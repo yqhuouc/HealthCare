@@ -1,0 +1,179 @@
+// ============================================================
+// PRISMA SCHEMA - Hệ thống đặt lịch khám bệnh
+// Database: PostgreSQL (Supabase)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Dùng cho Prisma Migrate khi dùng Supabase (connection pooler)
+}
+
+// =============================
+// TÀI KHOẢN (Account)
+// =============================
+model TaiKhoan {
+  id                BigInt    @id @default(autoincrement())
+  email             String    @unique @db.VarChar(255)
+  matKhau           String    @db.VarChar(255)
+  vaiTro            String?   @db.VarChar(50) // "admin" | "bac_si" | "benh_nhan"
+  trangThaiTaiKhoan Int?      @default(1) // 1 = hoạt động, 0 = bị khóa
+  ngayTao           DateTime? @default(now())
+  ngayCapNhat       DateTime? @updatedAt
+  gioiTinh          Int? // 1 = Nam, 2 = Nữ, 3 = Khác
+  ngaySinh          DateTime? @db.Date
+  diaChi            String?   @db.VarChar(255)
+  anhDaiDien        String?   @db.VarChar(255)
+
+  bacSi    BacSi?
+  benhNhan BenhNhan?
+
+  @@map("TaiKhoan")
+}
+
+// =============================
+// CHUYÊN KHOA (Specialty)
+// =============================
+model ChuyenKhoa {
+  id             BigInt  @id @default(autoincrement())
+  tenChuyenKhoa  String  @db.VarChar(120)
+  anhChuyenKhoa  String? @db.VarChar(255)
+  moTaChuyenKhoa String? @db.Text
+
+  bacSis BacSi[]
+
+  @@map("ChuyenKhoa")
+}
+
+// =============================
+// BÁC SĨ (Doctor)
+// =============================
+model BacSi {
+  id            BigInt   @id @default(autoincrement())
+  hocViChucDanh String?  @db.VarChar(120)
+  tenBacSi      String   @db.VarChar(120)
+  moTaNgan      String?  @db.VarChar(255)
+  moTaChiTiet   String?  @db.Text
+  giaKham       Decimal? @db.Decimal(10, 2)
+  taiKhoanId    BigInt?  @unique
+  chuyenKhoaId  BigInt?
+
+  taiKhoan    TaiKhoan?          @relation(fields: [taiKhoanId], references: [id])
+  chuyenKhoa  ChuyenKhoa?        @relation(fields: [chuyenKhoaId], references: [id])
+  lichLamViec LichLamViecBacSi[]
+  datLichs    DatLich[]
+
+  @@map("BacSi")
+}
+
+// =============================
+// BỆNH NHÂN (Patient)
+// =============================
+model BenhNhan {
+  id          BigInt  @id @default(autoincrement())
+  hoTen       String  @db.VarChar(120)
+  soDienThoai String? @db.VarChar(20)
+  emailLienHe String? @db.VarChar(255)
+  taiKhoanId  BigInt? @unique
+
+  taiKhoan TaiKhoan? @relation(fields: [taiKhoanId], references: [id])
+  datLichs DatLich[]
+
+  @@map("BenhNhan")
+}
+
+// =============================
+// KHUNG GIỜ (Time Slot)
+// =============================
+model KhungGio {
+  id         BigInt   @id @default(autoincrement())
+  gioBatDau  DateTime @db.Time()
+  gioKetThuc DateTime @db.Time()
+
+  lichLamViec LichLamViecBacSi[]
+
+  @@map("KhungGio")
+}
+
+// =============================
+// LỊCH LÀM VIỆC BÁC SĨ (Doctor Schedule)
+// =============================
+model LichLamViecBacSi {
+  id                  BigInt   @id @default(autoincrement())
+  ngayLamViec         DateTime @db.Date
+  soBenhNhanHienTai   Int?     @default(0)
+  sanSang             Int?     @default(1) // 1 = sẵn sàng, 0 = không
+  bacSiId             BigInt?
+  khungGioId          BigInt?
+
+  bacSi    BacSi?    @relation(fields: [bacSiId], references: [id])
+  khungGio KhungGio? @relation(fields: [khungGioId], references: [id])
+
+  @@map("LichLamViecBacSi")
+}
+
+// =============================
+// HÌNH THỨC THANH TOÁN (Payment Method)
+// =============================
+model HinhThucThanhToan {
+  id         BigInt  @id @default(autoincrement())
+  tenHinhThuc String @db.VarChar(120)
+
+  datLichs DatLich[]
+
+  @@map("HinhThucThanhToan")
+}
+
+// =============================
+// ĐẶT LỊCH (Appointment)
+// =============================
+model DatLich {
+  id                  BigInt   @id @default(autoincrement())
+  ngayDat             DateTime @db.Date
+  gioBatDau           DateTime @db.Time()
+  gioKetThuc          DateTime @db.Time()
+  lyDoKham            String?  @db.VarChar(255)
+  giaKham             Decimal? @db.Decimal(10, 2)
+  trangThai           Int?     @default(0) // 0=chờ, 1=xác nhận, 2=đã khám, 3=hủy
+  bacSiId             BigInt?
+  benhNhanId          BigInt?
+  hinhThucThanhToanId BigInt?
+
+  bacSi             BacSi?             @relation(fields: [bacSiId], references: [id])
+  benhNhan          BenhNhan?          @relation(fields: [benhNhanId], references: [id])
+  hinhThucThanhToan HinhThucThanhToan? @relation(fields: [hinhThucThanhToanId], references: [id])
+  donThuoc          DonThuoc?
+
+  // Ràng buộc: 1 bác sĩ không thể có 2 lịch cùng ngày + cùng giờ bắt đầu
+  @@unique([bacSiId, ngayDat, gioBatDau], name: "unique_lich")
+  @@map("DatLich")
+}
+
+// =============================
+// ĐƠN THUỐC (Prescription)
+// =============================
+model DonThuoc {
+  id       BigInt    @id @default(autoincrement())
+  datLichId BigInt   @unique
+  ngayTao  DateTime? @default(now())
+
+  datLich DatLich @relation(fields: [datLichId], references: [id])
+
+  @@map("DonThuoc")
+}
+
+// =============================
+// CÂU HỎI THƯỜNG GẶP (FAQ)
+// =============================
+model CauHoiThuongGap {
+  id           BigInt  @id @default(autoincrement())
+  cauHoi       String? @db.VarChar(255)
+  traLoi       String? @db.Text
+  dangHoatDong Int?    @default(1) // 1 = hiển thị, 0 = ẩn
+
+  @@map("CauHoiThuongGap")
+}
