@@ -1,154 +1,64 @@
-/**
- * ============================================================
- * CONTROLLER: Xác thực (Authentication)
- * ============================================================
- * - POST /api/auth/register  → Đăng ký tài khoản bệnh nhân
- * - POST /api/auth/login     → Đăng nhập (trả JWT)
- * - GET  /api/auth/me        → Lấy thông tin user đang đăng nhập
- * ============================================================
- */
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const prisma = require("../utils/prisma");
+const { asyncHandler } = require("../middlewares/error.middleware");
+const authService = require("../services/auth.service");
 const config = require("../config");
-const { sendSuccess, sendError } = require("../utils/response");
 
-/**
- * ĐĂNG KÝ tài khoản mới (mặc định vai trò "benh_nhan").
- * Flow: check email trùng → hash mật khẩu → tạo TaiKhoan + BenhNhan trong transaction
- */
-const register = async (req, res) => {
-  const { email, matKhau, hoTen, soDienThoai, gioiTinh, ngaySinh, diaChi } = req.body;
-
-  // Kiểm tra email đã tồn tại chưa
-  const existingAccount = await prisma.taiKhoan.findUnique({ where: { email } });
-  if (existingAccount) {
-    return sendError(res, "Email đã được sử dụng", 409);
-  }
-
-  // Hash mật khẩu với bcrypt (salt rounds = 10)
-  const hashedPassword = await bcrypt.hash(matKhau, 10);
-
-  // Transaction: tạo TaiKhoan + BenhNhan cùng lúc, đảm bảo tính nhất quán
-  const result = await prisma.$transaction(async (tx) => {
-    const taiKhoan = await tx.taiKhoan.create({
-      data: {
-        email,
-        matKhau: hashedPassword,
-        vaiTro: "benh_nhan",
-        trangThaiTaiKhoan: 1,
-        gioiTinh: gioiTinh || null,
-        ngaySinh: ngaySinh ? new Date(ngaySinh) : null,
-        diaChi: diaChi || null,
-      },
-    });
-
-    const benhNhan = await tx.benhNhan.create({
-      data: {
-        hoTen,
-        soDienThoai: soDienThoai || null,
-        emailLienHe: email,
-        taiKhoanId: taiKhoan.id,
-      },
-    });
-
-    return { taiKhoan, benhNhan };
-  });
-
-  // Tạo JWT token
-  const token = jwt.sign(
-    { id: result.taiKhoan.id, email: result.taiKhoan.email, vaiTro: result.taiKhoan.vaiTro },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn }
-  );
-
-  return sendSuccess(res, {
-    token,
-    user: {
-      id: result.taiKhoan.id,
-      email: result.taiKhoan.email,
-      vaiTro: result.taiKhoan.vaiTro,
-      hoTen: result.benhNhan.hoTen,
-    },
-  }, "Đăng ký thành công", 201);
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: config.nodeEnv === "production",
+  sameSite: "strict",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
 };
 
-/**
- * ĐĂNG NHẬP.
- * Flow: tìm tài khoản theo email → so sánh mật khẩu → kiểm tra trạng thái → trả JWT
- */
-const login = async (req, res) => {
-  const { email, matKhau } = req.body;
+const register = asyncHandler(async (req, res) => {
+  const result = await authService.register(req.body);
+  res.status(201).json({ success: true, message: "Đăng ký thành công", data: result });
+});
 
-  // Tìm tài khoản kèm thông tin bác sĩ/bệnh nhân
-  const taiKhoan = await prisma.taiKhoan.findUnique({
-    where: { email },
-    include: { bacSi: true, benhNhan: true },
+const login = asyncHandler(async (req, res) => {
+  const { user, accessToken, refreshToken } = await authService.login(req.body);
+
+  // Set refreshToken vào HttpOnly Cookie
+  res.cookie("refreshToken", refreshToken, COOKIE_OPTIONS);
+
+  res.json({
+    success: true,
+    message: "Đăng nhập thành công",
+    data: { user, accessToken },
   });
+});
 
-  if (!taiKhoan) {
-    return sendError(res, "Email hoặc mật khẩu không đúng", 401);
-  }
+const refresh = asyncHandler(async (req, res) => {
+  const oldRefreshToken = req.cookies.refreshToken;
+  const { accessToken, refreshToken } = await authService.refreshAccessToken(oldRefreshToken);
 
-  // Kiểm tra tài khoản có bị khóa không
-  if (taiKhoan.trangThaiTaiKhoan === 0) {
-    return sendError(res, "Tài khoản đã bị khóa. Vui lòng liên hệ admin.", 403);
-  }
+  // Set refreshToken mới vào HttpOnly Cookie
+  res.cookie("refreshToken", refreshToken, COOKIE_OPTIONS);
 
-  // So sánh mật khẩu đã hash
-  const isMatch = await bcrypt.compare(matKhau, taiKhoan.matKhau);
-  if (!isMatch) {
-    return sendError(res, "Email hoặc mật khẩu không đúng", 401);
-  }
+  res.json({ success: true, data: { accessToken } });
+});
 
-  const token = jwt.sign(
-    { id: taiKhoan.id, email: taiKhoan.email, vaiTro: taiKhoan.vaiTro },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn }
-  );
+const logout = asyncHandler(async (req, res) => {
+  await authService.logout(req.user.id);
 
-  // Lấy tên hiển thị tùy vai trò
-  let hoTen = "Admin";
-  if (taiKhoan.benhNhan) hoTen = taiKhoan.benhNhan.hoTen;
-  if (taiKhoan.bacSi) hoTen = taiKhoan.bacSi.tenBacSi;
+  // Xóa cookie
+  res.clearCookie("refreshToken", COOKIE_OPTIONS);
 
-  return sendSuccess(res, {
-    token,
-    user: {
-      id: taiKhoan.id,
-      email: taiKhoan.email,
-      vaiTro: taiKhoan.vaiTro,
-      hoTen,
-    },
-  }, "Đăng nhập thành công");
-};
+  res.json({ success: true, message: "Đăng xuất thành công" });
+});
 
-/**
- * LẤY THÔNG TIN user đang đăng nhập (từ JWT token).
- */
-const getMe = async (req, res) => {
-  const taiKhoan = await prisma.taiKhoan.findUnique({
-    where: { id: BigInt(req.user.id) },
-    select: {
-      id: true,
-      email: true,
-      vaiTro: true,
-      gioiTinh: true,
-      ngaySinh: true,
-      diaChi: true,
-      anhDaiDien: true,
-      ngayTao: true,
-      trangThaiTaiKhoan: true,
-      bacSi: true,
-      benhNhan: true,
-    },
-  });
+const getMe = asyncHandler(async (req, res) => {
+  const user = await authService.getMe(req.user.id);
+  res.json({ success: true, data: user });
+});
 
-  if (!taiKhoan) {
-    return sendError(res, "Không tìm thấy tài khoản", 404);
-  }
+const doiMatKhau = asyncHandler(async (req, res) => {
+  const result = await authService.doiMatKhau(req.user.id, req.body);
+  res.json({ success: true, message: result.message });
+});
 
-  return sendSuccess(res, taiKhoan, "Lấy thông tin thành công");
-};
+const capNhatHoSo = asyncHandler(async (req, res) => {
+  const result = await authService.capNhatHoSo(req.user.id, req.body);
+  res.json({ success: true, message: "Cập nhật hồ sơ thành công", data: result });
+});
 
-module.exports = { register, login, getMe };
+module.exports = { register, login, refresh, logout, getMe, doiMatKhau, capNhatHoSo };

@@ -20,6 +20,7 @@ model TaiKhoan {
   id                BigInt    @id @default(autoincrement())
   email             String    @unique @db.VarChar(255)
   matKhau           String    @db.VarChar(255)
+  refreshToken      String?   @db.Text
   vaiTro            String?   @db.VarChar(50) // "admin" | "bac_si" | "benh_nhan"
   trangThaiTaiKhoan Int?      @default(1) // 1 = hoạt động, 0 = bị khóa
   ngayTao           DateTime? @default(now())
@@ -106,6 +107,7 @@ model LichLamViecBacSi {
   id                  BigInt   @id @default(autoincrement())
   ngayLamViec         DateTime @db.Date
   soBenhNhanHienTai   Int?     @default(0)
+  soBenhNhanToiDa     Int?     @default(10) // Giới hạn bệnh nhân mỗi khung giờ
   sanSang             Int?     @default(1) // 1 = sẵn sàng, 0 = không
   bacSiId             BigInt?
   khungGioId          BigInt?
@@ -157,13 +159,32 @@ model DatLich {
 // ĐƠN THUỐC (Prescription)
 // =============================
 model DonThuoc {
-  id       BigInt    @id @default(autoincrement())
-  datLichId BigInt   @unique
-  ngayTao  DateTime? @default(now())
+  id        BigInt    @id @default(autoincrement())
+  datLichId BigInt    @unique
+  ngayTao   DateTime? @default(now())
+  chanDoan  String?   @db.Text        // Chẩn đoán bệnh
+  ghiChu    String?   @db.Text        // Ghi chú cho bệnh nhân
 
-  datLich DatLich @relation(fields: [datLichId], references: [id])
+  datLich         DatLich           @relation(fields: [datLichId], references: [id])
+  chiTietDonThuoc ChiTietDonThuoc[]
 
   @@map("DonThuoc")
+}
+
+// =============================
+// CHI TIẾT ĐƠN THUỐC (Prescription Detail)
+// =============================
+model ChiTietDonThuoc {
+  id         BigInt  @id @default(autoincrement())
+  donThuocId BigInt
+  tenThuoc   String  @db.VarChar(255)
+  soLuong    Int?
+  lieuDung   String? @db.VarChar(255)  // VD: "1 viên x 3 lần/ngày"
+  ghiChu     String? @db.VarChar(255)  // VD: "Uống sau ăn"
+
+  donThuoc DonThuoc @relation(fields: [donThuocId], references: [id], onDelete: Cascade)
+
+  @@map("ChiTietDonThuoc")
 }
 
 // =============================

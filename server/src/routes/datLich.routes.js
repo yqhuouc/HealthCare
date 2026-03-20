@@ -1,30 +1,29 @@
 const express = require("express");
 const router = express.Router();
 const datLichController = require("../controllers/datLich.controller");
-const { datLichValidator, capNhatTrangThaiValidator } = require("../validators/datLich.validator");
-const validate = require("../middlewares/validate");
-const { authenticate, authorize } = require("../middlewares/auth");
-const asyncHandler = require("../utils/asyncHandler");
+const { authenticate, authorize } = require("../middlewares/auth.middleware");
+const { validate } = require("../middlewares/validate.middleware");
+const { createDatLichSchema, updateTrangThaiSchema } = require("../validations/datLich.validation");
 
 // GET /api/dat-lich - Lấy tất cả lịch hẹn (admin)
-router.get("/", authenticate, authorize("admin"), asyncHandler(datLichController.getAll));
+router.get("/", authenticate, authorize("admin"), datLichController.getAll);
 
 // GET /api/dat-lich/benh-nhan/:id - Lấy lịch hẹn theo bệnh nhân
-router.get("/benh-nhan/:id", authenticate, asyncHandler(datLichController.getByBenhNhan));
+router.get("/benh-nhan/:id", authenticate, datLichController.getByBenhNhan);
 
 // GET /api/dat-lich/bac-si/:id - Lấy lịch hẹn theo bác sĩ
-router.get("/bac-si/:id", authenticate, asyncHandler(datLichController.getByBacSi));
+router.get("/bac-si/:id", authenticate, datLichController.getByBacSi);
 
 // GET /api/dat-lich/:id - Lấy chi tiết lịch hẹn
-router.get("/:id", authenticate, asyncHandler(datLichController.getById));
+router.get("/:id", authenticate, datLichController.getById);
 
 // POST /api/dat-lich - Tạo lịch hẹn mới
-router.post("/", authenticate, datLichValidator, validate, asyncHandler(datLichController.create));
+router.post("/", authenticate, validate(createDatLichSchema), datLichController.create);
 
 // PUT /api/dat-lich/:id/trang-thai - Cập nhật trạng thái (admin, bác sĩ)
-router.put("/:id/trang-thai", authenticate, authorize("admin", "bac_si"), capNhatTrangThaiValidator, validate, asyncHandler(datLichController.updateTrangThai));
+router.put("/:id/trang-thai", authenticate, authorize("admin", "bac_si"), validate(updateTrangThaiSchema), datLichController.updateTrangThai);
 
 // DELETE /api/dat-lich/:id - Xóa lịch hẹn
-router.delete("/:id", authenticate, asyncHandler(datLichController.remove));
+router.delete("/:id", authenticate, datLichController.remove);
 
 module.exports = router;

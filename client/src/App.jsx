@@ -24,7 +24,6 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* ---- Doctor standalone: login (không có layout nào) ---- */}
         {doctorStandaloneRoutes.map(({ path, component: Component }) => (
           <Route key={path} path={path} element={<Component />} />

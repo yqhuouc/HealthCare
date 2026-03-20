@@ -1,0 +1,115 @@
+const bcrypt = require("bcryptjs");
+const prisma = require("../utils/prisma");
+const { AppError } = require("../middlewares/error.middleware");
+
+const getAll = async ({ chuyenKhoaId, search, page = 1, limit = 10 }) => {
+  const skip = (Number(page) - 1) * Number(limit);
+  const where = {};
+  if (chuyenKhoaId) where.chuyenKhoaId = BigInt(chuyenKhoaId);
+  if (search) where.tenBacSi = { contains: search, mode: "insensitive" };
+
+  const [bacSis, total] = await Promise.all([
+    prisma.bacSi.findMany({
+      where,
+      include: {
+        chuyenKhoa: { select: { id: true, tenChuyenKhoa: true } },
+        taiKhoan: { select: { id: true, email: true, anhDaiDien: true, trangThaiTaiKhoan: true } },
+      },
+      skip,
+      take: Number(limit),
+      orderBy: { tenBacSi: "asc" },
+    }),
+    prisma.bacSi.count({ where }),
+  ]);
+
+  return {
+    bacSis,
+    pagination: { total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / Number(limit)) },
+  };
+};
+
+const getById = async (id) => {
+  const bacSi = await prisma.bacSi.findUnique({
+    where: { id: BigInt(id) },
+    include: {
+      chuyenKhoa: true,
+      taiKhoan: { select: { id: true, email: true, anhDaiDien: true, gioiTinh: true, ngaySinh: true, diaChi: true } },
+    },
+  });
+
+  if (!bacSi) throw new AppError("Không tìm thấy bác sĩ", 404);
+  return bacSi;
+};
+
+const create = async (data) => {
+  if (data.email) {
+    const exists = await prisma.taiKhoan.findUnique({ where: { email: data.email } });
+    if (exists) throw new AppError("Email đã được sử dụng", 409);
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const taiKhoan = await tx.taiKhoan.create({
+      data: {
+        email: data.email || `doctor_${Date.now()}@clinic.local`,
+        matKhau: await bcrypt.hash(data.matKhau || "doctor123", 10),
+        vaiTro: "bac_si",
+        trangThaiTaiKhoan: 1,
+        gioiTinh: data.gioiTinh || null,
+        ngaySinh: data.ngaySinh ? new Date(data.ngaySinh) : null,
+        diaChi: data.diaChi || null,
+      },
+    });
+
+    const bacSi = await tx.bacSi.create({
+      data: {
+        tenBacSi: data.tenBacSi,
+        hocViChucDanh: data.hocViChucDanh,
+        moTaNgan: data.moTaNgan,
+        moTaChiTiet: data.moTaChiTiet,
+        giaKham: data.giaKham ? parseFloat(data.giaKham) : null,
+        chuyenKhoaId: data.chuyenKhoaId ? BigInt(data.chuyenKhoaId) : null,
+        taiKhoanId: taiKhoan.id,
+      },
+    });
+
+    return bacSi;
+  });
+
+  return result;
+};
+
+const update = async (id, data) => {
+  const existing = await prisma.bacSi.findUnique({ where: { id: BigInt(id) } });
+  if (!existing) throw new AppError("Không tìm thấy bác sĩ", 404);
+
+  return prisma.bacSi.update({
+    where: { id: BigInt(id) },
+    data: {
+      tenBacSi: data.tenBacSi,
+      hocViChucDanh: data.hocViChucDanh,
+      moTaNgan: data.moTaNgan,
+      moTaChiTiet: data.moTaChiTiet,
+      giaKham: data.giaKham !== undefined ? parseFloat(data.giaKham) : undefined,
+      chuyenKhoaId: data.chuyenKhoaId !== undefined ? BigInt(data.chuyenKhoaId) : undefined,
+    },
+  });
+};
+
+const remove = async (id) => {
+  const existing = await prisma.bacSi.findUnique({ where: { id: BigInt(id) } });
+  if (!existing) throw new AppError("Không tìm thấy bác sĩ", 404);
+
+  const appointmentCount = await prisma.datLich.count({ where: { bacSiId: BigInt(id) } });
+  if (appointmentCount > 0) {
+    throw new AppError(`Không thể xóa vì bác sĩ có ${appointmentCount} lịch hẹn`, 400);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.bacSi.delete({ where: { id: BigInt(id) } });
+    if (existing.taiKhoanId) {
+      await tx.taiKhoan.delete({ where: { id: existing.taiKhoanId } });
+    }
+  });
+};
+
+module.exports = { getAll, getById, create, update, remove };

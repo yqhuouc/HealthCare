@@ -1,34 +1,33 @@
 const express = require("express");
 const router = express.Router();
 const lichLamViecController = require("../controllers/lichLamViec.controller");
-const { khungGioValidator, lichLamViecValidator } = require("../validators/lichLamViec.validator");
-const validate = require("../middlewares/validate");
-const { authenticate, authorize } = require("../middlewares/auth");
-const asyncHandler = require("../utils/asyncHandler");
+const { authenticate, authorize } = require("../middlewares/auth.middleware");
+const { validate } = require("../middlewares/validate.middleware");
+const { khungGioSchema, lichLamViecSchema } = require("../validations/lichLamViec.validation");
 
 // ===== KHUNG GIỜ =====
 
 // GET /api/lich-lam-viec/khung-gio - Lấy tất cả khung giờ (public)
-router.get("/khung-gio", asyncHandler(lichLamViecController.getAllKhungGio));
+router.get("/khung-gio", lichLamViecController.getAllKhungGio);
 
 // POST /api/lich-lam-viec/khung-gio - Tạo khung giờ (admin)
-router.post("/khung-gio", authenticate, authorize("admin"), khungGioValidator, validate, asyncHandler(lichLamViecController.createKhungGio));
+router.post("/khung-gio", authenticate, authorize("admin"), validate(khungGioSchema), lichLamViecController.createKhungGio);
 
 // DELETE /api/lich-lam-viec/khung-gio/:id - Xóa khung giờ (admin)
-router.delete("/khung-gio/:id", authenticate, authorize("admin"), asyncHandler(lichLamViecController.deleteKhungGio));
+router.delete("/khung-gio/:id", authenticate, authorize("admin"), lichLamViecController.deleteKhungGio);
 
 // ===== LỊCH LÀM VIỆC =====
 
-// GET /api/lich-lam-viec - Lấy lịch làm việc (public, filter theo bacSiId + ngayLamViec)
-router.get("/", asyncHandler(lichLamViecController.getLichLamViec));
+// GET /api/lich-lam-viec - Lấy lịch làm việc (public)
+router.get("/", lichLamViecController.getLichLamViec);
 
 // POST /api/lich-lam-viec - Tạo lịch làm việc (admin, bác sĩ)
-router.post("/", authenticate, authorize("admin", "bac_si"), lichLamViecValidator, validate, asyncHandler(lichLamViecController.createLichLamViec));
+router.post("/", authenticate, authorize("admin", "bac_si"), validate(lichLamViecSchema), lichLamViecController.createLichLamViec);
 
 // PUT /api/lich-lam-viec/:id - Cập nhật (admin, bác sĩ)
-router.put("/:id", authenticate, authorize("admin", "bac_si"), asyncHandler(lichLamViecController.updateLichLamViec));
+router.put("/:id", authenticate, authorize("admin", "bac_si"), lichLamViecController.updateLichLamViec);
 
 // DELETE /api/lich-lam-viec/:id - Xóa (admin, bác sĩ)
-router.delete("/:id", authenticate, authorize("admin", "bac_si"), asyncHandler(lichLamViecController.deleteLichLamViec));
+router.delete("/:id", authenticate, authorize("admin", "bac_si"), lichLamViecController.deleteLichLamViec);
 
 module.exports = router;
