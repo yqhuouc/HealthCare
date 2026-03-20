@@ -1,213 +1,504 @@
-# Luong di tung chuc nang (Frontend -> Backend)
+# Luồng đi từng chức năng (Frontend → Backend)
 
-Tai lieu nay mo ta luong xu ly theo tung chuc nang chinh de ban de theo doi va demo.
-
-## 0) Tong quan luong chung
-
-1. Nguoi dung thao tac tren UI (`client/src/pages/...`)
-2. Page goi Service (`client/src/services/...`)
-3. Service goi API qua `api.js` (axios instance)
-4. Request vao backend: `Route -> Validator -> validate middleware -> auth middleware -> Controller -> Prisma -> DB`
-5. Backend tra JSON ket qua, frontend hien thi/toast/chuyen trang
+> Tài liệu mô tả luồng xử lý theo từng chức năng chính của hệ thống.
+> Giúp theo dõi toàn bộ flow từ UI đến Database.
 
 ---
 
-## 1) Dang ky tai khoan benh nhan (vi du ban hoi)
+## 0. Tổng quan luồng chung
 
-### 1.1 Luong mong muon khi noi backend that
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  1. Người dùng thao tác trên UI (client/src/pages/...)           │
+│  2. Page gọi Service (client/src/services/...)                   │
+│  3. Service gọi API qua api.js (axios instance, base URL /api)   │
+│  4. Request vào backend:                                         │
+│     Route → [validate middleware + Zod] → [authenticate]         │
+│          → [authorize] → Controller → Service → Prisma → DB     │
+│  5. Backend trả JSON { success, message, data }                  │
+│  6. Frontend nhận response → cập nhật UI / toast / chuyển trang  │
+└──────────────────────────────────────────────────────────────────┘
+```
 
-1. Nguoi dung mo trang `/register` (`RegisterPage`)
-2. Bam nut "Dang ky"
-3. Frontend goi `authService.register(userData)`
-4. Service goi `POST /api/auth/register`
-5. Backend vao `auth.routes.js`:
-  - `registerValidator`
-  - `validate`
-  - `authController.register`
-6. Controller tao:
-  - Ban ghi `TaiKhoan` (vai tro `benh_nhan`)
-  - Ban ghi `BenhNhan` lien ket voi tai khoan
-7. Backend tra ve `success + message + data`
-8. Frontend hien thi "dang ky thanh cong", sau do dieu huong sang `/login`
+### Kiến trúc backend mỗi module
 
-### 1.2 Trang thai hien tai trong source
-
-- `authService.register` dang tra mock message, chua goi API that.
-- Nghia la UI co luong, backend co endpoint, nhung frontend chua noi truc tiep vao `/api/auth/register`.
-
----
-
-## 2) Dang nhap
-
-1. Nguoi dung mo `/login` (benh nhan) hoac `/doctor/login` (bac si)
-2. Bam "Dang nhap"
-3. Frontend goi `authService.login(credentials)`
-4. Neu noi backend that: goi `POST /api/auth/login`
-5. Backend:
-  - `loginValidator` -> `validate` -> `authController.login`
-  - Kiem tra email/mat khau, tao JWT
-6. Frontend luu token (localStorage)
-7. Tu lan goi API sau, `api.js` tu dong gan header `Authorization: Bearer <token>`
-
-Trang thai hien tai: `authService.login` dang mock token/user.
+```
+routes/xxx.routes.js          Khai báo HTTP method + URL + middleware chain
+        │
+validations/xxx.validation.js  Zod schema validate body
+        │
+middlewares/validate.middleware.js  Parse body qua schema, trả 400 nếu lỗi
+        │
+middlewares/auth.middleware.js      authenticate (verify JWT), authorize (check role)
+        │
+controllers/xxx.controller.js      Nhận req, gọi service, trả res
+        │
+services/xxx.service.js            Logic nghiệp vụ, query Prisma, throw AppError
+        │
+utils/prisma.js                    Prisma Client singleton → PostgreSQL
+```
 
 ---
 
-## 3) Lay thong tin user hien tai (`/auth/me`)
+## 1. Đăng ký tài khoản bệnh nhân
 
-1. Frontend goi `authService.getMe()`
-2. API call: `GET /api/auth/me`
-3. Backend middleware `authenticate` giai ma token, gan `req.user`
-4. `authController.getMe` tra thong tin user dang dang nhap
-5. Frontend dung de do du lieu profile/role
+### Luồng chi tiết
 
-Trang thai hien tai: `authService.getMe` dang mock data.
+1. Người dùng mở trang `/register` → `RegisterPage.jsx`
+2. Điền form: email, mật khẩu, họ tên, số điện thoại, giới tính, ngày sinh, địa chỉ
+3. Bấm nút **"Đăng ký"**
+4. Frontend gọi `authService.register(userData)`
+5. Service gọi `POST /api/auth/register`
+6. Backend flow:
+   - `auth.routes.js` → `validate(registerSchema)` → `authController.register`
+   - Controller gọi `authService.register(req.body)`
+   - Service kiểm tra email đã tồn tại chưa → nếu trùng throw `409`
+   - Hash mật khẩu bằng bcrypt (10 rounds)
+   - Dùng `$transaction` tạo đồng thời:
+     - Bản ghi `TaiKhoan` (vaiTro = `"benh_nhan"`, trangThaiTaiKhoan = 1)
+     - Bản ghi `BenhNhan` liên kết với tài khoản vừa tạo
+   - Trả về `{ id, email, vaiTro, hoTen }` (không trả token)
+7. Frontend nhận `201 Created` → hiển thị "Đăng ký thành công" → điều hướng sang `/login`
 
----
+### Validation (Zod)
 
-## 4) Xem danh sach bac si, chi tiet bac si (benh nhan)
-
-1. Nguoi dung vao `/doctors` (DoctorListPage)
-2. Frontend goi `doctorService.getAll(filters)`
-3. Neu noi backend that: `GET /api/bac-si?chuyenKhoaId=&search=&page=&limit=`
-4. Backend route `bacSi.routes.js` -> `bacSiController.getAll` -> Prisma lay danh sach/filter
-5. Bam 1 bac si -> `/doctors/:id`
-6. Frontend goi `doctorService.getById(id)`
-7. Neu backend that: `GET /api/bac-si/:id` -> `bacSiController.getById`
-
-Trang thai hien tai: `doctorService` dang doc tu `mockDoctors`.
-
----
-
-## 5) Dat lich kham (benh nhan)
-
-1. Nguoi dung vao `/booking/:doctorId`
-2. Chon ngay/gio/hinh thuc thanh toan
-3. Bam "Dat lich"
-4. Frontend goi `appointmentService.create(data)`
-5. Neu backend that: `POST /api/dat-lich`
-6. Backend:
-  - `authenticate` (bat buoc dang nhap)
-  - `datLichValidator` -> `validate`
-  - `datLichController.create` (kiem tra rang buoc, luu DB)
-7. Tra ket qua lich hen moi tao
-
-Trang thai hien tai: `appointmentService.create` dang mock object lich hen.
+```
+registerSchema:
+  - email: string, email format (bắt buộc)
+  - matKhau: string, 6-50 ký tự (bắt buộc)
+  - hoTen: string, 1-120 ký tự (bắt buộc)
+  - soDienThoai: string, max 20 (tùy chọn)
+  - gioiTinh: number, 1-3 (tùy chọn)
+  - ngaySinh: string (tùy chọn)
+  - diaChi: string, max 255 (tùy chọn)
+```
 
 ---
 
-## 6) Lich su lich hen / huy lich (benh nhan)
+## 2. Đăng nhập (Dual JWT)
 
-### 6.1 Xem lich su
+### Luồng chi tiết
 
-1. Vao `/appointments`
-2. Frontend goi `appointmentService.getMyAppointments()`
-3. Neu backend that: `GET /api/dat-lich/benh-nhan/:id` (can JWT)
-4. Backend tra danh sach lich theo benh nhan
+1. Người dùng mở `/login` (bệnh nhân) hoặc `/doctor/login` (bác sĩ)
+2. Điền email + mật khẩu
+3. Bấm **"Đăng nhập"**
+4. Frontend gọi `authService.login(credentials)`
+5. Service gọi `POST /api/auth/login`
+6. Backend flow:
+   - `auth.routes.js` → `validate(loginSchema)` → `authController.login`
+   - Controller gọi `authService.login(req.body)`
+   - Service:
+     - Tìm tài khoản theo email (include bacSi, benhNhan)
+     - Kiểm tra tài khoản tồn tại → nếu không throw `401`
+     - Kiểm tra trangThaiTaiKhoan !== 0 → nếu bị khóa throw `403`
+     - So sánh mật khẩu bằng bcrypt → nếu sai throw `401`
+     - Tạo cặp token: `generateTokens(taiKhoanId)`
+       - Access Token: `jwt.sign({ id }, accessSecret, { expiresIn: "15m" })`
+       - Refresh Token: `jwt.sign({ id }, refreshSecret, { expiresIn: "7d" })`
+     - Lưu refresh token vào DB (cột `TaiKhoan.refreshToken`)
+     - Xác định hoTen dựa trên vai trò (admin/bác sĩ/bệnh nhân)
+   - Controller:
+     - Set `refreshToken` vào **HttpOnly Cookie** (secure, sameSite strict, 7 ngày)
+     - Trả JSON: `{ user: { id, email, vaiTro, hoTen }, accessToken }`
+7. Frontend:
+   - Lưu `accessToken` (Zustand store / localStorage)
+   - `api.js` tự gắn header `Authorization: Bearer <accessToken>` cho mọi request sau
+   - Chuyển hướng theo vai trò: admin → `/admin`, bác sĩ → `/doctor`, bệnh nhân → `/`
 
-### 6.2 Huy lich
+### Validation (Zod)
 
-1. Bam "Huy lich"
-2. Frontend goi `appointmentService.cancel(id)`
-3. Neu backend that: co the:
-  - `PUT /api/dat-lich/:id/trang-thai` voi trang thai = da huy, hoac
-  - `DELETE /api/dat-lich/:id` (tuy rule nghiep vu)
-4. Backend xac thuc + cap nhat trang thai/xoa
-
-Trang thai hien tai: `getMyAppointments` va `cancel` dang mock.
-
----
-
-## 7) Luong bac si (portal `/doctor`)
-
-### 7.1 Xem lich hen cua bac si
-
-1. Bac si vao `/doctor/appointments`
-2. Frontend goi API lay lich theo bac si
-3. Backend endpoint: `GET /api/dat-lich/bac-si/:id` (JWT)
-
-### 7.2 Cap nhat trang thai kham
-
-1. Bac si mo chi tiet `/doctor/appointments/:id`
-2. Bam xac nhan/hoan tat/huy
-3. API: `PUT /api/dat-lich/:id/trang-thai`
-4. Backend authorize `admin` hoac `bac_si`
-
-### 7.3 Quan ly lich lam viec
-
-1. Bac si vao `/doctor/schedule` hoac `/doctor/schedule/add`
-2. API lien quan:
-  - `GET /api/lich-lam-viec?bacSiId=&ngayLamViec=`
-  - `POST /api/lich-lam-viec`
-  - `PUT /api/lich-lam-viec/:id`
-  - `DELETE /api/lich-lam-viec/:id`
-
-### 7.4 Ke don thuoc
-
-1. Tu man hinh kham benh, bac si tao don
-2. API: `POST /api/don-thuoc` (chi role `bac_si`)
+```
+loginSchema:
+  - email: string, email format (bắt buộc)
+  - matKhau: string, min 1 ký tự (bắt buộc)
+```
 
 ---
 
-## 8) Luong admin (portal `/admin`)
+## 3. Làm mới Access Token (Refresh)
 
-### 8.1 Quan ly chuyen khoa
+### Luồng chi tiết
 
-- Xem: `GET /api/chuyen-khoa`
-- Them: `POST /api/chuyen-khoa` (admin)
-- Sua: `PUT /api/chuyen-khoa/:id` (admin)
-- Xoa: `DELETE /api/chuyen-khoa/:id` (admin)
-
-### 8.2 Quan ly bac si
-
-- Xem danh sach: `GET /api/bac-si`
-- Them moi bac si: `POST /api/bac-si` (admin)
-- Cap nhat: `PUT /api/bac-si/:id` (admin)
-- Xoa: `DELETE /api/bac-si/:id` (admin)
-
-### 8.3 Quan ly benh nhan
-
-- Xem danh sach: `GET /api/benh-nhan` (admin)
-- Xem chi tiet: `GET /api/benh-nhan/:id` (JWT)
-- Sua: `PUT /api/benh-nhan/:id` (JWT)
-- Xoa: `DELETE /api/benh-nhan/:id` (admin)
-
-### 8.4 Quan ly FAQ
-
-- Public xem FAQ active: `GET /api/cau-hoi-thuong-gap`
-- Admin xem tat ca: `GET /api/cau-hoi-thuong-gap/all`
-- Them/sua/xoa:
-  - `POST /api/cau-hoi-thuong-gap`
-  - `PUT /api/cau-hoi-thuong-gap/:id`
-  - `DELETE /api/cau-hoi-thuong-gap/:id`
-
-### 8.5 Quan ly hinh thuc thanh toan
-
-- `GET /api/hinh-thuc-thanh-toan` (public)
-- `POST /api/hinh-thuc-thanh-toan` (admin)
-- `DELETE /api/hinh-thuc-thanh-toan/:id` (admin)
+1. Khi Access Token hết hạn → API trả `401` "Token đã hết hạn"
+2. Frontend gọi `POST /api/auth/refresh` (không cần header Authorization)
+3. Refresh Token được trình duyệt **tự gửi** qua cookie
+4. Backend flow:
+   - `authController.refresh` đọc `req.cookies.refreshToken`
+   - Gọi `authService.refreshAccessToken(refreshToken)`
+   - Service:
+     - Kiểm tra token tồn tại → nếu không throw `401`
+     - Verify token bằng `jwtRefreshSecret`
+     - Tìm tài khoản trong DB, so khớp refreshToken
+     - Tạo cặp token mới (**Token Rotation** — refresh token cũ bị thay thế)
+     - Lưu refresh token mới vào DB
+   - Controller: set refresh cookie mới + trả `{ accessToken }`
+5. Frontend cập nhật accessToken mới → retry request gốc
 
 ---
 
-## 9) Health check va debug luong
+## 4. Đăng xuất
 
-- Endpoint kiem tra server: `GET /api/health`
-- De trace nhanh 1 chuc nang, ban co the theo checklist:
-  1. Route da khai bao trong `server/src/routes/*.routes.js` chua?
-  2. Validator co dung field frontend gui len khong?
-  3. Frontend service da goi dung endpoint chua?
-  4. Co token trong `localStorage` de interceptor gan header chua?
-  5. Role user co dung voi `authorize(...)` khong?
+### Luồng chi tiết
+
+1. Người dùng bấm **"Đăng xuất"**
+2. Frontend gọi `POST /api/auth/logout` (kèm Access Token)
+3. Backend flow:
+   - `authenticate` middleware verify token → gắn `req.user`
+   - Controller gọi `authService.logout(req.user.id)`
+   - Service: update `TaiKhoan.refreshToken = null`
+   - Controller: `res.clearCookie("refreshToken")` → trả success
+4. Frontend: xóa accessToken khỏi store, điều hướng về `/login`
 
 ---
 
-## 10) Ghi chu quan trong hien tai
+## 5. Lấy thông tin user hiện tại (`/auth/me`)
 
-1. Backend da co he thong endpoint kha day du.
-2. Frontend hien van con nhieu service mock (`authService`, `doctorService`, `appointmentService`).
-3. Vi vay, luong UI hien tai co the "chay duoc" nhung chua di het backend that.
-4. Buoc tiep theo de dong bo:
-  - thay cac TODO trong service bang API that,
-  - map dung response backend,
-  - them auth guard cho private routes.
+### Luồng chi tiết
 
+1. Frontend gọi `authService.getMe()` → `GET /api/auth/me`
+2. Middleware `authenticate` verify Access Token → query DB → gắn `req.user`
+3. Controller gọi `authService.getMe(req.user.id)`
+4. Service query TaiKhoan với select đầy đủ:
+   - id, email, vaiTro, gioiTinh, ngaySinh, diaChi, anhDaiDien, ngayTao, trangThaiTaiKhoan
+   - Include: `bacSi` (nếu vai trò bác sĩ), `benhNhan` (nếu vai trò bệnh nhân)
+5. Trả về thông tin user đầy đủ
+6. Frontend dùng dữ liệu này để hiển thị profile, kiểm tra role cho routing
+
+---
+
+## 6. Đổi mật khẩu
+
+### Luồng chi tiết
+
+1. Người dùng vào trang profile → bấm **"Đổi mật khẩu"**
+2. Nhập mật khẩu cũ + mật khẩu mới
+3. Frontend gọi `PUT /api/auth/doi-mat-khau`
+4. Backend flow:
+   - `authenticate` → `validate(doiMatKhauSchema)` → controller → service
+   - Service: verify mật khẩu cũ bằng bcrypt → nếu sai throw `400`
+   - Hash mật khẩu mới → update vào DB
+5. Trả success → Frontend hiện toast "Đổi mật khẩu thành công"
+
+### Validation (Zod)
+
+```
+doiMatKhauSchema:
+  - matKhauCu: string, min 1 (bắt buộc)
+  - matKhauMoi: string, 6-50 ký tự (bắt buộc)
+```
+
+---
+
+## 7. Cập nhật hồ sơ cá nhân
+
+### Luồng chi tiết
+
+1. Người dùng vào trang profile → sửa thông tin cá nhân
+2. Frontend gọi `PUT /api/auth/cap-nhat-ho-so`
+3. Backend flow:
+   - `authenticate` → `validate(capNhatHoSoSchema)` → controller → service
+   - Service: tìm tài khoản → update các trường được gửi lên
+   - Chỉ cho phép cập nhật: gioiTinh, ngaySinh, diaChi, anhDaiDien
+4. Trả về thông tin tài khoản đã cập nhật
+
+### Validation (Zod)
+
+```
+capNhatHoSoSchema:
+  - gioiTinh: number, 1-3 (tùy chọn)
+  - ngaySinh: string (tùy chọn)
+  - diaChi: string, max 255 (tùy chọn)
+  - anhDaiDien: string, max 255 (tùy chọn)
+```
+
+---
+
+## 8. Xem danh sách bác sĩ + chi tiết bác sĩ (Public)
+
+### 8.1 Danh sách bác sĩ
+
+1. Người dùng vào `/doctors` → `DoctorListPage.jsx`
+2. Frontend gọi `doctorService.getAll(filters)`
+3. API: `GET /api/bac-si?chuyenKhoaId=&search=&page=1&limit=10`
+4. Backend flow (public, không cần auth):
+   - `bacSi.routes.js` → `bacSiController.getAll` → `bacSiService.getAll(req.query)`
+   - Service:
+     - Build `where` clause từ query params (chuyenKhoaId, search theo tên)
+     - Query `prisma.bacSi.findMany` với include chuyenKhoa + taiKhoan
+     - Đếm total → tính pagination
+   - Trả: `{ bacSis: [...], pagination: { total, page, limit, totalPages } }`
+5. Frontend render danh sách + phân trang
+
+### 8.2 Chi tiết bác sĩ
+
+1. Bấm vào 1 bác sĩ → `/doctors/:id` → `DoctorDetailPage.jsx`
+2. Frontend gọi `doctorService.getById(id)`
+3. API: `GET /api/bac-si/:id`
+4. Backend flow:
+   - Service query bacSi include chuyenKhoa + taiKhoan (email, ảnh, giới tính, ngày sinh, địa chỉ)
+   - Nếu không tìm thấy → throw `404`
+5. Frontend hiển thị chi tiết: tên, học vị, chuyên khoa, mô tả, giá khám
+
+---
+
+## 9. Đặt lịch khám (Bệnh nhân)
+
+### Luồng chi tiết
+
+1. Người dùng vào `/booking/:doctorId` → `BookingPage.jsx`
+2. Chọn ngày, khung giờ, hình thức thanh toán, nhập lý do khám
+3. Bấm **"Đặt lịch"**
+4. Frontend gọi `appointmentService.create(data)`
+5. API: `POST /api/dat-lich`
+6. Backend flow:
+   - `authenticate` (bắt buộc đăng nhập)
+   - `validate(createDatLichSchema)`
+   - Controller → Service:
+     - **Bước 1**: Kiểm tra bác sĩ tồn tại → nếu không throw `404`
+     - **Bước 2**: Kiểm tra bệnh nhân tồn tại → nếu không throw `404`
+     - **Bước 3**: Kiểm tra bác sĩ có lịch làm việc ngày đó + sẵn sàng → nếu không throw `400`
+     - **Bước 4**: Kiểm tra trùng lịch (cùng bacSiId + ngayDat + gioBatDau) → nếu trùng throw `409`
+     - **Bước 5**: Tạo DatLich với trangThai = 0 (chờ xác nhận)
+     - Nếu không truyền giaKham → lấy giá khám mặc định của bác sĩ
+7. Trả về lịch hẹn vừa tạo (include đầy đủ bác sĩ, bệnh nhân, hình thức thanh toán)
+8. Frontend hiển thị "Đặt lịch thành công" → điều hướng về lịch sử
+
+### Validation (Zod)
+
+```
+createDatLichSchema:
+  - ngayDat: string, min 1 (bắt buộc) — format "YYYY-MM-DD"
+  - gioBatDau: string, regex HH:mm (bắt buộc)
+  - gioKetThuc: string, regex HH:mm (bắt buộc)
+  - bacSiId: string|number, > 0 (bắt buộc)
+  - benhNhanId: string|number, > 0 (bắt buộc)
+  - lyDoKham: string, max 255 (tùy chọn)
+  - hinhThucThanhToanId: string|number (tùy chọn)
+  - giaKham: string|number (tùy chọn)
+```
+
+---
+
+## 10. Lịch sử lịch hẹn / Hủy lịch (Bệnh nhân)
+
+### 10.1 Xem lịch sử
+
+1. Vào `/appointments` → `AppointmentHistoryPage.jsx`
+2. Frontend gọi `appointmentService.getMyAppointments(benhNhanId)`
+3. API: `GET /api/dat-lich/benh-nhan/:id` (cần JWT)
+4. Backend flow:
+   - `authenticate` verify token
+   - Service kiểm tra **ownership**: so sánh `benhNhan.taiKhoanId` với `req.user.id`
+   - Nếu không phải chủ sở hữu → throw `403`
+   - Query danh sách lịch hẹn theo benhNhanId, sắp xếp theo ngày mới nhất
+   - Include: bác sĩ (tên, học vị, chuyên khoa), hình thức thanh toán, đơn thuốc
+5. Frontend render danh sách theo trạng thái (chờ / xác nhận / đã khám / hủy)
+
+### 10.2 Hủy lịch
+
+1. Bấm **"Hủy lịch"** trên lịch hẹn đang ở trạng thái "Chờ xác nhận" (0)
+2. Frontend gọi `DELETE /api/dat-lich/:id`
+3. Backend flow:
+   - `authenticate` verify token
+   - Service:
+     - Kiểm tra lịch hẹn tồn tại
+     - **Ownership check**: bệnh nhân chỉ xóa được lịch của mình
+     - Kiểm tra trạng thái: **không cho xóa** nếu trangThai = 1 (đã xác nhận) hoặc 2 (đã khám)
+     - Dùng `$transaction`:
+       - Xóa đơn thuốc liên quan (nếu có)
+       - Xóa lịch hẹn
+4. Trả success → Frontend reload danh sách
+
+---
+
+## 11. Luồng Bác sĩ (Portal `/doctor`)
+
+### 11.1 Xem lịch hẹn của bác sĩ
+
+1. Bác sĩ vào `/doctor/appointments` → `DoctorAppointmentsPage.jsx`
+2. API: `GET /api/dat-lich/bac-si/:bacSiId` (JWT)
+3. Backend:
+   - `authenticate` verify token
+   - Service kiểm tra **ownership**: bác sĩ chỉ xem được lịch của chính mình
+   - Query lịch hẹn theo bacSiId, include bệnh nhân, hình thức thanh toán, đơn thuốc
+
+### 11.2 Xem chi tiết lịch hẹn
+
+1. Bấm vào 1 lịch hẹn → `/doctor/appointments/:id` → `DoctorAppointmentDetailPage.jsx`
+2. API: `GET /api/dat-lich/:id` (JWT)
+3. Backend trả chi tiết đầy đủ: bác sĩ, bệnh nhân, hình thức thanh toán, đơn thuốc + chi tiết thuốc
+
+### 11.3 Cập nhật trạng thái lịch hẹn
+
+1. Bác sĩ bấm **Xác nhận** / **Hoàn tất** / **Hủy** trên chi tiết lịch
+2. API: `PUT /api/dat-lich/:id/trang-thai` (authorize: admin hoặc bac_si)
+3. Body: `{ "trangThai": 1 }` (xác nhận) / `{ "trangThai": 2 }` (đã khám) / `{ "trangThai": 3 }` (hủy)
+4. Backend kiểm tra lịch hẹn tồn tại → update trạng thái → trả lịch hẹn đã cập nhật
+
+### 11.4 Quản lý lịch làm việc
+
+1. Bác sĩ vào `/doctor/schedule` → `DoctorSchedulePage.jsx`
+2. Xem lịch: `GET /api/lich-lam-viec?bacSiId=X&ngayLamViec=YYYY-MM-DD`
+3. Thêm ca: `/doctor/schedule/add` → `DoctorAddShiftPage.jsx`
+   - API: `POST /api/lich-lam-viec` (authorize: admin hoặc bac_si)
+   - Body: `{ ngayLamViec, bacSiId, khungGioId, soBenhNhanToiDa }`
+   - Backend kiểm tra bác sĩ + khung giờ tồn tại, kiểm tra trùng lịch
+4. Cập nhật sẵn sàng: `PUT /api/lich-lam-viec/:id` → `{ sanSang: 0 }` hoặc `{ sanSang: 1 }`
+5. Xóa lịch: `DELETE /api/lich-lam-viec/:id`
+
+### 11.5 Kê đơn thuốc
+
+1. Từ chi tiết lịch hẹn **đã khám xong** (trangThai = 2)
+2. Bác sĩ bấm **"Kê đơn thuốc"**
+3. API: `POST /api/don-thuoc` (authorize: bac_si)
+4. Body:
+   ```json
+   {
+     "datLichId": 1,
+     "chanDoan": "Viêm họng cấp",
+     "ghiChu": "Uống nhiều nước, nghỉ ngơi",
+     "chiTietDonThuoc": [
+       { "tenThuoc": "Amoxicillin 500mg", "soLuong": 21, "lieuDung": "1 viên x 3 lần/ngày", "ghiChu": "Uống sau ăn" },
+       { "tenThuoc": "Paracetamol 500mg", "soLuong": 10, "lieuDung": "1 viên khi sốt > 38.5°C" }
+     ]
+   }
+   ```
+5. Backend flow:
+   - Kiểm tra lịch hẹn tồn tại + trangThai phải = 2 → nếu không throw `400`
+   - Kiểm tra chưa có đơn thuốc cho lịch này → nếu đã có throw `409`
+   - Dùng Prisma nested create: tạo DonThuoc + ChiTietDonThuoc cùng lúc
+6. Trả đơn thuốc vừa tạo (include chi tiết bác sĩ, bệnh nhân, chi tiết thuốc)
+
+---
+
+## 12. Luồng Admin (Portal `/admin`)
+
+### 12.1 Dashboard tổng quan
+
+1. Admin vào `/admin` → `AdminDashboardPage.jsx`
+2. API: `GET /api/thong-ke/tong-quan` (authorize: admin)
+3. Backend trả:
+   - Tổng bệnh nhân, bác sĩ, lịch hẹn, chuyên khoa
+   - Tổng doanh thu (tổng giaKham của lịch hẹn trangThai = 2)
+   - Phân bố lịch hẹn theo trạng thái (bao nhiêu chờ, bao nhiêu xác nhận, ...)
+
+### 12.2 Thống kê lịch hẹn
+
+1. Admin vào `/admin/stats` → `AdminStatsPage.jsx`
+2. API: `GET /api/thong-ke/lich-hen?tuNgay=2026-01-01&denNgay=2026-03-20`
+3. Backend trả:
+   - Lịch hẹn theo ngày (group by ngayDat)
+   - Top 10 bác sĩ có nhiều lịch hẹn nhất (kèm tên bác sĩ)
+
+### 12.3 Quản lý chuyên khoa
+
+1. Xem: `/admin/specialties` → `AdminSpecialtiesPage.jsx`
+   - `GET /api/chuyen-khoa` (public) — trả danh sách kèm `_count.bacSis`
+2. Thêm: `/admin/specialties/add` → `AdminAddSpecialtyPage.jsx`
+   - `POST /api/chuyen-khoa` (admin) — body: `{ tenChuyenKhoa, anhChuyenKhoa, moTaChuyenKhoa }`
+3. Sửa: `PUT /api/chuyen-khoa/:id` (admin)
+4. Xóa: `DELETE /api/chuyen-khoa/:id` (admin) — **không xóa được** nếu có bác sĩ thuộc chuyên khoa
+
+### 12.4 Quản lý bác sĩ
+
+1. Xem danh sách: `/admin/doctors` → `AdminDoctorsPage.jsx`
+   - `GET /api/bac-si?page=1&limit=10` — kèm filter chuyenKhoaId, search
+2. Thêm bác sĩ: `/admin/doctors/add` → `AdminAddDoctorPage.jsx`
+   - `POST /api/bac-si` (admin)
+   - Backend tự tạo `TaiKhoan` (vaiTro = bac_si) + `BacSi` trong transaction
+   - Body: `{ tenBacSi, hocViChucDanh, email, matKhau, chuyenKhoaId, giaKham, ... }`
+3. Sửa: `PUT /api/bac-si/:id` (admin)
+4. Xóa: `DELETE /api/bac-si/:id` (admin) — **không xóa được** nếu có lịch hẹn
+   - Backend xóa trong transaction: BacSi → TaiKhoan
+
+### 12.5 Quản lý bệnh nhân
+
+1. Xem danh sách: `/admin/patients` → `AdminPatientsPage.jsx`
+   - `GET /api/benh-nhan?search=&page=1&limit=10` (admin)
+2. Xem chi tiết: `GET /api/benh-nhan/:id` (JWT)
+3. Sửa: `PUT /api/benh-nhan/:id` (JWT) — cập nhật hoTen, soDienThoai, emailLienHe + taiKhoan liên quan
+4. Xóa: `DELETE /api/benh-nhan/:id` (admin) — **không xóa được** nếu có lịch hẹn
+
+### 12.6 Quản lý lịch hẹn
+
+1. Xem tất cả: `/admin/appointments` → `AdminAppointmentsPage.jsx`
+   - `GET /api/dat-lich?trangThai=&ngayDat=&page=1&limit=10` (admin)
+2. Cập nhật trạng thái: `PUT /api/dat-lich/:id/trang-thai` (admin)
+
+### 12.7 Quản lý FAQ
+
+1. Xem tất cả: `/admin/faqs` → `AdminFAQsPage.jsx`
+   - `GET /api/cau-hoi-thuong-gap/all?page=1&limit=20` (admin) — kể cả FAQ đã ẩn
+2. Thêm: `/admin/faqs/add` → `AdminAddFAQPage.jsx`
+   - `POST /api/cau-hoi-thuong-gap` (admin) — body: `{ cauHoi, traLoi, dangHoatDong }`
+3. Sửa: `PUT /api/cau-hoi-thuong-gap/:id` (admin) — cho phép ẩn/hiện bằng dangHoatDong (0 hoặc 1)
+4. Xóa: `DELETE /api/cau-hoi-thuong-gap/:id` (admin)
+
+Public FAQ: `GET /api/cau-hoi-thuong-gap` — chỉ trả FAQ có dangHoatDong = 1
+
+### 12.8 Quản lý hình thức thanh toán
+
+- Xem: `GET /api/hinh-thuc-thanh-toan` (public)
+- Thêm: `POST /api/hinh-thuc-thanh-toan` (admin) — body: `{ tenHinhThuc }`
+- Xóa: `DELETE /api/hinh-thuc-thanh-toan/:id` (admin) — **không xóa được** nếu có lịch hẹn sử dụng
+
+---
+
+## 13. Xem chuyên khoa + FAQ (Public)
+
+### 13.1 Danh sách chuyên khoa
+
+1. `/specialties` → `SpecialtyListPage.jsx`
+2. `GET /api/chuyen-khoa` (public)
+3. Trả danh sách chuyên khoa kèm `_count.bacSis` (số bác sĩ mỗi chuyên khoa)
+
+### 13.2 Chi tiết chuyên khoa
+
+1. `/specialties/:id` → `SpecialtyDetailPage.jsx`
+2. `GET /api/chuyen-khoa/:id` (public)
+3. Trả chi tiết + danh sách bác sĩ thuộc chuyên khoa (id, tên, học vị, mô tả ngắn, giá khám)
+
+### 13.3 FAQ
+
+1. `/faq` → `FAQPage.jsx`
+2. `GET /api/cau-hoi-thuong-gap` (public)
+3. Chỉ trả FAQ có dangHoatDong = 1, sắp xếp theo id tăng dần
+
+---
+
+## 14. Xem kết quả khám / Đơn thuốc (Bệnh nhân)
+
+1. Bệnh nhân vào `/medical-result` → `MedicalResultPage.jsx`
+2. Từ lịch hẹn đã khám (trangThai = 2), xem đơn thuốc:
+   - Đơn thuốc đã nằm trong include khi lấy danh sách lịch hẹn
+   - Hoặc gọi riêng: `GET /api/don-thuoc/:id` (JWT)
+3. Hiển thị: chẩn đoán, ghi chú, danh sách thuốc (tên, số lượng, liều dùng, ghi chú)
+
+---
+
+## 15. Health check và Debug
+
+### Health check
+
+```
+GET /api/health → { success: true, message: "Server đang hoạt động!", timestamp }
+```
+
+### Checklist debug khi một chức năng không hoạt động
+
+1. **Route đã khai báo?** → Kiểm tra `server/src/routes/*.routes.js` và `routes/index.js`
+2. **Validation đúng field?** → Kiểm tra `server/src/validations/*.validation.js`
+3. **Frontend gọi đúng endpoint?** → Kiểm tra `client/src/services/*.js`
+4. **Access Token có hết hạn?** → Gọi `/api/auth/refresh` để lấy token mới
+5. **Role đúng với authorize?** → Kiểm tra `authorize("admin", "bac_si")` trong route
+6. **Ownership check?** → Bệnh nhân chỉ xem/sửa/xóa dữ liệu của chính mình
+7. **Prisma schema khớp?** → Kiểm tra `schema.prisma` và chạy `npx prisma generate`
+8. **Database kết nối?** → Kiểm tra `.env` (DATABASE_URL, DIRECT_URL)
+
+### Kiểm tra nhanh bằng Prisma Studio
+
+```bash
+npx prisma studio
+```
+
+Mở `http://localhost:5555` → duyệt/sửa dữ liệu trực tiếp trên các bảng.

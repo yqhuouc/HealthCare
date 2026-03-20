@@ -1,7 +1,8 @@
 # Hướng dẫn kiểm thử API bằng Postman
 
-> Tài liệu hướng dẫn chi tiết cách sử dụng Postman để kiểm thử tất cả API  
+> Tài liệu hướng dẫn chi tiết cách sử dụng Postman để kiểm thử tất cả API
 > của hệ thống Đặt lịch Khám bệnh Trực tuyến.
+> Hệ thống sử dụng **Dual JWT** (Access Token + Refresh Token HttpOnly Cookie).
 
 ---
 
@@ -19,8 +20,9 @@
 10. [Test Đơn thuốc](#10-test-đơn-thuốc)
 11. [Test FAQ](#11-test-faq)
 12. [Test Hình thức thanh toán](#12-test-hình-thức-thanh-toán)
-13. [Kiểm thử lỗi & Edge cases](#13-kiểm-thử-lỗi--edge-cases)
-14. [Checklist kiểm thử](#14-checklist-kiểm-thử)
+13. [Test Thống kê](#13-test-thống-kê)
+14. [Kiểm thử lỗi & Edge cases](#14-kiểm-thử-lỗi--edge-cases)
+15. [Checklist kiểm thử](#15-checklist-kiểm-thử)
 
 ---
 
@@ -32,7 +34,7 @@ Tải và cài đặt từ: https://www.postman.com/downloads/
 
 ### 1.2 Hoàn tất kết nối Supabase
 
-Trước khi test, bạn cần hoàn tất việc kết nối database Supabase.  
+Trước khi test, bạn cần hoàn tất việc kết nối database Supabase.
 Xem chi tiết tại **[Mục 2. Kết nối Supabase](#2-kết-nối-supabase)**.
 
 Sau khi hoàn tất mục 2, hệ thống sẽ có sẵn:
@@ -40,7 +42,7 @@ Sau khi hoàn tất mục 2, hệ thống sẽ có sẵn:
 - 8 bác sĩ (kèm tài khoản)
 - 1 bệnh nhân mẫu
 - 8 chuyên khoa
-- 8 khung giờ
+- 8 khung giờ (07:00 → 17:00)
 - 3 hình thức thanh toán
 - 5 câu hỏi thường gặp
 
@@ -48,7 +50,7 @@ Sau khi hoàn tất mục 2, hệ thống sẽ có sẵn:
 
 ## 2. Kết nối Supabase
 
-> Supabase là nền tảng cung cấp PostgreSQL database miễn phí trên cloud.  
+> Supabase là nền tảng cung cấp PostgreSQL database miễn phí trên cloud.
 > Phần này hướng dẫn chi tiết từ tạo project đến kết nối thành công.
 
 ### 2.1 Tạo tài khoản Supabase
@@ -94,7 +96,7 @@ Sau khi project được tạo xong:
   ```
 - Đây là `DIRECT_URL` trong file `.env`
 
-> **Lưu ý**: Thay `[YOUR-PASSWORD]` bằng mật khẩu bạn đặt ở bước 2.2.  
+> **Lưu ý**: Thay `[YOUR-PASSWORD]` bằng mật khẩu bạn đặt ở bước 2.2.
 > Nếu mật khẩu có ký tự đặc biệt (như `@`, `#`, `!`), cần URL-encode chúng.
 
 ### 2.4 Cấu hình file .env
@@ -116,18 +118,25 @@ PORT=5000
 NODE_ENV=development
 
 # ===== Database (Supabase PostgreSQL) =====
-# Connection Pooling (Transaction mode) - dùng cho ứng dụng chạy
+# Connection Pooling (Transaction mode) - thêm ?pgbouncer=true
 DATABASE_URL="postgresql://postgres.abcdefghijk:MyStr0ng!Pass2026@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
 
 # Direct Connection - dùng cho Prisma Migrate/Push
 DIRECT_URL="postgresql://postgres.abcdefghijk:MyStr0ng!Pass2026@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
 
-# ===== JWT =====
-JWT_SECRET="mot_chuoi_bi_mat_bat_ky_dai_hon_32_ky_tu"
-JWT_EXPIRES_IN="7d"
+# ===== JWT (Dual Token) =====
+# Tạo chuỗi ngẫu nhiên >= 32 ký tự cho mỗi secret
+JWT_ACCESS_SECRET=your_access_secret_key_here_min_32_chars
+JWT_REFRESH_SECRET=your_refresh_secret_key_here_min_32_chars
+JWT_ACCESS_EXPIRES=15m
+JWT_REFRESH_EXPIRES=7d
+
+# ===== CORS =====
+CLIENT_URL=http://localhost:5173
 ```
 
 > Thay `postgres.abcdefghijk` và `MyStr0ng!Pass2026` bằng thông tin thực từ Supabase.
+> `JWT_ACCESS_SECRET` và `JWT_REFRESH_SECRET` phải là 2 chuỗi **khác nhau**.
 
 ### 2.5 Đẩy schema lên Supabase
 
@@ -159,14 +168,14 @@ Nếu thành công sẽ hiện:
 
 1. Quay lại Supabase Dashboard
 2. Click **"Table Editor"** ở sidebar trái
-3. Bạn sẽ thấy **10 bảng** đã được tạo:
+3. Bạn sẽ thấy **11 bảng** đã được tạo:
 
 ```
 TaiKhoan, ChuyenKhoa, BacSi, BenhNhan, KhungGio,
-LichLamViecBacSi, HinhThucThanhToan, DatLich, DonThuoc, CauHoiThuongGap
+LichLamViecBacSi, HinhThucThanhToan, DatLich, DonThuoc, ChiTietDonThuoc, CauHoiThuongGap
 ```
 
-Nếu thấy đủ 10 bảng → kết nối thành công!
+Nếu thấy đủ 11 bảng → kết nối thành công!
 
 ### 2.7 Seed dữ liệu mẫu
 
@@ -205,7 +214,7 @@ npm run dev
 Kết quả:
 ```
 🚀 Server đang chạy tại http://localhost:5000
-📋 API docs: http://localhost:5000/api/health
+📋 API health: http://localhost:5000/api/health
 ```
 
 Mở trình duyệt, truy cập `http://localhost:5000/api/health`:
@@ -213,13 +222,11 @@ Mở trình duyệt, truy cập `http://localhost:5000/api/health`:
 {
   "success": true,
   "message": "Server đang hoạt động!",
-  "timestamp": "2026-03-10T..."
+  "timestamp": "2026-03-20T..."
 }
 ```
 
 ### 2.9 Xem dữ liệu trực quan với Prisma Studio
-
-Prisma Studio là giao diện web để xem/sửa dữ liệu trực tiếp:
 
 ```bash
 npx prisma studio
@@ -239,7 +246,7 @@ Mở `http://localhost:5555` → Bạn có thể duyệt tất cả bảng, xem 
 | `prisma generate` lỗi | Chưa cài prisma | Chạy `npm install` trong thư mục server |
 | `DIRECT_URL is not defined` | Thiếu biến DIRECT_URL trong .env | Thêm DIRECT_URL vào file .env (xem bước 2.4) |
 
-> **Mẹo**: Nếu project Supabase bị **pause** (do không hoạt động quá 7 ngày trên free plan),  
+> **Mẹo**: Nếu project Supabase bị **pause** (do không hoạt động quá 7 ngày trên free plan),
 > vào Dashboard → click **"Restore project"** để kích hoạt lại.
 
 ---
@@ -260,6 +267,7 @@ Mở `http://localhost:5555` → Bạn có thể duyệt tất cả bảng, xem 
    - `Don Thuoc`
    - `FAQ`
    - `Hinh Thuc Thanh Toan`
+   - `Thong Ke`
 
 ### 3.2 Tạo Environment
 
@@ -270,9 +278,9 @@ Mở `http://localhost:5555` → Bạn có thể duyệt tất cả bảng, xem 
 | Variable | Initial Value | Description |
 |----------|---------------|-------------|
 | `base_url` | `http://localhost:5000/api` | URL gốc của API |
-| `admin_token` | _(để trống, sẽ lấy sau)_ | JWT token của admin |
-| `doctor_token` | _(để trống)_ | JWT token của bác sĩ |
-| `patient_token` | _(để trống)_ | JWT token của bệnh nhân |
+| `admin_token` | _(để trống, sẽ lấy sau)_ | Access Token của admin |
+| `doctor_token` | _(để trống)_ | Access Token của bác sĩ |
+| `patient_token` | _(để trống)_ | Access Token của bệnh nhân |
 
 4. Click **"Save"** → Chọn environment `Local` ở dropdown góc trên phải
 
@@ -281,6 +289,19 @@ Mở `http://localhost:5555` → Bạn có thể duyệt tất cả bảng, xem 
 Trong Postman, dùng `{{ten_bien}}` để reference biến. Ví dụ:
 - URL: `{{base_url}}/auth/login`
 - Header: `Bearer {{admin_token}}`
+
+### 3.4 Lưu ý về Dual JWT
+
+Hệ thống sử dụng **Dual JWT**:
+- **Access Token**: trả trong JSON body → bạn lưu vào biến environment `*_token`
+- **Refresh Token**: set vào **HttpOnly Cookie** → Postman tự quản lý cookie
+
+Khi gọi API cần xác thực, thêm header:
+```
+Authorization: Bearer {{admin_token}}
+```
+
+Khi gọi refresh, Postman sẽ **tự gửi cookie** nếu cookie được lưu cho domain `localhost`.
 
 ---
 
@@ -299,7 +320,7 @@ GET {{base_url}}/health
 {
   "success": true,
   "message": "Server đang hoạt động!",
-  "timestamp": "2026-03-10T..."
+  "timestamp": "2026-03-20T..."
 }
 ```
 
@@ -335,21 +356,21 @@ POST {{base_url}}/auth/register
   "success": true,
   "message": "Đăng ký thành công",
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiIs...",
-    "user": {
-      "id": 11,
-      "email": "nguyenvana@gmail.com",
-      "vaiTro": "benh_nhan",
-      "hoTen": "Nguyễn Văn A"
-    }
+    "id": 11,
+    "email": "nguyenvana@gmail.com",
+    "vaiTro": "benh_nhan",
+    "hoTen": "Nguyễn Văn A"
   }
 }
 ```
 
+> **Lưu ý**: Đăng ký chỉ trả thông tin user, **không trả token**. Người dùng cần đăng nhập sau khi đăng ký.
+
 **Kiểm thử lỗi**:
 - Gửi lại cùng email → `409` "Email đã được sử dụng"
-- Bỏ trống email → `400` "Email không được để trống"
+- Bỏ trống email → `400` "Email không hợp lệ"
 - Mật khẩu < 6 ký tự → `400` "Mật khẩu phải có ít nhất 6 ký tự"
+- Bỏ trống họ tên → `400` "Họ tên không được để trống"
 
 ---
 
@@ -373,22 +394,25 @@ POST {{base_url}}/auth/login
   "success": true,
   "message": "Đăng nhập thành công",
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiIs...",
     "user": {
       "id": 1,
       "email": "admin@clinic.vn",
       "vaiTro": "admin",
       "hoTen": "Admin"
-    }
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIs..."
   }
 }
 ```
 
-> **Quan trọng**: Copy giá trị `token` từ response → Paste vào biến `admin_token` trong Environment.
+> **Quan trọng**:
+> 1. Copy giá trị `accessToken` từ response → Paste vào biến `admin_token` trong Environment
+> 2. Kiểm tra tab **"Cookies"** trong Postman → sẽ thấy `refreshToken` cookie cho `localhost`
 
 **Kiểm thử lỗi**:
 - Sai mật khẩu → `401` "Email hoặc mật khẩu không đúng"
 - Email không tồn tại → `401` "Email hoặc mật khẩu không đúng"
+- Tài khoản bị khóa → `403` "Tài khoản đã bị khóa. Vui lòng liên hệ admin."
 
 ---
 
@@ -406,7 +430,7 @@ POST {{base_url}}/auth/login
 }
 ```
 
-> Copy `token` → Paste vào biến `doctor_token`.
+> Copy `accessToken` → Paste vào biến `doctor_token`.
 
 ---
 
@@ -424,11 +448,41 @@ POST {{base_url}}/auth/login
 }
 ```
 
-> Copy `token` → Paste vào biến `patient_token`.
+> Copy `accessToken` → Paste vào biến `patient_token`.
 
 ---
 
-### 4.6 Lấy thông tin user hiện tại
+### 4.6 Làm mới Access Token (Refresh)
+
+> Khi Access Token hết hạn (sau 15 phút), dùng endpoint này để lấy token mới.
+> Refresh Token được gửi tự động qua cookie.
+
+```
+POST {{base_url}}/auth/refresh
+```
+
+Không cần header Authorization, không cần body.
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIs... (token mới)"
+  }
+}
+```
+
+> Cookie `refreshToken` cũng được cập nhật (Token Rotation).
+> Cập nhật lại biến `*_token` trong Environment với accessToken mới.
+
+**Kiểm thử lỗi**:
+- Không có cookie refreshToken → `401` "Refresh token không hợp lệ"
+- Cookie refreshToken đã bị xóa / sai → `401` "Refresh token không hợp lệ hoặc đã hết hạn"
+
+---
+
+### 4.7 Lấy thông tin user hiện tại
 
 ```
 GET {{base_url}}/auth/me
@@ -443,19 +497,131 @@ GET {{base_url}}/auth/me
 ```json
 {
   "success": true,
-  "message": "Lấy thông tin thành công",
   "data": {
     "id": 1,
     "email": "admin@clinic.vn",
     "vaiTro": "admin",
-    ...
+    "gioiTinh": 1,
+    "ngaySinh": null,
+    "diaChi": null,
+    "anhDaiDien": null,
+    "ngayTao": "2026-03-20T...",
+    "trangThaiTaiKhoan": 1,
+    "bacSi": null,
+    "benhNhan": null
   }
 }
 ```
 
+> Thử đổi token sang `patient_token` hoặc `doctor_token` để xem thông tin khác nhau.
+> Bệnh nhân sẽ có trường `benhNhan: { id, hoTen, ... }`, bác sĩ sẽ có trường `bacSi: { id, ... }`.
+
 **Kiểm thử lỗi**:
-- Không gửi token → `401` "Không có token xác thực"
-- Token sai/hết hạn → `401` "Token không hợp lệ hoặc đã hết hạn"
+- Không gửi token → `401` "Vui lòng đăng nhập để tiếp tục"
+- Token sai/hết hạn → `401` "Token không hợp lệ" hoặc "Token đã hết hạn"
+- Token của tài khoản bị khóa → `403` "Tài khoản đã bị khóa"
+
+---
+
+### 4.8 Đổi mật khẩu
+
+```
+PUT {{base_url}}/auth/doi-mat-khau
+```
+
+**Headers**:
+| Key | Value |
+|-----|-------|
+| Content-Type | application/json |
+| Authorization | Bearer {{patient_token}} |
+
+**Body**:
+```json
+{
+  "matKhauCu": "patient123",
+  "matKhauMoi": "newpassword123"
+}
+```
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "message": "Đổi mật khẩu thành công"
+}
+```
+
+**Kiểm thử lỗi**:
+- Mật khẩu cũ sai → `400` "Mật khẩu cũ không đúng"
+- Mật khẩu mới < 6 ký tự → `400` "Mật khẩu mới phải có ít nhất 6 ký tự"
+
+> Sau khi test, đổi lại mật khẩu cũ để tiện test tiếp.
+
+---
+
+### 4.9 Cập nhật hồ sơ cá nhân
+
+```
+PUT {{base_url}}/auth/cap-nhat-ho-so
+```
+
+**Headers**:
+| Key | Value |
+|-----|-------|
+| Content-Type | application/json |
+| Authorization | Bearer {{patient_token}} |
+
+**Body**:
+```json
+{
+  "gioiTinh": 1,
+  "ngaySinh": "1995-05-15",
+  "diaChi": "123 Phố Huế, Hà Nội",
+  "anhDaiDien": "https://example.com/avatar.jpg"
+}
+```
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "message": "Cập nhật hồ sơ thành công",
+  "data": {
+    "id": 10,
+    "email": "benhnhan@gmail.com",
+    "vaiTro": "benh_nhan",
+    "gioiTinh": 1,
+    "ngaySinh": "1995-05-15T00:00:00.000Z",
+    "diaChi": "123 Phố Huế, Hà Nội",
+    "anhDaiDien": "https://example.com/avatar.jpg"
+  }
+}
+```
+
+---
+
+### 4.10 Đăng xuất
+
+```
+POST {{base_url}}/auth/logout
+```
+
+**Headers**:
+| Key | Value |
+|-----|-------|
+| Authorization | Bearer {{patient_token}} |
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "message": "Đăng xuất thành công"
+}
+```
+
+> Sau khi logout, Refresh Token trong DB bị xóa, cookie bị clear.
+> Dùng Access Token cũ vẫn hoạt động cho đến khi hết hạn (15 phút).
+> Nhưng không thể refresh token mới nữa.
 
 ---
 
@@ -473,7 +639,6 @@ Không cần token. Kết quả trả về mảng chuyên khoa kèm số lượn
 ```json
 {
   "success": true,
-  "message": "Lấy danh sách chuyên khoa thành công",
   "data": [
     {
       "id": 1,
@@ -481,8 +646,7 @@ Không cần token. Kết quả trả về mảng chuyên khoa kèm số lượn
       "anhChuyenKhoa": null,
       "moTaChuyenKhoa": "Khám và điều trị các bệnh về tim, mạch máu",
       "_count": { "bacSis": 2 }
-    },
-    ...
+    }
   ]
 }
 ```
@@ -495,7 +659,7 @@ Không cần token. Kết quả trả về mảng chuyên khoa kèm số lượn
 GET {{base_url}}/chuyen-khoa/1
 ```
 
-Kết quả kèm danh sách bác sĩ thuộc chuyên khoa.
+Kết quả kèm danh sách bác sĩ thuộc chuyên khoa (id, tenBacSi, hocViChucDanh, moTaNgan, giaKham).
 
 ---
 
@@ -527,13 +691,14 @@ POST {{base_url}}/chuyen-khoa
   "data": {
     "id": 9,
     "tenChuyenKhoa": "Chấn thương chỉnh hình",
-    ...
+    "anhChuyenKhoa": null,
+    "moTaChuyenKhoa": "Khám và điều trị các bệnh về xương khớp, cơ bắp"
   }
 }
 ```
 
 **Kiểm thử phân quyền**:
-- Dùng `doctor_token` → `403` "Bạn không có quyền truy cập"
+- Dùng `doctor_token` → `403` "Bạn không có quyền thực hiện hành động này"
 - Không gửi token → `401`
 
 ---
@@ -566,7 +731,7 @@ DELETE {{base_url}}/chuyen-khoa/9
 
 **Kiểm thử lỗi**:
 - Xóa chuyên khoa có bác sĩ → `400` "Không thể xóa vì có X bác sĩ thuộc chuyên khoa này"
-- ID không tồn tại → `404`
+- ID không tồn tại → `404` "Không tìm thấy chuyên khoa"
 
 ---
 
@@ -591,15 +756,21 @@ GET {{base_url}}/bac-si?chuyenKhoaId=1&search=An&page=1&limit=10
 ```json
 {
   "success": true,
-  "message": "Lấy danh sách bác sĩ thành công",
-  "data": {
-    "bacSis": [ ... ],
-    "pagination": {
-      "total": 8,
-      "page": 1,
-      "limit": 10,
-      "totalPages": 1
+  "data": [
+    {
+      "id": 1,
+      "tenBacSi": "Nguyễn Văn An",
+      "hocViChucDanh": "PGS.TS",
+      "giaKham": "500000",
+      "chuyenKhoa": { "id": 1, "tenChuyenKhoa": "Tim mạch" },
+      "taiKhoan": { "id": 2, "email": "bacsi1@clinic.vn", "anhDaiDien": null, "trangThaiTaiKhoan": 1 }
     }
+  ],
+  "pagination": {
+    "total": 8,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 1
   }
 }
 ```
@@ -611,6 +782,8 @@ GET {{base_url}}/bac-si?chuyenKhoaId=1&search=An&page=1&limit=10
 ```
 GET {{base_url}}/bac-si/1
 ```
+
+Trả chi tiết bác sĩ kèm chuyên khoa đầy đủ + thông tin tài khoản (email, ảnh, giới tính, ngày sinh, địa chỉ).
 
 ---
 
@@ -638,7 +811,8 @@ POST {{base_url}}/bac-si
 }
 ```
 
-**Kết quả mong đợi** (Status: `201 Created`)
+> Backend sẽ tự tạo TaiKhoan (vaiTro = bac_si) + BacSi trong transaction.
+> Nếu không truyền email/matKhau, hệ thống tự generate email dạng `doctor_<timestamp>@clinic.local` và mật khẩu mặc định `doctor123`.
 
 **Kiểm thử lỗi**:
 - Email trùng → `409` "Email đã được sử dụng"
@@ -672,6 +846,7 @@ DELETE {{base_url}}/bac-si/9
 
 **Kiểm thử lỗi**:
 - Bác sĩ có lịch hẹn → `400` "Không thể xóa vì bác sĩ có X lịch hẹn"
+- ID không tồn tại → `404` "Không tìm thấy bác sĩ"
 
 ---
 
@@ -720,13 +895,29 @@ PUT {{base_url}}/benh-nhan/1
 }
 ```
 
+> **Ownership check**: Bệnh nhân chỉ sửa được hồ sơ của chính mình. Nếu bệnh nhân A sửa hồ sơ bệnh nhân B → `403`.
+
+---
+
+### 7.4 Xóa bệnh nhân (Admin)
+
+```
+DELETE {{base_url}}/benh-nhan/1
+```
+
+**Headers**: Authorization: Bearer {{admin_token}}
+
+**Kiểm thử lỗi**:
+- Bệnh nhân có lịch hẹn → `400` "Không thể xóa vì bệnh nhân có X lịch hẹn"
+
 ---
 
 ## 8. Test Đặt lịch
 
 > Đây là phần quan trọng nhất. Test theo đúng thứ tự để đảm bảo dữ liệu nhất quán.
+> **Yêu cầu**: Phải tạo lịch làm việc cho bác sĩ trước khi đặt lịch (xem mục 9).
 
-### 8.1 Tạo lịch hẹn mới (Bệnh nhân)
+### 8.1 Tạo lịch hẹn mới
 
 ```
 POST {{base_url}}/dat-lich
@@ -737,7 +928,7 @@ POST {{base_url}}/dat-lich
 **Body**:
 ```json
 {
-  "ngayDat": "2026-03-20",
+  "ngayDat": "2026-03-25",
   "gioBatDau": "08:00",
   "gioKetThuc": "09:00",
   "lyDoKham": "Đau đầu kéo dài, chóng mặt",
@@ -754,26 +945,37 @@ POST {{base_url}}/dat-lich
   "message": "Đặt lịch thành công",
   "data": {
     "id": 1,
-    "ngayDat": "2026-03-20T00:00:00.000Z",
+    "ngayDat": "2026-03-25T00:00:00.000Z",
     "gioBatDau": "1970-01-01T08:00:00.000Z",
     "gioKetThuc": "1970-01-01T09:00:00.000Z",
     "lyDoKham": "Đau đầu kéo dài, chóng mặt",
     "giaKham": "500000",
     "trangThai": 0,
-    "bacSi": { "id": 1, "tenBacSi": "Nguyễn Văn An", ... },
-    "benhNhan": { "id": 1, "hoTen": "Nguyễn Bệnh Nhân", ... },
-    ...
+    "bacSi": {
+      "id": 1,
+      "tenBacSi": "Nguyễn Văn An",
+      "hocViChucDanh": "PGS.TS",
+      "chuyenKhoa": { "tenChuyenKhoa": "Tim mạch" }
+    },
+    "benhNhan": { "id": 1, "hoTen": "Nguyễn Bệnh Nhân", "soDienThoai": "0912345678" },
+    "hinhThucThanhToan": { "id": 1, "tenHinhThuc": "Tiền mặt" },
+    "donThuoc": null
   }
 }
 ```
 
 > Ghi lại `id` của lịch hẹn vừa tạo (ví dụ: `1`) để dùng cho các test tiếp theo.
 
+**Kiểm thử lỗi**:
+- Bác sĩ không có lịch làm việc ngày đó → `400` "Bác sĩ không có lịch làm việc vào ngày này"
+- bacSiId không tồn tại → `404` "Không tìm thấy bác sĩ"
+- benhNhanId không tồn tại → `404` "Không tìm thấy bệnh nhân"
+
 ---
 
 ### 8.2 Test trùng lịch
 
-Gửi lại **cùng request** ở 8.1 (cùng bác sĩ + cùng ngày + cùng giờ):
+Gửi lại **cùng request** ở 8.1 (cùng bác sĩ + cùng ngày + cùng giờ bắt đầu):
 
 **Kết quả mong đợi** (Status: `409`):
 ```json
@@ -789,7 +991,7 @@ Gửi lại **cùng request** ở 8.1 (cùng bác sĩ + cùng ngày + cùng gi�
 
 ```json
 {
-  "ngayDat": "2026-03-20",
+  "ngayDat": "2026-03-25",
   "gioBatDau": "09:00",
   "gioKetThuc": "10:00",
   "lyDoKham": "Khám định kỳ",
@@ -812,7 +1014,7 @@ GET {{base_url}}/dat-lich
 Hỗ trợ filter:
 ```
 GET {{base_url}}/dat-lich?trangThai=0
-GET {{base_url}}/dat-lich?ngayDat=2026-03-20
+GET {{base_url}}/dat-lich?ngayDat=2026-03-25
 GET {{base_url}}/dat-lich?trangThai=0&page=1&limit=5
 ```
 
@@ -836,6 +1038,8 @@ GET {{base_url}}/dat-lich/benh-nhan/1
 
 **Headers**: Authorization: Bearer {{patient_token}}
 
+> **Ownership check**: Bệnh nhân chỉ xem được lịch của chính mình.
+
 ---
 
 ### 8.7 Lấy lịch hẹn theo bác sĩ
@@ -845,6 +1049,8 @@ GET {{base_url}}/dat-lich/bac-si/1
 ```
 
 **Headers**: Authorization: Bearer {{doctor_token}}
+
+> **Ownership check**: Bác sĩ chỉ xem được lịch của chính mình.
 
 ---
 
@@ -880,7 +1086,7 @@ PUT {{base_url}}/dat-lich/1/trang-thai
 }
 ```
 
-> Lưu ý: Sau bước này mới có thể tạo đơn thuốc cho lịch hẹn.
+> **Quan trọng**: Sau bước này mới có thể tạo đơn thuốc cho lịch hẹn.
 
 ---
 
@@ -909,6 +1115,8 @@ DELETE {{base_url}}/dat-lich/2
 
 **Kiểm thử lỗi**:
 - Xóa lịch đã xác nhận (trangThai=1) → `400` "Không thể xóa lịch hẹn đã xác nhận hoặc đã khám"
+- Xóa lịch đã khám (trangThai=2) → `400` "Không thể xóa lịch hẹn đã xác nhận hoặc đã khám"
+- Bệnh nhân A xóa lịch của bệnh nhân B → `403` "Bạn không có quyền xóa lịch hẹn này"
 
 ---
 
@@ -920,7 +1128,7 @@ DELETE {{base_url}}/dat-lich/2
 GET {{base_url}}/lich-lam-viec/khung-gio
 ```
 
-**Kết quả mong đợi**: Danh sách 8 khung giờ (07:00-08:00, 08:00-09:00, ...)
+**Kết quả mong đợi**: Danh sách 8 khung giờ (07:00-08:00, 08:00-09:00, ..., 16:00-17:00)
 
 ---
 
@@ -942,7 +1150,22 @@ POST {{base_url}}/lich-lam-viec/khung-gio
 
 ---
 
-### 9.3 Tạo lịch làm việc cho bác sĩ (Admin/BS)
+### 9.3 Xóa khung giờ (Admin)
+
+```
+DELETE {{base_url}}/lich-lam-viec/khung-gio/9
+```
+
+**Headers**: Authorization: Bearer {{admin_token}}
+
+**Kiểm thử lỗi**:
+- Khung giờ đang được sử dụng → `400` "Không thể xóa vì khung giờ đang được X lịch sử dụng"
+
+---
+
+### 9.4 Tạo lịch làm việc cho bác sĩ (Admin/BS)
+
+> **Quan trọng**: Phải tạo lịch làm việc TRƯỚC khi đặt lịch hẹn.
 
 ```
 POST {{base_url}}/lich-lam-viec
@@ -953,26 +1176,52 @@ POST {{base_url}}/lich-lam-viec
 **Body**:
 ```json
 {
-  "ngayLamViec": "2026-03-20",
+  "ngayLamViec": "2026-03-25",
   "bacSiId": 1,
-  "khungGioId": 1
+  "khungGioId": 2,
+  "soBenhNhanToiDa": 10
+}
+```
+
+> `khungGioId: 2` tương ứng khung 08:00-09:00 (theo seed data).
+
+**Kết quả mong đợi** (Status: `201 Created`):
+```json
+{
+  "success": true,
+  "message": "Tạo lịch làm việc thành công",
+  "data": {
+    "id": 1,
+    "ngayLamViec": "2026-03-25T00:00:00.000Z",
+    "soBenhNhanHienTai": 0,
+    "soBenhNhanToiDa": 10,
+    "sanSang": 1,
+    "bacSi": { "id": 1, "tenBacSi": "Nguyễn Văn An" },
+    "khungGio": {
+      "id": 2,
+      "gioBatDau": "1970-01-01T08:00:00.000Z",
+      "gioKetThuc": "1970-01-01T09:00:00.000Z"
+    }
+  }
 }
 ```
 
 **Kiểm thử lỗi**:
 - Gửi lại cùng dữ liệu → `409` "Bác sĩ đã có lịch làm việc vào khung giờ này"
+- bacSiId không tồn tại → `404` "Không tìm thấy bác sĩ"
+- khungGioId không tồn tại → `404` "Không tìm thấy khung giờ"
 
 ---
 
-### 9.4 Lấy lịch làm việc (Public)
+### 9.5 Lấy lịch làm việc (Public)
 
 ```
-GET {{base_url}}/lich-lam-viec?bacSiId=1&ngayLamViec=2026-03-20
+GET {{base_url}}/lich-lam-viec?bacSiId=1&ngayLamViec=2026-03-25
 ```
 
 ---
 
-### 9.5 Cập nhật trạng thái sẵn sàng
+### 9.6 Cập nhật trạng thái sẵn sàng
 
 ```
 PUT {{base_url}}/lich-lam-viec/1
@@ -987,9 +1236,11 @@ PUT {{base_url}}/lich-lam-viec/1
 }
 ```
 
+> Đặt `sanSang: 0` → bác sĩ không nhận bệnh nhân ở khung giờ này.
+
 ---
 
-### 9.6 Xóa lịch làm việc
+### 9.7 Xóa lịch làm việc
 
 ```
 DELETE {{base_url}}/lich-lam-viec/1
@@ -1001,7 +1252,7 @@ DELETE {{base_url}}/lich-lam-viec/1
 
 ## 10. Test Đơn thuốc
 
-> Yêu cầu: Phải có ít nhất 1 lịch hẹn ở trạng thái "đã khám" (trangThai=2).  
+> **Yêu cầu**: Phải có ít nhất 1 lịch hẹn ở trạng thái "đã khám" (trangThai=2).
 > Xem bước 8.9 để cập nhật trạng thái.
 
 ### 10.1 Tạo đơn thuốc (Bác sĩ)
@@ -1015,7 +1266,29 @@ POST {{base_url}}/don-thuoc
 **Body**:
 ```json
 {
-  "datLichId": 1
+  "datLichId": 1,
+  "chanDoan": "Viêm họng cấp, sốt nhẹ",
+  "ghiChu": "Uống nhiều nước ấm, nghỉ ngơi, tái khám sau 5 ngày nếu không giảm",
+  "chiTietDonThuoc": [
+    {
+      "tenThuoc": "Amoxicillin 500mg",
+      "soLuong": 21,
+      "lieuDung": "1 viên x 3 lần/ngày",
+      "ghiChu": "Uống sau ăn"
+    },
+    {
+      "tenThuoc": "Paracetamol 500mg",
+      "soLuong": 10,
+      "lieuDung": "1 viên khi sốt > 38.5°C",
+      "ghiChu": "Cách 4-6 tiếng mới uống tiếp"
+    },
+    {
+      "tenThuoc": "Vitamin C 1000mg",
+      "soLuong": 14,
+      "lieuDung": "1 viên/ngày",
+      "ghiChu": "Uống buổi sáng"
+    }
+  ]
 }
 ```
 
@@ -1027,23 +1300,45 @@ POST {{base_url}}/don-thuoc
   "data": {
     "id": 1,
     "datLichId": 1,
-    "ngayTao": "2026-03-10T...",
+    "chanDoan": "Viêm họng cấp, sốt nhẹ",
+    "ghiChu": "Uống nhiều nước ấm, nghỉ ngơi...",
+    "ngayTao": "2026-03-20T...",
     "datLich": {
-      "bacSi": { "tenBacSi": "Nguyễn Văn An" },
-      "benhNhan": { "hoTen": "Nguyễn Bệnh Nhân" }
-    }
+      "bacSi": { "id": 1, "tenBacSi": "Nguyễn Văn An", "hocViChucDanh": "PGS.TS" },
+      "benhNhan": { "id": 1, "hoTen": "Nguyễn Bệnh Nhân", "soDienThoai": "0912345678" }
+    },
+    "chiTietDonThuoc": [
+      { "id": 1, "tenThuoc": "Amoxicillin 500mg", "soLuong": 21, "lieuDung": "1 viên x 3 lần/ngày", "ghiChu": "Uống sau ăn" },
+      { "id": 2, "tenThuoc": "Paracetamol 500mg", "soLuong": 10, "lieuDung": "1 viên khi sốt > 38.5°C", "ghiChu": "Cách 4-6 tiếng" },
+      { "id": 3, "tenThuoc": "Vitamin C 1000mg", "soLuong": 14, "lieuDung": "1 viên/ngày", "ghiChu": "Uống buổi sáng" }
+    ]
   }
 }
 ```
 
 **Kiểm thử lỗi**:
-- Lịch hẹn chưa khám (trangThai != 2) → `400` "Chỉ tạo đơn thuốc cho lịch hẹn đã khám xong"
-- Đã có đơn thuốc → `409` "Lịch hẹn này đã có đơn thuốc"
-- Dùng patient_token → `403` "Bạn không có quyền"
+- Lịch hẹn chưa khám (trangThai != 2) → `400` "Chỉ tạo đơn thuốc cho lịch hẹn đã khám xong (trạng thái = 2)"
+- Đã có đơn thuốc cho lịch này → `409` "Lịch hẹn này đã có đơn thuốc"
+- Dùng `patient_token` → `403` "Bạn không có quyền thực hiện hành động này"
+- datLichId không tồn tại → `404` "Không tìm thấy lịch hẹn"
 
 ---
 
-### 10.2 Lấy danh sách đơn thuốc (Admin/BS)
+### 10.2 Tạo đơn thuốc đơn giản (không có chi tiết thuốc)
+
+```json
+{
+  "datLichId": 2,
+  "chanDoan": "Cảm cúm nhẹ",
+  "ghiChu": "Nghỉ ngơi, uống nước ấm"
+}
+```
+
+> Có thể tạo đơn thuốc chỉ với chẩn đoán + ghi chú, không bắt buộc có chi tiết thuốc.
+
+---
+
+### 10.3 Lấy danh sách đơn thuốc (Admin/BS)
 
 ```
 GET {{base_url}}/don-thuoc
@@ -1051,15 +1346,31 @@ GET {{base_url}}/don-thuoc
 
 **Headers**: Authorization: Bearer {{doctor_token}}
 
+Hỗ trợ phân trang: `?page=1&limit=10`
+
 ---
 
-### 10.3 Lấy chi tiết đơn thuốc
+### 10.4 Lấy chi tiết đơn thuốc
 
 ```
 GET {{base_url}}/don-thuoc/1
 ```
 
 **Headers**: Authorization: Bearer {{patient_token}}
+
+Trả chi tiết đầy đủ: chẩn đoán, ghi chú, bác sĩ kê đơn, bệnh nhân, danh sách thuốc.
+
+---
+
+### 10.5 Xóa đơn thuốc (Admin)
+
+```
+DELETE {{base_url}}/don-thuoc/1
+```
+
+**Headers**: Authorization: Bearer {{admin_token}}
+
+> ChiTietDonThuoc sẽ tự xóa nhờ `onDelete: Cascade` trong schema.
 
 ---
 
@@ -1082,6 +1393,8 @@ GET {{base_url}}/cau-hoi-thuong-gap/all
 ```
 
 **Headers**: Authorization: Bearer {{admin_token}}
+
+Hỗ trợ phân trang: `?page=1&limit=20`
 
 ---
 
@@ -1168,23 +1481,89 @@ POST {{base_url}}/hinh-thuc-thanh-toan
 DELETE {{base_url}}/hinh-thuc-thanh-toan/4
 ```
 
+**Kiểm thử lỗi**:
+- Hình thức thanh toán đang được lịch hẹn sử dụng → `400` "Không thể xóa vì có X lịch hẹn đang sử dụng"
+
 ---
 
-## 13. Kiểm thử lỗi & Edge cases
+## 13. Test Thống kê
 
-### 13.1 Validate dữ liệu đầu vào
+### 13.1 Dashboard tổng quan (Admin)
+
+```
+GET {{base_url}}/thong-ke/tong-quan
+```
+
+**Headers**: Authorization: Bearer {{admin_token}}
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "data": {
+    "tongBenhNhan": 2,
+    "tongBacSi": 8,
+    "tongLichHen": 3,
+    "tongChuyenKhoa": 8,
+    "doanhThu": "1000000",
+    "lichHenTheoTrangThai": [
+      { "trangThai": 0, "soLuong": 1 },
+      { "trangThai": 1, "soLuong": 0 },
+      { "trangThai": 2, "soLuong": 1 },
+      { "trangThai": 3, "soLuong": 1 }
+    ]
+  }
+}
+```
+
+> `doanhThu` = tổng `giaKham` của tất cả lịch hẹn có trangThai = 2 (đã khám).
+
+---
+
+### 13.2 Thống kê lịch hẹn theo khoảng thời gian (Admin)
+
+```
+GET {{base_url}}/thong-ke/lich-hen?tuNgay=2026-03-01&denNgay=2026-03-31
+```
+
+**Headers**: Authorization: Bearer {{admin_token}}
+
+**Kết quả mong đợi**:
+```json
+{
+  "success": true,
+  "data": {
+    "lichHenTheoNgay": [
+      { "ngay": "2026-03-25T00:00:00.000Z", "soLuong": 2 }
+    ],
+    "lichHenTheoBacSi": [
+      { "bacSiId": 1, "tenBacSi": "Nguyễn Văn An", "soLuong": 1 },
+      { "bacSiId": 2, "tenBacSi": "Trần Thị Bình", "soLuong": 1 }
+    ]
+  }
+}
+```
+
+> Top 10 bác sĩ có nhiều lịch hẹn nhất trong khoảng thời gian chỉ định.
+
+---
+
+## 14. Kiểm thử lỗi & Edge cases
+
+### 14.1 Validate dữ liệu đầu vào (Zod)
 
 | Test case | Request | Kết quả mong đợi |
 |-----------|---------|-------------------|
-| Email trống | POST register, `"email": ""` | 400 - "Email không được để trống" |
 | Email sai format | POST register, `"email": "abc"` | 400 - "Email không hợp lệ" |
 | Mật khẩu < 6 ký tự | POST register, `"matKhau": "123"` | 400 - "Mật khẩu phải có ít nhất 6 ký tự" |
+| Họ tên trống | POST register, `"hoTen": ""` | 400 - "Họ tên không được để trống" |
 | Tên bác sĩ trống | POST bac-si, `"tenBacSi": ""` | 400 - "Tên bác sĩ không được để trống" |
-| Ngày đặt sai format | POST dat-lich, `"ngayDat": "abc"` | 400 - "Ngày đặt phải đúng định dạng YYYY-MM-DD" |
 | Giờ sai format | POST dat-lich, `"gioBatDau": "8h"` | 400 - "Giờ bắt đầu phải đúng định dạng HH:mm" |
 | Trạng thái ngoài khoảng | PUT trang-thai, `"trangThai": 5` | 400 - "Trạng thái phải từ 0-3" |
+| Tên thuốc trống | POST don-thuoc, `chiTietDonThuoc: [{ "tenThuoc": "" }]` | 400 - "Tên thuốc không được để trống" |
+| Tên hình thức trống | POST hinh-thuc-thanh-toan, `"tenHinhThuc": ""` | 400 - "Tên hình thức thanh toán không được để trống" |
 
-### 13.2 Phân quyền
+### 14.2 Phân quyền
 
 | Test case | Request | Kết quả mong đợi |
 |-----------|---------|-------------------|
@@ -1194,99 +1573,139 @@ DELETE {{base_url}}/hinh-thuc-thanh-toan/4
 | Token hết hạn/sai | GET auth/me với token random | 401 |
 | Bệnh nhân tạo đơn thuốc | POST don-thuoc với patient_token | 403 |
 | Bệnh nhân xem danh sách BN | GET benh-nhan với patient_token | 403 |
+| Bệnh nhân xem thống kê | GET thong-ke/tong-quan với patient_token | 403 |
+| Bác sĩ xem thống kê | GET thong-ke/tong-quan với doctor_token | 403 |
+| Tài khoản bị khóa | Bất kỳ API nào cần auth | 403 "Tài khoản đã bị khóa" |
 
-### 13.3 Ràng buộc dữ liệu
+### 14.3 Ownership check
+
+| Test case | Request | Kết quả mong đợi |
+|-----------|---------|-------------------|
+| BN A xem lịch BN B | GET dat-lich/benh-nhan/2 với patient_token (BN id=1) | 403 |
+| BS A xem lịch BS B | GET dat-lich/bac-si/2 với doctor_token (BS id=1) | 403 |
+| BN A sửa hồ sơ BN B | PUT benh-nhan/2 với patient_token (BN id=1) | 403 |
+| BN A xóa lịch BN B | DELETE dat-lich/X (lịch của BN B) với patient_token | 403 |
+
+### 14.4 Ràng buộc dữ liệu
 
 | Test case | Request | Kết quả mong đợi |
 |-----------|---------|-------------------|
 | Trùng lịch hẹn | POST dat-lich cùng BS+ngày+giờ | 409 |
 | Email đăng ký trùng | POST register cùng email | 409 |
+| Trùng lịch làm việc | POST lich-lam-viec cùng BS+ngày+khung giờ | 409 |
 | Xóa chuyên khoa có BS | DELETE chuyen-khoa/1 | 400 |
 | Xóa BS có lịch hẹn | DELETE bac-si/1 (khi có lịch) | 400 |
+| Xóa BN có lịch hẹn | DELETE benh-nhan/1 (khi có lịch) | 400 |
+| Xóa khung giờ đang dùng | DELETE lich-lam-viec/khung-gio/1 (khi có lịch) | 400 |
+| Xóa HTTT đang dùng | DELETE hinh-thuc-thanh-toan/1 (khi có lịch) | 400 |
 | Tạo đơn thuốc trùng | POST don-thuoc cùng datLichId | 409 |
+| Đơn thuốc cho lịch chưa khám | POST don-thuoc, datLich.trangThai != 2 | 400 |
+| Xóa lịch đã xác nhận | DELETE dat-lich/1 (trangThai=1) | 400 |
 | ID không tồn tại | GET bac-si/99999 | 404 |
 
 ---
 
-## 14. Checklist kiểm thử
+## 15. Checklist kiểm thử
 
 Dùng checklist này để đánh dấu các API đã test qua:
 
-### Authentication
+### Authentication (7 endpoints)
 - [ ] Health check `GET /api/health`
 - [ ] Đăng ký thành công `POST /api/auth/register`
-- [ ] Đăng ký lỗi (email trùng, thiếu field)
+- [ ] Đăng ký lỗi (email trùng, thiếu field, mật khẩu yếu)
 - [ ] Đăng nhập admin `POST /api/auth/login`
 - [ ] Đăng nhập bác sĩ
 - [ ] Đăng nhập bệnh nhân
-- [ ] Đăng nhập lỗi (sai mật khẩu)
+- [ ] Đăng nhập lỗi (sai mật khẩu, tài khoản bị khóa)
+- [ ] Làm mới token `POST /api/auth/refresh`
 - [ ] Lấy thông tin user `GET /api/auth/me`
-- [ ] Lỗi không có token
+- [ ] Đổi mật khẩu `PUT /api/auth/doi-mat-khau`
+- [ ] Đổi mật khẩu lỗi (sai mật khẩu cũ)
+- [ ] Cập nhật hồ sơ `PUT /api/auth/cap-nhat-ho-so`
+- [ ] Đăng xuất `POST /api/auth/logout`
+- [ ] Lỗi không có token / token sai / token hết hạn
 
-### Chuyên khoa
+### Chuyên khoa (5 endpoints)
 - [ ] Lấy danh sách `GET /api/chuyen-khoa`
 - [ ] Lấy chi tiết `GET /api/chuyen-khoa/:id`
 - [ ] Tạo mới (admin) `POST /api/chuyen-khoa`
 - [ ] Cập nhật (admin) `PUT /api/chuyen-khoa/:id`
 - [ ] Xóa (admin) `DELETE /api/chuyen-khoa/:id`
-- [ ] Phân quyền: bác sĩ/bệnh nhân không tạo được
+- [ ] Phân quyền: bác sĩ/bệnh nhân không tạo/sửa/xóa được
 
-### Bác sĩ
+### Bác sĩ (5 endpoints)
 - [ ] Lấy danh sách `GET /api/bac-si`
-- [ ] Lấy danh sách filter theo chuyên khoa
-- [ ] Lấy danh sách tìm kiếm theo tên
-- [ ] Phân trang
+- [ ] Filter theo chuyên khoa `?chuyenKhoaId=`
+- [ ] Tìm kiếm theo tên `?search=`
+- [ ] Phân trang `?page=&limit=`
 - [ ] Lấy chi tiết `GET /api/bac-si/:id`
 - [ ] Tạo mới (admin) `POST /api/bac-si`
 - [ ] Cập nhật (admin) `PUT /api/bac-si/:id`
 - [ ] Xóa (admin) `DELETE /api/bac-si/:id`
+- [ ] Không xóa được khi có lịch hẹn
 
-### Bệnh nhân
+### Bệnh nhân (4 endpoints)
 - [ ] Lấy danh sách (admin) `GET /api/benh-nhan`
 - [ ] Lấy chi tiết `GET /api/benh-nhan/:id`
 - [ ] Cập nhật `PUT /api/benh-nhan/:id`
+- [ ] Ownership check: BN không sửa hồ sơ BN khác
 - [ ] Xóa (admin) `DELETE /api/benh-nhan/:id`
+- [ ] Không xóa được khi có lịch hẹn
 
-### Đặt lịch
+### Đặt lịch (7 endpoints)
 - [ ] Tạo lịch hẹn `POST /api/dat-lich`
-- [ ] Test trùng lịch (cùng BS + ngày + giờ)
+- [ ] Test trùng lịch (cùng BS + ngày + giờ bắt đầu)
+- [ ] Test BS không có lịch làm việc ngày đó
 - [ ] Lấy tất cả (admin) `GET /api/dat-lich`
-- [ ] Filter theo trạng thái, ngày
+- [ ] Filter theo trạng thái, ngày, phân trang
 - [ ] Lấy chi tiết `GET /api/dat-lich/:id`
-- [ ] Lấy theo bệnh nhân `GET /api/dat-lich/benh-nhan/:id`
-- [ ] Lấy theo bác sĩ `GET /api/dat-lich/bac-si/:id`
-- [ ] Cập nhật trạng thái: chờ → xác nhận
-- [ ] Cập nhật trạng thái: xác nhận → đã khám
-- [ ] Cập nhật trạng thái: hủy
-- [ ] Xóa lịch chờ xác nhận
-- [ ] Không xóa được lịch đã xác nhận
+- [ ] Lấy theo bệnh nhân `GET /api/dat-lich/benh-nhan/:id` + ownership
+- [ ] Lấy theo bác sĩ `GET /api/dat-lich/bac-si/:id` + ownership
+- [ ] Cập nhật trạng thái: chờ → xác nhận (1)
+- [ ] Cập nhật trạng thái: xác nhận → đã khám (2)
+- [ ] Cập nhật trạng thái: hủy (3)
+- [ ] Xóa lịch chờ xác nhận/đã hủy
+- [ ] Không xóa được lịch đã xác nhận/đã khám
+- [ ] Ownership check: BN không xóa lịch BN khác
 
-### Lịch làm việc
+### Lịch làm việc (7 endpoints)
 - [ ] Lấy khung giờ `GET /api/lich-lam-viec/khung-gio`
 - [ ] Tạo khung giờ (admin) `POST /api/lich-lam-viec/khung-gio`
+- [ ] Xóa khung giờ (admin) `DELETE /api/lich-lam-viec/khung-gio/:id`
+- [ ] Không xóa được khung giờ đang sử dụng
 - [ ] Tạo lịch làm việc `POST /api/lich-lam-viec`
-- [ ] Lấy lịch theo bác sĩ + ngày
+- [ ] Test trùng lịch làm việc
+- [ ] Lấy lịch theo bác sĩ + ngày `GET /api/lich-lam-viec?bacSiId=&ngayLamViec=`
 - [ ] Cập nhật sẵn sàng `PUT /api/lich-lam-viec/:id`
 - [ ] Xóa lịch `DELETE /api/lich-lam-viec/:id`
 
-### Đơn thuốc
-- [ ] Tạo đơn thuốc (bác sĩ) `POST /api/don-thuoc`
-- [ ] Không tạo được cho lịch chưa khám
-- [ ] Không tạo trùng
+### Đơn thuốc (4 endpoints)
+- [ ] Tạo đơn thuốc (bác sĩ) `POST /api/don-thuoc` với chi tiết thuốc
+- [ ] Tạo đơn thuốc đơn giản (chỉ chẩn đoán + ghi chú)
+- [ ] Không tạo được cho lịch chưa khám (trangThai != 2)
+- [ ] Không tạo trùng (lịch đã có đơn thuốc)
 - [ ] Lấy danh sách (admin/bs) `GET /api/don-thuoc`
 - [ ] Lấy chi tiết `GET /api/don-thuoc/:id`
+- [ ] Xóa (admin) `DELETE /api/don-thuoc/:id`
 
-### FAQ
+### FAQ (6 endpoints)
 - [ ] Lấy FAQ hoạt động (public) `GET /api/cau-hoi-thuong-gap`
 - [ ] Lấy tất cả (admin) `GET /api/cau-hoi-thuong-gap/all`
 - [ ] Tạo mới (admin) `POST /api/cau-hoi-thuong-gap`
 - [ ] Cập nhật (admin) `PUT /api/cau-hoi-thuong-gap/:id`
+- [ ] Ẩn/hiện FAQ bằng dangHoatDong
 - [ ] Xóa (admin) `DELETE /api/cau-hoi-thuong-gap/:id`
 
-### Hình thức thanh toán
+### Hình thức thanh toán (3 endpoints)
 - [ ] Lấy danh sách (public) `GET /api/hinh-thuc-thanh-toan`
 - [ ] Tạo mới (admin) `POST /api/hinh-thuc-thanh-toan`
 - [ ] Xóa (admin) `DELETE /api/hinh-thuc-thanh-toan/:id`
+- [ ] Không xóa được khi đang được sử dụng
+
+### Thống kê (2 endpoints)
+- [ ] Dashboard tổng quan (admin) `GET /api/thong-ke/tong-quan`
+- [ ] Thống kê lịch hẹn (admin) `GET /api/thong-ke/lich-hen?tuNgay=&denNgay=`
+- [ ] Phân quyền: chỉ admin mới xem được thống kê
 
 ---
 
@@ -1295,26 +1714,50 @@ Dùng checklist này để đánh dấu các API đã test qua:
 Để test hiệu quả, nên thực hiện theo thứ tự:
 
 1. **Health check** → Đảm bảo server chạy
-2. **Đăng nhập** 3 tài khoản → Lưu token vào Environment
+2. **Đăng nhập** 3 tài khoản → Lưu access token vào Environment
 3. **Chuyên khoa** → CRUD (dữ liệu nền tảng)
 4. **Bác sĩ** → CRUD + filter (phụ thuộc chuyên khoa)
 5. **Bệnh nhân** → Xem + cập nhật
 6. **Khung giờ & Lịch làm việc** → Tạo lịch cho bác sĩ
 7. **Hình thức thanh toán** → Dữ liệu phụ trợ
-8. **Đặt lịch** → Tạo → test trùng → cập nhật trạng thái
-9. **Đơn thuốc** → Tạo sau khi lịch đã khám xong
+8. **Đặt lịch** → Tạo → test trùng → cập nhật trạng thái (0 → 1 → 2)
+9. **Đơn thuốc** → Tạo sau khi lịch đã khám xong (trangThai = 2)
 10. **FAQ** → CRUD + ẩn/hiện
+11. **Thống kê** → Xem dashboard + thống kê lịch hẹn
+12. **Auth nâng cao** → Đổi mật khẩu, cập nhật hồ sơ, refresh token, logout
+13. **Edge cases** → Phân quyền, ownership, ràng buộc dữ liệu
 
 ---
 
-> **Mẹo**: Trong Postman, bạn có thể dùng tab **"Tests"** trong mỗi request để tự động lưu token.  
-> Ví dụ, thêm đoạn script sau vào tab **"Tests"** của request Login Admin:
->
-> ```javascript
-> if (pm.response.code === 200) {
->     var jsonData = pm.response.json();
->     pm.environment.set("admin_token", jsonData.data.token);
-> }
-> ```
->
-> Sau đó mỗi lần login, token sẽ tự động cập nhật vào Environment.
+## Mẹo sử dụng Postman
+
+### Auto-save token khi login
+
+Trong tab **"Tests"** (hoặc **"Scripts > Post-response"**) của request Login Admin, thêm script:
+
+```javascript
+if (pm.response.code === 200) {
+    var jsonData = pm.response.json();
+    pm.environment.set("admin_token", jsonData.data.accessToken);
+}
+```
+
+Tương tự cho Login Bác sĩ → save vào `doctor_token`, Login Bệnh nhân → save vào `patient_token`.
+
+### Auto-save token khi refresh
+
+```javascript
+if (pm.response.code === 200) {
+    var jsonData = pm.response.json();
+    // Cập nhật token cho tài khoản đang dùng
+    pm.environment.set("admin_token", jsonData.data.accessToken);
+}
+```
+
+### Kiểm tra cookie
+
+Postman → tab **"Cookies"** (bên cạnh Headers, Body) → xem cookie `refreshToken` cho domain `localhost`.
+
+### Collection Runner
+
+Bạn có thể dùng **Collection Runner** để chạy hàng loạt request theo thứ tự đã sắp xếp, tự động kiểm tra kết quả.
