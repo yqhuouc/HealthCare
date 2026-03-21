@@ -1,0 +1,117 @@
+@startuml ERD
+skinparam linetype ortho
+
+' Ký hiệu: PK = Khóa chính, FK = Khóa ngoại, U = Duy nhất, N = Cho phép null
+
+entity "TaiKhoan" as TK #FFEFD5 {
+  * **id** : bigint(20) <<PK>>
+  --
+  email : varchar(255) <<U>>
+  matKhau : varchar(255)
+  vaiTro : varchar(50) <<N>>
+  trangThaiTaiKhoan : int(11) <<N>>
+  refreshToken : text <<N>>
+  gioiTinh : int(11) <<N>>
+  ngaySinh : date <<N>>
+  diaChi : varchar(255) <<N>>
+  anhDaiDien : varchar(255) <<N>>
+  ngayTao : datetime <<N>>
+  ngayCapNhat : datetime <<N>>
+}
+
+entity "ChuyenKhoa" as CK #FFEFD5 {
+  * **id** : bigint(20) <<PK>>
+  --
+  tenChuyenKhoa : varchar(120)
+  anhChuyenKhoa : varchar(255) <<N>>
+  moTaChuyenKhoa : text <<N>>
+}
+
+entity "BacSi" as BS #FFEFD5 {
+  * **id** : bigint(20) <<PK>>
+  --
+  hocViChucDanh : varchar(120) <<N>>
+  tenBacSi : varchar(120)
+  moTaNgan : varchar(255) <<N>>
+  moTaChiTiet : text <<N>>
+  giaKham : decimal(10, 2) <<N>>
+  taiKhoanId : bigint(20) <<FK>> <<U>>
+  chuyenKhoaId : bigint(20) <<FK>> <<N>>
+}
+
+entity "BenhNhan" as BN #FFEFD5 {
+  * **id** : bigint(20) <<PK>>
+  --
+  hoTen : varchar(120)
+  soDienThoai : varchar(20) <<N>>
+  emailLienHe : varchar(255) <<N>>
+  taiKhoanId : bigint(20) <<FK>> <<U>>
+}
+
+entity "KhungGio" as KG #FFEFD5 {
+  * **id** : bigint(20) <<PK>>
+  --
+  gioBatDau : time
+  gioKetThuc : time
+}
+
+entity "LichLamViecBacSi" as LLV #FFEFD5 {
+  * **id** : bigint(20) <<PK>>
+  --
+  ngayLamViec : date
+  soBenhNhanHienTai : int(11) <<N>>
+  sanSang : int(11) <<N>>
+  bacSiId : bigint(20) <<FK>> <<N>>
+  khungGioId : bigint(20) <<FK>> <<N>>
+}
+
+entity "HinhThucThanhToan" as HTTT #FFEFD5 {
+  * **id** : bigint(20) <<PK>>
+  --
+  tenHinhThuc : varchar(120)
+}
+
+entity "DatLich" as DL #FFEFD5 {
+  * **id** : bigint(20) <<PK>>
+  --
+  ngayDat : date
+  gioBatDau : time
+  gioKetThuc : time
+  lyDoKham : varchar(255) <<N>>
+  giaKham : decimal(10, 2) <<N>>
+  trangThai : int(11) <<N>>
+  bacSiId : bigint(20) <<FK>> <<N>>
+  benhNhanId : bigint(20) <<FK>> <<N>>
+  hinhThucThanhToanId : bigint(20) <<FK>> <<N>>
+  ..
+  **UNIQUE**(bacSiId, ngayDat, gioBatDau)
+}
+
+entity "DonThuoc" as DT #FFEFD5 {
+  * **id** : bigint(20) <<PK>>
+  --
+  datLichId : bigint(20) <<FK>> <<U>>
+  ngayTao : datetime <<N>>
+}
+
+entity "CauHoiThuongGap" as FAQ #FFEFD5 {
+  * **id** : bigint(20) <<PK>>
+  --
+  cauHoi : varchar(255) <<N>>
+  traLoi : text <<N>>
+  dangHoatDong : int(11) <<N>>
+}
+
+' ============================
+' QUAN HỆ
+' ============================
+TK ||--o| BS : "1 — 0..1"
+TK ||--o| BN : "1 — 0..1"
+CK ||--o{ BS : "1 — N"
+BS ||--o{ LLV : "1 — N"
+KG ||--o{ LLV : "1 — N"
+BS ||--o{ DL : "1 — N"
+BN ||--o{ DL : "1 — N"
+HTTT ||--o{ DL : "1 — N"
+DL ||--o| DT : "1 — 0..1"
+@enduml

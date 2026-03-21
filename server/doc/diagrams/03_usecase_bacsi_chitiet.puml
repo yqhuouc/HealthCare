@@ -1,0 +1,38 @@
+@startuml UseCase_ChiTiet_BacSi
+left to right direction
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+}
+
+actor "Bác sĩ" as BS #LightGreen
+
+rectangle "Phân hệ Bác sĩ" {
+  usecase "Đăng nhập" as UC1
+  usecase "Tạo lịch làm việc" as UC2 #PaleGreen
+  usecase "Xem lịch hẹn\ncủa tôi" as UC3
+  usecase "Cập nhật trạng thái\nlịch hẹn" as UC4 #PaleGreen
+  usecase "Kê đơn thuốc" as UC5 #PaleGreen
+
+  usecase "Xác thực JWT" as INC1
+  usecase "Kiểm tra quyền\nsở hữu bác sĩ" as INC2
+  usecase "Kiểm tra trạng thái\nlà Đã khám" as INC3
+  usecase "Kiểm tra chưa có\nđơn thuốc" as INC4
+  usecase "Kiểm tra lịch\nkhông bị trùng" as INC5
+}
+
+BS -- UC1
+BS -- UC2
+BS -- UC3
+BS -- UC4
+BS -- UC5
+
+UC4 ..> INC1 : <<include>>
+UC4 ..> INC2 : <<include>>
+UC5 ..> INC1 : <<include>>
+UC5 ..> INC3 : <<include>>
+UC5 ..> INC4 : <<include>>
+UC2 ..> INC1 : <<include>>
+UC2 ..> INC5 : <<include>>
+@enduml

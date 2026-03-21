@@ -1,0 +1,54 @@
+@startuml UseCase_ChiTiet_Admin
+left to right direction
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+}
+
+actor "Quản trị viên" as AD #LightCoral
+
+rectangle "Phân hệ Quản trị" {
+  usecase "Quản lý chuyên khoa" as UC1 #PaleGreen
+  usecase "Quản lý bác sĩ" as UC2 #PaleGreen
+  usecase "Quản lý bệnh nhân" as UC3
+  usecase "Quản lý FAQ" as UC4 #PaleGreen
+  usecase "Quản lý hình thức\nthanh toán" as UC5
+  usecase "Xem tất cả lịch hẹn" as UC6
+  usecase "Cập nhật trạng thái\nlịch hẹn" as UC7
+  usecase "Xem thống kê" as UC8
+
+  usecase "Thêm chuyên khoa" as CK1
+  usecase "Sửa chuyên khoa" as CK2
+  usecase "Xóa chuyên khoa" as CK3
+
+  usecase "Thêm bác sĩ\nkèm tài khoản" as BS1
+  usecase "Sửa thông tin bác sĩ" as BS2
+  usecase "Xóa bác sĩ" as BS3
+
+  usecase "Thêm câu hỏi" as FAQ1
+  usecase "Sửa câu hỏi" as FAQ2
+  usecase "Xóa câu hỏi" as FAQ3
+}
+
+AD -- UC1
+AD -- UC2
+AD -- UC3
+AD -- UC4
+AD -- UC5
+AD -- UC6
+AD -- UC7
+AD -- UC8
+
+UC1 ..> CK1 : <<include>>
+UC1 ..> CK2 : <<include>>
+UC1 ..> CK3 : <<include>>
+
+UC2 ..> BS1 : <<include>>
+UC2 ..> BS2 : <<include>>
+UC2 ..> BS3 : <<include>>
+
+UC4 ..> FAQ1 : <<include>>
+UC4 ..> FAQ2 : <<include>>
+UC4 ..> FAQ3 : <<include>>
+@enduml

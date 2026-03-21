@@ -1,0 +1,73 @@
+@startuml Sequence_DatLich
+skinparam sequenceArrowThickness 2
+
+actor "Bệnh nhân" as BN
+participant "Giao diện\n(React)" as FE #LightBlue
+participant "Bộ định tuyến\n(Router)" as RT #LightYellow
+participant "Middleware\nxác thực" as AUTH #Orange
+participant "Dịch vụ\nĐặt lịch" as SV #LightGreen
+database "CSDL\n(PostgreSQL)" as DB #LightCoral
+
+BN -> FE : Chọn bác sĩ, ngày,\nkhung giờ, lý do khám
+activate FE
+FE -> RT : POST /api/dat-lich\n(Bearer accessToken)
+activate RT
+
+RT -> AUTH : authenticate(JWT)
+activate AUTH
+AUTH -> DB : findUnique(userId)
+activate DB
+DB --> AUTH : TàiKhoản + vaiTrò
+deactivate DB
+AUTH --> RT : req.user = {id, vaiTro}
+deactivate AUTH
+
+RT -> SV : create(dữ liệu đặt lịch)
+activate SV
+
+SV -> DB : Kiểm tra BácSĩ tồn tại?
+activate DB
+DB --> SV : Dữ liệu BácSĩ
+deactivate DB
+
+SV -> DB : Kiểm tra BệnhNhân tồn tại?
+activate DB
+DB --> SV : Dữ liệu BệnhNhân
+deactivate DB
+
+SV -> DB : Kiểm tra LịchLàmViệcBácSĩ\n(ngày + sẵn sàng = 1)
+activate DB
+DB --> SV : Dữ liệu lịch làm việc
+deactivate DB
+
+SV -> DB : Kiểm tra trùng lịch\n(UNIQUE: bacSiId + ngayDat\n+ gioBatDau)
+activate DB
+DB --> SV : Kết quả kiểm tra
+deactivate DB
+
+alt Không trùng lịch
+  SV -> DB : INSERT INTO DatLich\n(trangThai = 0: Chờ xác nhận)
+  activate DB
+  DB --> SV : Lịch hẹn đã tạo
+  deactivate DB
+  SV --> RT : Dữ liệu lịch hẹn
+  deactivate SV
+  RT --> FE : 201 Created
+  deactivate RT
+  FE --> BN : Hiển thị\n"Đặt lịch thành công"
+
+else Trùng lịch
+  SV --> RT : throw Error 409
+  deactivate SV
+  RT --> FE : 409 Lịch đã\nđược đặt
+  deactivate RT
+  FE --> BN : Hiển thị lỗi\ntrùng lịch
+
+else Bác sĩ không có lịch
+  SV --> RT : throw Error 400
+  RT --> FE : 400 Bác sĩ không\ncó lịch ngày này
+  FE --> BN : Hiển thị lỗi
+end
+
+deactivate FE
+@enduml

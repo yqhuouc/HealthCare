@@ -1,0 +1,63 @@
+@startuml Activity_DatLich
+|Bệnh nhân / Frontend|
+start
+:Xem danh sách chuyên khoa;
+:Chọn chuyên khoa;
+:Xem danh sách bác sĩ\ntheo chuyên khoa;
+:Chọn bác sĩ;
+:Xem thông tin chi tiết\nbác sĩ và lịch trống;
+:Chọn **ngày** và **khung giờ**;
+:Nhập **lý do khám**;
+:Chọn **hình thức thanh toán**;
+:Gửi yêu cầu đặt lịch\n(kèm JWT token);
+
+|Máy chủ / Backend|
+:Kiểm tra tính hợp lệ\ndữ liệu đầu vào;
+if (Dữ liệu hợp lệ?) then (Không)
+  :Trả lỗi **400**\nDữ liệu không hợp lệ;
+  stop
+else (Có)
+endif
+
+:Xác thực JWT từ\nheader Authorization;
+if (Token hợp lệ?) then (Không)
+  :Trả lỗi **401**\nChưa đăng nhập;
+  stop
+else (Có)
+endif
+
+:Kiểm tra **bác sĩ** tồn tại;
+if (Bác sĩ tồn tại?) then (Không)
+  :Trả lỗi **404**\nKhông tìm thấy bác sĩ;
+  stop
+else (Có)
+endif
+
+:Kiểm tra **bệnh nhân** tồn tại;
+if (Bệnh nhân tồn tại?) then (Không)
+  :Trả lỗi **404**;
+  stop
+else (Có)
+endif
+
+:Kiểm tra bác sĩ có\n**lịch làm việc** ngày đó\nvà **sẵn sàng** (sanSang = 1);
+if (Có lịch làm việc?) then (Không)
+  :Trả lỗi **400**\nBác sĩ không có lịch\nngày này;
+  stop
+else (Có)
+endif
+
+:Kiểm tra **trùng lịch**\n(ràng buộc UNIQUE:\nbacSiId + ngayDat + gioBatDau);
+if (Bị trùng lịch?) then (Trùng)
+  :Trả lỗi **409**\nLịch đã được đặt;
+  stop
+else (Không trùng)
+endif
+
+:Tạo bản ghi **DatLich**\n(trangThai = 0: Chờ xác nhận);
+:Trả về **201 Created**\nkèm thông tin lịch hẹn;
+
+|Bệnh nhân / Frontend|
+:Hiển thị thông báo\n"Đặt lịch thành công";
+stop
+@enduml
