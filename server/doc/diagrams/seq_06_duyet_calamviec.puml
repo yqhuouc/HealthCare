@@ -1,0 +1,41 @@
+@startuml Seq_DuyetCaLamViec
+skinparam sequenceArrowThickness 2
+actor "Admin" as AD
+participant "Giao diện" as FE #LightBlue
+participant "Router" as RT #LightYellow
+participant "Auth\nMiddleware" as AUTH #Orange
+participant "LichLamViec\nService" as SV #LightGreen
+database "CSDL" as DB #LightCoral
+
+AD -> FE : Duyệt / cập nhật\nca làm việc bác sĩ
+activate FE
+FE -> RT : PUT /api/lich-lam-viec/:id\n(Bearer token + body)
+activate RT
+RT -> AUTH : authenticate(JWT)\n+ authorize("admin")
+activate AUTH
+AUTH --> RT : req.user (Admin)
+deactivate AUTH
+RT -> SV : update(id, data)
+activate SV
+SV -> DB : findUnique({id})
+activate DB
+DB --> SV : Lịch làm việc
+deactivate DB
+
+alt Tồn tại
+  SV -> DB : UPDATE LichLamViecBacSi\nSET sanSang, ...
+  activate DB
+  DB --> SV : Đã cập nhật
+  deactivate DB
+  SV --> RT : Dữ liệu mới
+  RT --> FE : 200 OK
+  FE --> AD : Hiển thị thành công
+else Không tìm thấy
+  SV --> RT : Lỗi 404
+  RT --> FE : 404
+  FE --> AD : Hiển thị lỗi
+end
+deactivate SV
+deactivate RT
+deactivate FE
+@enduml

@@ -1,0 +1,30 @@
+@startuml Seq_XemLichKham_BenhNhan
+skinparam sequenceArrowThickness 2
+actor "Bệnh nhân" as BN
+participant "Giao diện" as FE #LightBlue
+participant "Router" as RT #LightYellow
+participant "Auth\nMiddleware" as AUTH #Orange
+participant "DatLich\nService" as SV #LightGreen
+database "CSDL" as DB #LightCoral
+
+BN -> FE : Xem lịch sử\nlịch khám
+activate FE
+FE -> RT : GET /api/dat-lich/benh-nhan\n(Bearer token)
+activate RT
+RT -> AUTH : authenticate(JWT)
+activate AUTH
+AUTH --> RT : req.user
+deactivate AUTH
+RT -> SV : getByBenhNhan(benhNhanId)
+activate SV
+SV -> DB : findMany({benhNhanId})\n+ include bacSi,\nhinhThucThanhToan\n+ orderBy ngayDat DESC
+activate DB
+DB --> SV : Danh sách lịch hẹn
+deactivate DB
+SV --> RT : Dữ liệu lịch hẹn
+deactivate SV
+RT --> FE : 200 OK\n{danh sách lịch hẹn}
+deactivate RT
+FE --> BN : Hiển thị bảng\nlịch sử khám
+deactivate FE
+@enduml

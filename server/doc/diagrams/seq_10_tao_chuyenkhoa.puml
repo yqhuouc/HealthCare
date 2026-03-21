@@ -1,0 +1,30 @@
+@startuml Seq_TaoChuyenKhoa
+skinparam sequenceArrowThickness 2
+actor "Admin" as AD
+participant "Giao diện" as FE #LightBlue
+participant "Router" as RT #LightYellow
+participant "Auth\nMiddleware" as AUTH #Orange
+participant "ChuyenKhoa\nService" as SV #LightGreen
+database "CSDL" as DB #LightCoral
+
+AD -> FE : Nhập tên, mô tả,\nảnh chuyên khoa
+activate FE
+FE -> RT : POST /api/chuyen-khoa\n(Bearer token + body)
+activate RT
+RT -> AUTH : authenticate(JWT)\n+ authorize("admin")
+activate AUTH
+AUTH --> RT : req.user (Admin)
+deactivate AUTH
+RT -> SV : create(data)
+activate SV
+SV -> DB : INSERT ChuyenKhoa
+activate DB
+DB --> SV : Chuyên khoa đã tạo
+deactivate DB
+SV --> RT : Dữ liệu chuyên khoa
+deactivate SV
+RT --> FE : 201 Created
+deactivate RT
+FE --> AD : Hiển thị thành công
+deactivate FE
+@enduml

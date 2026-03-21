@@ -1,0 +1,36 @@
+@startuml UC_QuanLyHoSoCaNhan
+left to right direction
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+}
+
+actor "Bệnh nhân" as BN #LightBlue
+actor "Bác sĩ" as BS #LightGreen
+
+' Actor kế thừa
+actor "Người dùng" as ND #WhiteSmoke
+BN --|> ND
+BS --|> ND
+
+rectangle "Chức năng quản lý hồ sơ cá nhân" {
+  usecase "Xem thông tin\ncá nhân" as UC1
+  usecase "Cập nhật\nhồ sơ cá nhân" as UC2
+  usecase "Đổi mật khẩu" as UC3
+
+  usecase "Xác thực JWT" as INC1 #LightGray
+  usecase "Mã hóa mật khẩu\nmới (bcrypt)" as INC2 #LightGray
+  usecase "Kiểm tra mật khẩu\ncũ đúng" as INC3 #LightGray
+}
+
+ND "1" -- "1" UC1
+ND "1" -- "0..*" UC2
+ND "1" -- "0..*" UC3
+
+UC1 ..> INC1 : <<include>>
+UC2 ..> INC1 : <<include>>
+UC3 ..> INC1 : <<include>>
+UC3 ..> INC3 : <<include>>
+UC3 ..> INC2 : <<include>>
+@enduml

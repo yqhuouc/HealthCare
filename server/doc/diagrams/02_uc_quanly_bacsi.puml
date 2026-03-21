@@ -1,0 +1,40 @@
+@startuml UC_QuanLyBacSi
+left to right direction
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+}
+
+actor "Quản trị viên" as AD #LightCoral
+actor "Bác sĩ" as BS #LightGreen
+
+rectangle "Chức năng quản lý bác sĩ" {
+  usecase "Xem danh sách\nbác sĩ" as UC1
+  usecase "Xem thông tin\nchi tiết bác sĩ" as UC2
+  usecase "Thêm bác sĩ mới\n(kèm tạo tài khoản)" as UC3
+  usecase "Sửa thông tin\nbác sĩ" as UC4
+  usecase "Xóa bác sĩ" as UC5
+  usecase "Cập nhật thông tin\ncá nhân bác sĩ" as UC6
+
+  usecase "Xác thực JWT" as INC1 #LightGray
+  usecase "Kiểm tra quyền\nAdmin" as INC2 #LightGray
+  usecase "Mã hóa mật khẩu\nbcrypt" as INC3 #LightGray
+}
+
+AD "1" -- "0..*" UC1
+AD "1" -- "0..*" UC2
+AD "1" -- "0..*" UC3
+AD "1" -- "0..*" UC4
+AD "1" -- "0..*" UC5
+BS "1" -- "1" UC6
+
+UC3 ..> INC1 : <<include>>
+UC3 ..> INC2 : <<include>>
+UC3 ..> INC3 : <<include>>
+UC4 ..> INC1 : <<include>>
+UC4 ..> INC2 : <<include>>
+UC5 ..> INC1 : <<include>>
+UC5 ..> INC2 : <<include>>
+UC6 ..> INC1 : <<include>>
+@enduml

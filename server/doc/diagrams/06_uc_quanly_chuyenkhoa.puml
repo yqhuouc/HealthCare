@@ -1,0 +1,35 @@
+@startuml UC_QuanLyChuyenKhoa
+left to right direction
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+}
+
+actor "Quản trị viên" as AD #LightCoral
+actor "Bệnh nhân" as BN #LightBlue
+
+rectangle "Chức năng quản lý chuyên khoa" {
+  usecase "Xem danh sách\nchuyên khoa" as UC1
+  usecase "Xem chi tiết\nchuyên khoa" as UC2
+  usecase "Thêm chuyên khoa\nmới" as UC3
+  usecase "Sửa thông tin\nchuyên khoa" as UC4
+  usecase "Xóa chuyên khoa" as UC5
+
+  usecase "Xác thực JWT" as INC1 #LightGray
+  usecase "Kiểm tra quyền\nAdmin" as INC2 #LightGray
+}
+
+BN -- UC1
+BN -- UC2
+AD "1" -- "0..*" UC3
+AD "1" -- "0..*" UC4
+AD "1" -- "0..*" UC5
+
+UC3 ..> INC1 : <<include>>
+UC3 ..> INC2 : <<include>>
+UC4 ..> INC1 : <<include>>
+UC4 ..> INC2 : <<include>>
+UC5 ..> INC1 : <<include>>
+UC5 ..> INC2 : <<include>>
+@enduml

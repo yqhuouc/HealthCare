@@ -1,0 +1,25 @@
+@startuml Seq_XemThongTinBacSi
+skinparam sequenceArrowThickness 2
+actor "Người dùng" as User
+participant "Giao diện\nReact" as FE #LightBlue
+participant "Router\nAPI" as RT #LightYellow
+participant "BacSi\nService" as SV #LightGreen
+database "CSDL" as DB #LightCoral
+
+User -> FE : Chọn xem\nthông tin bác sĩ
+activate FE
+FE -> RT : GET /api/bac-si/:id
+activate RT
+RT -> SV : getById(id)
+activate SV
+SV -> DB : findUnique({id})\n+ include chuyenKhoa,\ntaiKhoan, lichLamViec
+activate DB
+DB --> SV : Dữ liệu bác sĩ
+deactivate DB
+SV --> RT : Thông tin bác sĩ
+deactivate SV
+RT --> FE : 200 OK\n{bác sĩ + chuyên khoa\n+ lịch làm việc}
+deactivate RT
+FE --> User : Hiển thị trang\nchi tiết bác sĩ
+deactivate FE
+@enduml

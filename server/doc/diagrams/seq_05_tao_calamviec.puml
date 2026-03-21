@@ -1,0 +1,41 @@
+@startuml Seq_TaoCaLamViec
+skinparam sequenceArrowThickness 2
+actor "Bác sĩ" as BS
+participant "Giao diện" as FE #LightBlue
+participant "Router" as RT #LightYellow
+participant "Auth\nMiddleware" as AUTH #Orange
+participant "LichLamViec\nService" as SV #LightGreen
+database "CSDL" as DB #LightCoral
+
+BS -> FE : Chọn ngày +\nkhung giờ làm việc
+activate FE
+FE -> RT : POST /api/lich-lam-viec\n(Bearer token + body)
+activate RT
+RT -> AUTH : authenticate(JWT)\n+ authorize("bac_si")
+activate AUTH
+AUTH --> RT : req.user
+deactivate AUTH
+RT -> SV : create(data)
+activate SV
+SV -> DB : Kiểm tra trùng lịch\n(bacSiId + ngày + khungGioId)
+activate DB
+DB --> SV : Kết quả
+deactivate DB
+
+alt Không trùng
+  SV -> DB : INSERT LichLamViecBacSi\n(sanSang=1, soBenhNhanHienTai=0)
+  activate DB
+  DB --> SV : Lịch đã tạo
+  deactivate DB
+  SV --> RT : Dữ liệu lịch
+  RT --> FE : 201 Created
+  FE --> BS : Hiển thị thành công
+else Trùng lịch
+  SV --> RT : Lỗi 409
+  RT --> FE : 409 Lịch đã tồn tại
+  FE --> BS : Hiển thị lỗi
+end
+deactivate SV
+deactivate RT
+deactivate FE
+@enduml

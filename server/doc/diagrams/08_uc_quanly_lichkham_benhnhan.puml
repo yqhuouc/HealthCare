@@ -1,0 +1,39 @@
+@startuml UC_QuanLyLichKhamBenhNhan
+left to right direction
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+}
+
+actor "Bệnh nhân" as BN #LightBlue
+
+rectangle "Chức năng quản lý lịch khám bệnh nhân" {
+  usecase "Xem lịch sử\nlịch khám" as UC1
+  usecase "Xem chi tiết\nlịch khám" as UC2
+  usecase "Đặt lịch khám\nmới" as UC3
+  usecase "Hủy lịch khám" as UC4
+  usecase "Xem đơn thuốc\ncủa lịch khám" as UC5
+
+  usecase "Xác thực JWT" as INC1 #LightGray
+  usecase "Kiểm tra quyền\nsở hữu" as INC2 #LightGray
+  usecase "Kiểm tra trạng thái\ncho phép hủy" as INC3 #LightGray
+  usecase "Kiểm tra lịch\nlàm việc bác sĩ" as INC4 #LightGray
+  usecase "Kiểm tra\ntrùng lịch" as INC5 #LightGray
+}
+
+BN "1" -- "0..*" UC1
+BN "1" -- "0..*" UC2
+BN "1" -- "0..*" UC3
+BN "1" -- "0..*" UC4
+BN "1" -- "0..*" UC5
+
+UC3 ..> INC1 : <<include>>
+UC3 ..> INC4 : <<include>>
+UC3 ..> INC5 : <<include>>
+UC4 ..> INC1 : <<include>>
+UC4 ..> INC2 : <<include>>
+UC4 ..> INC3 : <<include>>
+UC5 ..> INC1 : <<include>>
+UC5 ..> INC2 : <<include>>
+@enduml
