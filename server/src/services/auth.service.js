@@ -1,13 +1,22 @@
 /**
  * ============================================================
- * Auth Service - Xử lý logic xác thực (Dual JWT)
+ * Auth Service - Xử lý logic xác thực (Dual JWT + Hash Refresh Token)
  * ============================================================
  */
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const prisma = require("../utils/prisma");
 const config = require("../config");
 const { AppError } = require("../middlewares/error.middleware");
+
+/**
+ * Hash refresh token bằng SHA-256 trước khi lưu vào DB
+ * → Nếu DB bị lộ, hacker không thể dùng refresh token plaintext
+ */
+const hashToken = (token) => {
+  return crypto.createHash("sha256").update(token).digest("hex");
+};
 
 const generateTokens = (taiKhoanId) => {
   const accessToken = jwt.sign({ id: taiKhoanId }, config.jwtAccessSecret, {
@@ -83,10 +92,10 @@ const login = async ({ email, matKhau }) => {
 
   const { accessToken, refreshToken } = generateTokens(Number(taiKhoan.id));
 
-  // Lưu refresh token vào DB
+  // Lưu HASH của refresh token vào DB (không lưu plaintext)
   await prisma.taiKhoan.update({
     where: { id: taiKhoan.id },
-    data: { refreshToken },
+    data: { refreshToken: hashToken(refreshToken) },
   });
 
   let hoTen = "Admin";
@@ -121,15 +130,17 @@ const refreshAccessToken = async (refreshToken) => {
     where: { id: BigInt(decoded.id) },
   });
 
-  if (!taiKhoan || taiKhoan.refreshToken !== refreshToken) {
+  // So sánh hash: hash cookie gửi lên phải trùng với hash trong DB
+  if (!taiKhoan || taiKhoan.refreshToken !== hashToken(refreshToken)) {
     throw new AppError("Refresh token không hợp lệ", 401);
   }
 
   const tokens = generateTokens(Number(taiKhoan.id));
 
+  // Lưu HASH của refresh token mới vào DB
   await prisma.taiKhoan.update({
     where: { id: taiKhoan.id },
-    data: { refreshToken: tokens.refreshToken },
+    data: { refreshToken: hashToken(tokens.refreshToken) },
   });
 
   return tokens;

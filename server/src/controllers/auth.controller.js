@@ -3,22 +3,25 @@ const authService = require("../services/auth.service");
 const config = require("../config");
 
 // ===== COOKIE OPTIONS =====
-// Access Token: ngắn hạn (15 phút)
-const ACCESS_COOKIE_OPTIONS = {
+// Options chung (dùng cho clearCookie — KHÔNG có maxAge)
+const COOKIE_BASE = {
   httpOnly: true,
   secure: config.nodeEnv === "production",
   sameSite: "strict",
+};
+
+// Access Token: ngắn hạn (15 phút), gửi kèm mọi request
+const ACCESS_COOKIE_OPTIONS = {
+  ...COOKIE_BASE,
   maxAge: 15 * 60 * 1000, // 15 phút
   path: "/",
 };
 
-// Refresh Token: dài hạn (7 ngày)
+// Refresh Token: dài hạn (7 ngày), CHỈ gửi khi gọi /api/auth
 const REFRESH_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: config.nodeEnv === "production",
-  sameSite: "strict",
+  ...COOKIE_BASE,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
-  path: "/",
+  path: "/api/auth",
 };
 
 const register = asyncHandler(async (req, res) => {
@@ -55,9 +58,9 @@ const refresh = asyncHandler(async (req, res) => {
 const logout = asyncHandler(async (req, res) => {
   await authService.logout(req.user.id);
 
-  // Xóa cả 2 cookie
-  res.clearCookie("accessToken", ACCESS_COOKIE_OPTIONS);
-  res.clearCookie("refreshToken", REFRESH_COOKIE_OPTIONS);
+  // Xóa cả 2 cookie — chỉ truyền options cần thiết (KHÔNG có maxAge)
+  res.clearCookie("accessToken", { ...COOKIE_BASE, path: "/" });
+  res.clearCookie("refreshToken", { ...COOKIE_BASE, path: "/api/auth" });
 
   res.json({ success: true, message: "Đăng xuất thành công" });
 });
