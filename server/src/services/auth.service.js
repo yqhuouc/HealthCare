@@ -1,7 +1,6 @@
 /**
- * ============================================================
- * Auth Service - Xử lý logic xác thực (Dual JWT + Hash Refresh Token)
- * ============================================================
+ * Service xác thực: bcrypt mật khẩu, JWT access/refresh, refresh chỉ lưu hash SHA-256 trong DB.
+ * Controller set cookie; lỗi nghiệp vụ → AppError.
  */
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
@@ -10,14 +9,9 @@ const prisma = require("../utils/prisma");
 const config = require("../config");
 const { AppError } = require("../middlewares/error.middleware");
 
-/**
- * Hash refresh token bằng SHA-256 trước khi lưu vào DB
- * → Nếu DB bị lộ, hacker không thể dùng refresh token plaintext
- */
-const hashToken = (token) => {
-  return crypto.createHash("sha256").update(token).digest("hex");
-};
+const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
 
+// Ký JWT access + refresh theo secret/expires trong config
 const generateTokens = (taiKhoanId) => {
   const accessToken = jwt.sign({ id: taiKhoanId }, config.jwtAccessSecret, {
     expiresIn: config.jwtAccessExpires,
@@ -30,6 +24,7 @@ const generateTokens = (taiKhoanId) => {
   return { accessToken, refreshToken };
 };
 
+// Transaction: tạo taiKhoan (benh_nhan) + benhNhan; email trùng → 409
 const register = async ({ email, matKhau, hoTen, soDienThoai, gioiTinh, ngaySinh, diaChi }) => {
   const existingAccount = await prisma.taiKhoan.findUnique({ where: { email } });
   if (existingAccount) {
@@ -71,6 +66,7 @@ const register = async ({ email, matKhau, hoTen, soDienThoai, gioiTinh, ngaySinh
   };
 };
 
+// Kiểm tra khóa, so khớp mật khẩu, lưu hash refresh; trả user + cặp token cho controller
 const login = async ({ email, matKhau }) => {
   const taiKhoan = await prisma.taiKhoan.findUnique({
     where: { email },
@@ -92,7 +88,6 @@ const login = async ({ email, matKhau }) => {
 
   const { accessToken, refreshToken } = generateTokens(Number(taiKhoan.id));
 
-  // Lưu HASH của refresh token vào DB (không lưu plaintext)
   await prisma.taiKhoan.update({
     where: { id: taiKhoan.id },
     data: { refreshToken: hashToken(refreshToken) },
@@ -114,6 +109,7 @@ const login = async ({ email, matKhau }) => {
   };
 };
 
+// Verify refresh JWT, so khớp hash DB, cấp token mới + cập nhật hash
 const refreshAccessToken = async (refreshToken) => {
   if (!refreshToken) {
     throw new AppError("Refresh token không hợp lệ", 401);
@@ -130,14 +126,12 @@ const refreshAccessToken = async (refreshToken) => {
     where: { id: BigInt(decoded.id) },
   });
 
-  // So sánh hash: hash cookie gửi lên phải trùng với hash trong DB
   if (!taiKhoan || taiKhoan.refreshToken !== hashToken(refreshToken)) {
     throw new AppError("Refresh token không hợp lệ", 401);
   }
 
   const tokens = generateTokens(Number(taiKhoan.id));
 
-  // Lưu HASH của refresh token mới vào DB
   await prisma.taiKhoan.update({
     where: { id: taiKhoan.id },
     data: { refreshToken: hashToken(tokens.refreshToken) },
@@ -146,6 +140,7 @@ const refreshAccessToken = async (refreshToken) => {
   return tokens;
 };
 
+// Xóa refresh hash trong DB (cookie do controller clear)
 const logout = async (userId) => {
   await prisma.taiKhoan.update({
     where: { id: BigInt(userId) },
@@ -154,6 +149,7 @@ const logout = async (userId) => {
   return { message: "Đăng xuất thành công" };
 };
 
+// Hồ sơ đầy đủ: taiKhoan + quan hệ bacSi/benhNhan
 const getMe = async (userId) => {
   const taiKhoan = await prisma.taiKhoan.findUnique({
     where: { id: BigInt(userId) },
@@ -179,6 +175,7 @@ const getMe = async (userId) => {
   return taiKhoan;
 };
 
+// So khớp mật khẩu cũ rồi hash mật khẩu mới
 const doiMatKhau = async (userId, { matKhauCu, matKhauMoi }) => {
   const taiKhoan = await prisma.taiKhoan.findUnique({
     where: { id: BigInt(userId) },
@@ -202,6 +199,7 @@ const doiMatKhau = async (userId, { matKhauCu, matKhauMoi }) => {
   return { message: "Đổi mật khẩu thành công" };
 };
 
+// Cập nhật các trường trên bảng taiKhoan (giới tính, ngày sinh, địa chỉ, ảnh)
 const capNhatHoSo = async (userId, data) => {
   const taiKhoan = await prisma.taiKhoan.findUnique({
     where: { id: BigInt(userId) },

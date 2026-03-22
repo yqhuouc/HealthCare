@@ -1,8 +1,9 @@
 /**
- * ThongKe Service - Dashboard & Thống kê cho Admin
+ * Gom số liệu dashboard: count entity, groupBy trạng thái lịch, doanh thu lịch đã khám (trangThai=2).
  */
 const prisma = require("../utils/prisma");
 
+// GET /thong-ke/tong-quan — số lượng + pie trạng thái + tổng giaKham (đã khám)
 const tongQuan = async () => {
   const [tongBenhNhan, tongBacSi, tongLichHen, tongChuyenKhoa, lichHenTheoTrangThai] = await Promise.all([
     prisma.benhNhan.count(),
@@ -34,6 +35,7 @@ const tongQuan = async () => {
   };
 };
 
+// Theo khoảng ngày (tuNgay/denNgay): group theo ngày + top bác sĩ
 const thongKeLichHen = async ({ tuNgay, denNgay }) => {
   const where = {};
   if (tuNgay && denNgay) {

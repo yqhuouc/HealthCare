@@ -1,3 +1,6 @@
+/**
+ * Routes /api/benh-nhan — admin xem danh sách; cập nhật hồ sơ có kiểm tra quyền.
+ */
 const express = require("express");
 const router = express.Router();
 const benhNhanController = require("../controllers/benhNhan.controller");

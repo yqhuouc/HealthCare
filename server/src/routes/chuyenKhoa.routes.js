@@ -1,3 +1,6 @@
+/**
+ * Routes /api/chuyen-khoa — CRUD chuyên khoa; GET public, thay đổi admin.
+ */
 const express = require("express");
 const router = express.Router();
 const chuyenKhoaController = require("../controllers/chuyenKhoa.controller");

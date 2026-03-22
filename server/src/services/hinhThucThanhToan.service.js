@@ -1,3 +1,6 @@
+/**
+ * Danh mục hình thức thanh toán (datLich tham chiếu). Xóa bị chặn nếu còn lịch dùng.
+ */
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 

@@ -1,7 +1,12 @@
+/**
+ * Zod: đặt lịch (giờ HH:mm) + PATCH trạng thái lịch.
+ * POST /dat-lich; PUT /dat-lich/:id/trang-thai.
+ */
 const { z } = require("zod");
 
 const timeRegex = /^\d{2}:\d{2}$/;
 
+// POST — ngày + khung giờ + bacSiId, benhNhanId, ...
 const createDatLichSchema = z.object({
   ngayDat: z.string().min(1, "Ngày đặt không được để trống"),
   gioBatDau: z
@@ -21,6 +26,7 @@ const createDatLichSchema = z.object({
   giaKham: z.union([z.string(), z.number()]).optional(),
 });
 
+// PUT trạng thái — 0..3
 const updateTrangThaiSchema = z.object({
   trangThai: z
     .number()

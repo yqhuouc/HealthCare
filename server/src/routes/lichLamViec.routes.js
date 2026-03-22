@@ -1,3 +1,6 @@
+/**
+ * Routes /api/lich-lam-viec — khung giờ master + lịch làm việc theo bác sĩ.
+ */
 const express = require("express");
 const router = express.Router();
 const lichLamViecController = require("../controllers/lichLamViec.controller");

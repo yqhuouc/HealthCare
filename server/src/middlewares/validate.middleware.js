@@ -1,6 +1,6 @@
 /**
- * Middleware validate request body với Zod schema.
- * Sử dụng: router.post("/", validate(schema), controller)
+ * Factory validate(schema): chạy Zod parse(req.body), gán lại req.body đã chuẩn hóa.
+ * Lỗi Zod → AppError 400 với message ghép từ từng field.
  */
 const { AppError } = require("./error.middleware");
 

@@ -1,9 +1,14 @@
+/**
+ * Master khungGio (giờ làm) + lichLamViecBacSi (bác sĩ + ngày + khung).
+ * Parse "HH:mm" lưu kiểu Date; xóa khung giờ chỉ khi không còn lịch dùng.
+ */
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 
 const parseTime = (timeStr) => new Date(`1970-01-01T${timeStr}:00.000Z`);
 
-// ===== KHUNG GIỜ =====
+// --- Khung giờ ---
+
 const getAllKhungGio = async () => {
   return prisma.khungGio.findMany({ orderBy: { gioBatDau: "asc" } });
 };
@@ -26,7 +31,9 @@ const deleteKhungGio = async (id) => {
   await prisma.khungGio.delete({ where: { id: BigInt(id) } });
 };
 
-// ===== LỊCH LÀM VIỆC =====
+// --- Lịch làm việc bác sĩ ---
+
+// Query: bacSiId, ngayLamViec (tuỳ chọn)
 const getLichLamViec = async ({ bacSiId, ngayLamViec }) => {
   const where = {};
   if (bacSiId) where.bacSiId = BigInt(bacSiId);
@@ -42,6 +49,7 @@ const getLichLamViec = async ({ bacSiId, ngayLamViec }) => {
   });
 };
 
+// Một bác sĩ + một ngày + một khung chỉ một bản ghi
 const createLichLamViec = async (data) => {
   const bacSi = await prisma.bacSi.findUnique({ where: { id: BigInt(data.bacSiId) } });
   if (!bacSi) throw new AppError("Không tìm thấy bác sĩ", 404);

@@ -1,15 +1,9 @@
 /**
- * ============================================================
- * Error Handler Middleware
- * ============================================================
- * - AppError: custom error class với statusCode
- * - errorHandler: global error handler
- * - asyncHandler: bọc async functions tự bắt lỗi
- * - notFoundHandler: xử lý 404
- * ============================================================
+ * AppError + xử lý lỗi tập trung (Prisma/JWT/Zod/Express). asyncHandler: bọc async → next(err). notFoundHandler: 404.
  */
 const { Prisma } = require("@prisma/client");
 
+// Lỗi nghiệp vụ có mã HTTP; isOperational phân biệt lỗi dự kiến vs bug
 class AppError extends Error {
   constructor(message, statusCode) {
     super(message);
@@ -19,6 +13,7 @@ class AppError extends Error {
   }
 }
 
+// Chuẩn hóa status/message; dev kèm stack (nếu chưa gửi header)
 const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || "Lỗi server nội bộ";
@@ -137,6 +132,7 @@ const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
+// Route không khớp (sau khi đã qua hết router)
 const notFoundHandler = (req, res) => {
   res.status(404).json({
     success: false,

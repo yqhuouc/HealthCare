@@ -1,5 +1,10 @@
+/**
+ * Schema Zod cho /api/auth. Dùng: router.METHOD(..., validate(schema), controller).
+ * Thông báo lỗi tiếng Việt cho client.
+ */
 const { z } = require("zod");
 
+// POST /register — đăng ký bệnh nhân
 const registerSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
   matKhau: z
@@ -16,11 +21,13 @@ const registerSchema = z.object({
   diaChi: z.string().max(255, "Địa chỉ tối đa 255 ký tự").optional(),
 });
 
+// POST /login
 const loginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
   matKhau: z.string().min(1, "Vui lòng nhập mật khẩu"),
 });
 
+// PUT /doi-mat-khau
 const doiMatKhauSchema = z.object({
   matKhauCu: z.string().min(1, "Vui lòng nhập mật khẩu cũ"),
   matKhauMoi: z
@@ -29,6 +36,7 @@ const doiMatKhauSchema = z.object({
     .max(50, "Mật khẩu mới tối đa 50 ký tự"),
 });
 
+// PUT /cap-nhat-ho-so — chỉ các trường trên taiKhoan
 const capNhatHoSoSchema = z.object({
   gioiTinh: z.number().int().min(1).max(3).optional(),
   ngaySinh: z.string().optional(),

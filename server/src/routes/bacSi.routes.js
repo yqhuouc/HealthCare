@@ -1,3 +1,6 @@
+/**
+ * Routes /api/bac-si — danh sách/chi tiết public; tạo/sửa/xóa admin.
+ */
 const express = require("express");
 const router = express.Router();
 const bacSiController = require("../controllers/bacSi.controller");

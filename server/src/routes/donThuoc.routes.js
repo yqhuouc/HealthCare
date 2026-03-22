@@ -1,3 +1,6 @@
+/**
+ * Routes /api/don-thuoc — danh sách/chi tiết; tạo (bác sĩ/admin); xóa admin.
+ */
 const express = require("express");
 const router = express.Router();
 const donThuocController = require("../controllers/donThuoc.controller");

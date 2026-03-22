@@ -1,6 +1,11 @@
+/**
+ * Lịch hẹn (datLich): admin xem tất cả; bệnh nhân/bác sĩ xem theo ownership.
+ * Tạo lịch kiểm tra lichLamViec, trùng slot; xóa kèm donThuoc (transaction).
+ */
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 
+// Chuỗi "HH:mm" → Date (cùng ngày epoch) để lưu/so khớp Prisma
 const parseTime = (timeStr) => new Date(`1970-01-01T${timeStr}:00.000Z`);
 
 const defaultInclude = {
@@ -12,6 +17,7 @@ const defaultInclude = {
   donThuoc: { include: { chiTietDonThuoc: true } },
 };
 
+// GET /dat-lich — lọc trangThai, ngayDat + phân trang
 const getAll = async ({ trangThai, ngayDat, page = 1, limit = 10 }) => {
   const skip = (Number(page) - 1) * Number(limit);
   const where = {};
@@ -41,8 +47,8 @@ const getById = async (id) => {
   return datLich;
 };
 
+// benh_nhan chỉ được xem đúng benhNhanId trùng tài khoản
 const getByBenhNhan = async (benhNhanId, requestUser) => {
-  // Kiểm tra ownership: bệnh nhân chỉ xem lịch của mình
   if (requestUser.vaiTro === "benh_nhan") {
     const benhNhan = await prisma.benhNhan.findUnique({ where: { id: BigInt(benhNhanId) } });
     if (!benhNhan || benhNhan.taiKhoanId !== requestUser.id) {
@@ -57,8 +63,8 @@ const getByBenhNhan = async (benhNhanId, requestUser) => {
   });
 };
 
+// bac_si chỉ xem đúng lịch của mình (taiKhoan → bacSi)
 const getByBacSi = async (bacSiId, requestUser) => {
-  // Kiểm tra ownership: bác sĩ chỉ xem lịch của mình
   if (requestUser.vaiTro === "bac_si") {
     const bacSi = await prisma.bacSi.findUnique({ where: { id: BigInt(bacSiId) } });
     if (!bacSi || bacSi.taiKhoanId !== requestUser.id) {
@@ -73,6 +79,7 @@ const getByBacSi = async (bacSiId, requestUser) => {
   });
 };
 
+// Có lịch làm việc sanSang ngày đó; không trùng unique (bacSi + ngay + gioBatDau)
 const create = async (data) => {
   const bacSi = await prisma.bacSi.findUnique({ where: { id: BigInt(data.bacSiId) } });
   if (!bacSi) throw new AppError("Không tìm thấy bác sĩ", 404);
@@ -80,7 +87,6 @@ const create = async (data) => {
   const benhNhan = await prisma.benhNhan.findUnique({ where: { id: BigInt(data.benhNhanId) } });
   if (!benhNhan) throw new AppError("Không tìm thấy bệnh nhân", 404);
 
-  // Kiểm tra bác sĩ có lịch làm việc cho ngày này không
   const lichLamViec = await prisma.lichLamViecBacSi.findFirst({
     where: {
       bacSiId: BigInt(data.bacSiId),
@@ -93,7 +99,6 @@ const create = async (data) => {
     throw new AppError("Bác sĩ không có lịch làm việc vào ngày này", 400);
   }
 
-  // Kiểm tra trùng lịch
   const trungLich = await prisma.datLich.findUnique({
     where: {
       unique_lich: {
@@ -135,11 +140,11 @@ const updateTrangThai = async (id, trangThai) => {
   });
 };
 
+// benh_nhan chỉ xóa lịch của mình; không xóa lịch đã xác nhận/đã khám; xóa donThuoc trước
 const remove = async (id, requestUser) => {
   const existing = await prisma.datLich.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
-  // Ownership check: bệnh nhân chỉ xóa lịch của mình
   if (requestUser.vaiTro === "benh_nhan") {
     const benhNhan = await prisma.benhNhan.findFirst({ where: { taiKhoanId: requestUser.id } });
     if (!benhNhan || existing.benhNhanId !== benhNhan.id) {

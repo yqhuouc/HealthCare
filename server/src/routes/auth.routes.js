@@ -1,3 +1,6 @@
+/**
+ * Routes /api/auth — đăng ký, đăng nhập, refresh/logout, đổi mật khẩu, cập nhật hồ sơ.
+ */
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/auth.controller");

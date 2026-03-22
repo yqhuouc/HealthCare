@@ -1,3 +1,7 @@
+/**
+ * Zod: FAQ (câu hỏi / trả lời / bật tắt hiển thị).
+ * POST /cau-hoi-thuong-gap; PUT cùng prefix + :id.
+ */
 const { z } = require("zod");
 
 const cauHoiThuongGapSchema = z.object({

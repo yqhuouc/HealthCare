@@ -1,11 +1,7 @@
 /**
- * ============================================================
- * Auth Middleware - Xác thực và phân quyền (Dual JWT HttpOnly Cookie)
- * ============================================================
- * - authenticate: verify Access Token từ HttpOnly Cookie → query DB → gắn req.user
- * - authorize: kiểm tra req.user.vaiTro
- * - optionalAuth: không bắt buộc đăng nhập
- * ============================================================
+ * authenticate: bắt buộc cookie accessToken hợp lệ → req.user (taiKhoan + bacSi/benhNhan id).
+ * authorize(...roles): chặn nếu req.user.vaiTro không thuộc danh sách.
+ * optionalAuth: có token hợp lệ thì gắn user, không có thì next() (không 401).
  */
 const jwt = require("jsonwebtoken");
 const prisma = require("../utils/prisma");
@@ -14,7 +10,6 @@ const { AppError } = require("./error.middleware");
 
 const authenticate = async (req, res, next) => {
   try {
-    // Đọc Access Token từ HttpOnly Cookie (thay vì Authorization header)
     const token = req.cookies.accessToken;
 
     if (!token) {
@@ -23,7 +18,6 @@ const authenticate = async (req, res, next) => {
 
     const decoded = jwt.verify(token, config.jwtAccessSecret);
 
-    // Query DB để lấy user đầy đủ + kiểm tra trạng thái
     const taiKhoan = await prisma.taiKhoan.findUnique({
       where: { id: BigInt(decoded.id) },
       select: {
@@ -51,6 +45,7 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+// roles: ví dụ authorize("admin"), authorize("admin", "bac_si")
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -67,7 +62,6 @@ const authorize = (...roles) => {
 
 const optionalAuth = async (req, res, next) => {
   try {
-    // Đọc Access Token từ HttpOnly Cookie
     const token = req.cookies.accessToken;
 
     if (!token) {

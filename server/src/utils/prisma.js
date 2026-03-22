@@ -1,7 +1,6 @@
 /**
- * Prisma Client Singleton
- * Đảm bảo chỉ tạo 1 instance PrismaClient trong toàn bộ ứng dụng,
- * tránh lỗi "too many connections" khi dev với hot-reload.
+ * Một PrismaClient cho cả process — tránh mở quá nhiều connection (đặc biệt nodemon).
+ * Log query chỉ bật rõ ở development.
  */
 const { PrismaClient } = require("@prisma/client");
 
@@ -9,7 +8,7 @@ const prisma = new PrismaClient({
   log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
 });
 
-// BigInt không serialize được sang JSON mặc định → chuyển thành Number
+// Serialize JSON: BigInt mặc định không hợp lệ trong JSON.stringify
 BigInt.prototype.toJSON = function () {
   return Number(this);
 };

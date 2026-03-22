@@ -1,7 +1,12 @@
+/**
+ * Bác sĩ: lọc theo chuyên khoa + tên; tạo transaction taiKhoan (bac_si) + bacSi.
+ * Xóa kèm taiKhoan nếu không còn lịch hẹn.
+ */
 const bcrypt = require("bcryptjs");
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 
+// Lọc chuyenKhoaId + search tên; include chuyenKhoa + taiKhoan (không matKhau)
 const getAll = async ({ chuyenKhoaId, search, page = 1, limit = 10 }) => {
   const skip = (Number(page) - 1) * Number(limit);
   const where = {};
@@ -28,6 +33,7 @@ const getAll = async ({ chuyenKhoaId, search, page = 1, limit = 10 }) => {
   };
 };
 
+// Chi tiết + chuyenKhoa + taiKhoan (không trả matKhau)
 const getById = async (id) => {
   const bacSi = await prisma.bacSi.findUnique({
     where: { id: BigInt(id) },
@@ -41,6 +47,7 @@ const getById = async (id) => {
   return bacSi;
 };
 
+// Email trùng → 409; không email thì tạo email giả + mật khẩu mặc định nếu thiếu
 const create = async (data) => {
   if (data.email) {
     const exists = await prisma.taiKhoan.findUnique({ where: { email: data.email } });
@@ -78,6 +85,7 @@ const create = async (data) => {
   return result;
 };
 
+// Cập nhật từng field tùy body; parse giaKham / chuyenKhoaId
 const update = async (id, data) => {
   const existing = await prisma.bacSi.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy bác sĩ", 404);
@@ -95,6 +103,7 @@ const update = async (id, data) => {
   });
 };
 
+// Cấm xóa nếu còn lịch; xóa bacSi rồi taiKhoan liên kết
 const remove = async (id) => {
   const existing = await prisma.bacSi.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy bác sĩ", 404);

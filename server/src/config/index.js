@@ -1,5 +1,6 @@
 /**
- * Config tập trung - đọc biến môi trường từ .env
+ * Config tập trung — đọc .env (PORT, JWT, CORS client).
+ * jwtAccessSecret / jwtRefreshSecret bắt buộc khi chạy auth thật.
  */
 require("dotenv").config();
 

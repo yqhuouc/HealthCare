@@ -1,3 +1,6 @@
+/**
+ * Routes /api/thong-ke — thống kê dashboard (chỉ admin).
+ */
 const express = require("express");
 const router = express.Router();
 const thongKeController = require("../controllers/thongKe.controller");

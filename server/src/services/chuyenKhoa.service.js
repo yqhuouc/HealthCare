@@ -1,6 +1,11 @@
+/**
+ * Nghiệp vụ chuyên khoa: CRUD Prisma; xóa có kiểm tra còn bác sĩ hay không.
+ * Lỗi nghiệp vụ → AppError để errorHandler trả JSON.
+ */
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 
+// Danh sách + đếm số bác sĩ mỗi khoa
 const getAll = async () => {
   return prisma.chuyenKhoa.findMany({
     include: { _count: { select: { bacSis: true } } },
@@ -8,6 +13,7 @@ const getAll = async () => {
   });
 };
 
+// Chi tiết + danh sách bác sĩ thuộc khoa
 const getById = async (id) => {
   const chuyenKhoa = await prisma.chuyenKhoa.findUnique({
     where: { id: BigInt(id) },
@@ -36,6 +42,7 @@ const update = async (id, data) => {
   });
 };
 
+// Chỉ xóa khi không còn bacSi gắn chuyenKhoaId
 const remove = async (id) => {
   const existing = await prisma.chuyenKhoa.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy chuyên khoa", 404);

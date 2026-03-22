@@ -1,3 +1,6 @@
+/**
+ * FAQ: getActive cho trang public (dangHoatDong = 1); admin dùng getAll phân trang + CRUD.
+ */
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 

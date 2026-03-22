@@ -1,5 +1,10 @@
+/**
+ * Zod: tạo / cập nhật bác sĩ (có thể kèm tài khoản khi tạo).
+ * Gắn validate middleware trước handler POST /bac-si, PUT /bac-si/:id.
+ */
 const { z } = require("zod");
 
+// POST — body tạo bác sĩ (+ email/matKhau tuỳ chọn)
 const createBacSiSchema = z.object({
   tenBacSi: z
     .string()
@@ -17,6 +22,7 @@ const createBacSiSchema = z.object({
   diaChi: z.string().max(255).optional(),
 });
 
+// PUT — body cập nhật một phần
 const updateBacSiSchema = z.object({
   tenBacSi: z.string().min(1).max(120).optional(),
   hocViChucDanh: z.string().max(120).optional(),

@@ -1,3 +1,6 @@
+/**
+ * Routes /api/dat-lich — đặt lịch, xem theo bệnh nhân/bác sĩ, cập nhật trạng thái, xóa.
+ */
 const express = require("express");
 const router = express.Router();
 const datLichController = require("../controllers/datLich.controller");

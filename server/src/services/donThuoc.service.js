@@ -1,3 +1,7 @@
+/**
+ * Đơn thuốc 1-1 với datLich (đã khám xong). Tạo kèm chi tiết thuốc nested create.
+ * Xóa đơn: chi tiết cascade theo schema Prisma.
+ */
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 
@@ -39,6 +43,7 @@ const getById = async (id) => {
   return donThuoc;
 };
 
+// Chỉ khi datLich.trangThai === 2; mỗi lịch một đơn
 const create = async (data) => {
   const datLich = await prisma.datLich.findUnique({ where: { id: BigInt(data.datLichId) } });
   if (!datLich) throw new AppError("Không tìm thấy lịch hẹn", 404);
@@ -74,7 +79,6 @@ const remove = async (id) => {
   const existing = await prisma.donThuoc.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy đơn thuốc", 404);
 
-  // ChiTietDonThuoc sẽ tự xóa nhờ onDelete: Cascade
   await prisma.donThuoc.delete({ where: { id: BigInt(id) } });
 };
 

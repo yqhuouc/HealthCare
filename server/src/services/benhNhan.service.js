@@ -1,6 +1,11 @@
+/**
+ * Bệnh nhân: danh sách + phân trang; cập nhật đồng bộ benhNhan + taiKhoan (nếu có).
+ * benh_nhan chỉ được sửa bản ghi trùng taiKhoanId; xóa kèm tài khoản nếu không còn lịch.
+ */
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 
+// Lọc theo họ tên (contains, không phân biệt hoa thường) + skip/take
 const getAll = async ({ search, page = 1, limit = 10 }) => {
   const skip = (Number(page) - 1) * Number(limit);
   const where = {};
@@ -25,6 +30,7 @@ const getAll = async ({ search, page = 1, limit = 10 }) => {
   };
 };
 
+// Chi tiết + include taiKhoan (ảnh, giới tính, ...)
 const getById = async (id) => {
   const benhNhan = await prisma.benhNhan.findUnique({
     where: { id: BigInt(id) },
@@ -37,6 +43,7 @@ const getById = async (id) => {
   return benhNhan;
 };
 
+// Transaction: cập nhật benhNhan + (tuỳ) taiKhoan; kiểm tra requestUser với vai trò benh_nhan
 const update = async (id, data, requestUser) => {
   const existing = await prisma.benhNhan.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy bệnh nhân", 404);
@@ -70,6 +77,7 @@ const update = async (id, data, requestUser) => {
   return result;
 };
 
+// Không xóa nếu còn datLich; xóa benhNhan + taiKhoan liên kết
 const remove = async (id) => {
   const existing = await prisma.benhNhan.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy bệnh nhân", 404);

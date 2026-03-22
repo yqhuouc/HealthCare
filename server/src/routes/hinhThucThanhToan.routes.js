@@ -1,3 +1,6 @@
+/**
+ * Routes /api/hinh-thuc-thanh-toan — danh mục thanh toán; tạo/xóa admin.
+ */
 const express = require("express");
 const router = express.Router();
 const hinhThucThanhToanController = require("../controllers/hinhThucThanhToan.controller");

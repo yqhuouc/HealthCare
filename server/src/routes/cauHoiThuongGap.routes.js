@@ -1,3 +1,6 @@
+/**
+ * Routes /api/cau-hoi-thuong-gap — FAQ public + CRUD admin.
+ */
 const express = require("express");
 const router = express.Router();
 const cauHoiThuongGapController = require("../controllers/cauHoiThuongGap.controller");

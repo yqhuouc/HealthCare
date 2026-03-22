@@ -1,3 +1,6 @@
+/**
+ * Body cho POST/PUT /api/chuyen-khoa (admin).
+ */
 const { z } = require("zod");
 
 const chuyenKhoaSchema = z.object({
