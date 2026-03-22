@@ -12,7 +12,7 @@
 │  1. Người dùng thao tác trên UI (client/src/pages/...)           │
 │  2. Page gọi Service (client/src/services/...)                   │
 │  3. Service gọi API qua api.js (axios instance, base URL /api)   │
-│  4. Request vào backend:                                         │
+│  4. Request vào backend (cookie HttpOnly tự gửi kèm):           │
 │     Route → [validate middleware + Zod] → [authenticate]         │
 │          → [authorize] → Controller → Service → Prisma → DB     │
 │  5. Backend trả JSON { success, message, data }                  │
@@ -29,7 +29,7 @@ validations/xxx.validation.js  Zod schema validate body
         │
 middlewares/validate.middleware.js  Parse body qua schema, trả 400 nếu lỗi
         │
-middlewares/auth.middleware.js      authenticate (verify JWT), authorize (check role)
+middlewares/auth.middleware.js      authenticate (đọc accessToken từ cookie), authorize (check role)
         │
 controllers/xxx.controller.js      Nhận req, gọi service, trả res
         │
@@ -75,7 +75,7 @@ registerSchema:
 
 ---
 
-## 2. Đăng nhập (Dual JWT)
+## 2. Đăng nhập (Dual JWT — HttpOnly Cookie)
 
 ### Luồng chi tiết
 
@@ -98,11 +98,12 @@ registerSchema:
      - Lưu refresh token vào DB (cột `TaiKhoan.refreshToken`)
      - Xác định hoTen dựa trên vai trò (admin/bác sĩ/bệnh nhân)
    - Controller:
+     - Set `accessToken` vào **HttpOnly Cookie** (secure, sameSite strict, 15 phút)
      - Set `refreshToken` vào **HttpOnly Cookie** (secure, sameSite strict, 7 ngày)
-     - Trả JSON: `{ user: { id, email, vaiTro, hoTen }, accessToken }`
+     - Trả JSON: `{ user: { id, email, vaiTro, hoTen } }` — **KHÔNG trả token trong body**
 7. Frontend:
-   - Lưu `accessToken` (Zustand store / localStorage)
-   - `api.js` tự gắn header `Authorization: Bearer <accessToken>` cho mọi request sau
+   - Browser tự lưu 2 cookie HttpOnly (JS không đọc được)
+   - Mọi request sau trình duyệt **tự gửi** cookie → server đọc `req.cookies.accessToken`
    - Chuyển hướng theo vai trò: admin → `/admin`, bác sĩ → `/doctor`, bệnh nhân → `/`
 
 ### Validation (Zod)
@@ -121,7 +122,7 @@ loginSchema:
 
 1. Khi Access Token hết hạn → API trả `401` "Token đã hết hạn"
 2. Frontend gọi `POST /api/auth/refresh` (không cần header Authorization)
-3. Refresh Token được trình duyệt **tự gửi** qua cookie
+3. Cả 2 cookie (accessToken + refreshToken) được trình duyệt **tự gửi**
 4. Backend flow:
    - `authController.refresh` đọc `req.cookies.refreshToken`
    - Gọi `authService.refreshAccessToken(refreshToken)`
@@ -131,8 +132,8 @@ loginSchema:
      - Tìm tài khoản trong DB, so khớp refreshToken
      - Tạo cặp token mới (**Token Rotation** — refresh token cũ bị thay thế)
      - Lưu refresh token mới vào DB
-   - Controller: set refresh cookie mới + trả `{ accessToken }`
-5. Frontend cập nhật accessToken mới → retry request gốc
+   - Controller: set **cả 2 cookie mới** (`accessToken` + `refreshToken`) → trả `{ message }`
+5. Frontend retry request gốc (cookie mới tự gửi theo)
 
 ---
 
@@ -141,13 +142,13 @@ loginSchema:
 ### Luồng chi tiết
 
 1. Người dùng bấm **"Đăng xuất"**
-2. Frontend gọi `POST /api/auth/logout` (kèm Access Token)
+2. Frontend gọi `POST /api/auth/logout` (cookie accessToken tự gửi kèm)
 3. Backend flow:
-   - `authenticate` middleware verify token → gắn `req.user`
+   - `authenticate` middleware đọc `accessToken` từ cookie → verify → gắn `req.user`
    - Controller gọi `authService.logout(req.user.id)`
    - Service: update `TaiKhoan.refreshToken = null`
-   - Controller: `res.clearCookie("refreshToken")` → trả success
-4. Frontend: xóa accessToken khỏi store, điều hướng về `/login`
+   - Controller: `res.clearCookie("accessToken")` + `res.clearCookie("refreshToken")` → trả success
+4. Frontend: cập nhật state, điều hướng về `/login`
 
 ---
 
@@ -156,7 +157,7 @@ loginSchema:
 ### Luồng chi tiết
 
 1. Frontend gọi `authService.getMe()` → `GET /api/auth/me`
-2. Middleware `authenticate` verify Access Token → query DB → gắn `req.user`
+2. Middleware `authenticate` đọc `accessToken` từ HttpOnly Cookie → verify → query DB → gắn `req.user`
 3. Controller gọi `authService.getMe(req.user.id)`
 4. Service query TaiKhoan với select đầy đủ:
    - id, email, vaiTro, gioiTinh, ngaySinh, diaChi, anhDaiDien, ngayTao, trangThaiTaiKhoan
@@ -251,7 +252,7 @@ capNhatHoSoSchema:
 4. Frontend gọi `appointmentService.create(data)`
 5. API: `POST /api/dat-lich`
 6. Backend flow:
-   - `authenticate` (bắt buộc đăng nhập)
+   - `authenticate` (bắt buộc đăng nhập — đọc accessToken từ cookie)
    - `validate(createDatLichSchema)`
    - Controller → Service:
      - **Bước 1**: Kiểm tra bác sĩ tồn tại → nếu không throw `404`
@@ -285,9 +286,9 @@ createDatLichSchema:
 
 1. Vào `/appointments` → `AppointmentHistoryPage.jsx`
 2. Frontend gọi `appointmentService.getMyAppointments(benhNhanId)`
-3. API: `GET /api/dat-lich/benh-nhan/:id` (cần JWT)
+3. API: `GET /api/dat-lich/benh-nhan/:id` (cần cookie HttpOnly)
 4. Backend flow:
-   - `authenticate` verify token
+   - `authenticate` đọc accessToken từ cookie → verify
    - Service kiểm tra **ownership**: so sánh `benhNhan.taiKhoanId` với `req.user.id`
    - Nếu không phải chủ sở hữu → throw `403`
    - Query danh sách lịch hẹn theo benhNhanId, sắp xếp theo ngày mới nhất
@@ -299,7 +300,7 @@ createDatLichSchema:
 1. Bấm **"Hủy lịch"** trên lịch hẹn đang ở trạng thái "Chờ xác nhận" (0)
 2. Frontend gọi `DELETE /api/dat-lich/:id`
 3. Backend flow:
-   - `authenticate` verify token
+   - `authenticate` đọc accessToken từ cookie → verify
    - Service:
      - Kiểm tra lịch hẹn tồn tại
      - **Ownership check**: bệnh nhân chỉ xóa được lịch của mình
@@ -316,16 +317,16 @@ createDatLichSchema:
 ### 11.1 Xem lịch hẹn của bác sĩ
 
 1. Bác sĩ vào `/doctor/appointments` → `DoctorAppointmentsPage.jsx`
-2. API: `GET /api/dat-lich/bac-si/:bacSiId` (JWT)
+2. API: `GET /api/dat-lich/bac-si/:bacSiId` (cookie HttpOnly)
 3. Backend:
-   - `authenticate` verify token
+   - `authenticate` đọc accessToken từ cookie → verify
    - Service kiểm tra **ownership**: bác sĩ chỉ xem được lịch của chính mình
    - Query lịch hẹn theo bacSiId, include bệnh nhân, hình thức thanh toán, đơn thuốc
 
 ### 11.2 Xem chi tiết lịch hẹn
 
 1. Bấm vào 1 lịch hẹn → `/doctor/appointments/:id` → `DoctorAppointmentDetailPage.jsx`
-2. API: `GET /api/dat-lich/:id` (JWT)
+2. API: `GET /api/dat-lich/:id` (cookie HttpOnly)
 3. Backend trả chi tiết đầy đủ: bác sĩ, bệnh nhân, hình thức thanh toán, đơn thuốc + chi tiết thuốc
 
 ### 11.3 Cập nhật trạng thái lịch hẹn
@@ -415,8 +416,8 @@ createDatLichSchema:
 
 1. Xem danh sách: `/admin/patients` → `AdminPatientsPage.jsx`
    - `GET /api/benh-nhan?search=&page=1&limit=10` (admin)
-2. Xem chi tiết: `GET /api/benh-nhan/:id` (JWT)
-3. Sửa: `PUT /api/benh-nhan/:id` (JWT) — cập nhật hoTen, soDienThoai, emailLienHe + taiKhoan liên quan
+2. Xem chi tiết: `GET /api/benh-nhan/:id` (cookie HttpOnly)
+3. Sửa: `PUT /api/benh-nhan/:id` (cookie HttpOnly) — cập nhật hoTen, soDienThoai, emailLienHe + taiKhoan liên quan
 4. Xóa: `DELETE /api/benh-nhan/:id` (admin) — **không xóa được** nếu có lịch hẹn
 
 ### 12.6 Quản lý lịch hẹn
@@ -471,7 +472,7 @@ Public FAQ: `GET /api/cau-hoi-thuong-gap` — chỉ trả FAQ có dangHoatDong =
 1. Bệnh nhân vào `/medical-result` → `MedicalResultPage.jsx`
 2. Từ lịch hẹn đã khám (trangThai = 2), xem đơn thuốc:
    - Đơn thuốc đã nằm trong include khi lấy danh sách lịch hẹn
-   - Hoặc gọi riêng: `GET /api/don-thuoc/:id` (JWT)
+   - Hoặc gọi riêng: `GET /api/don-thuoc/:id` (cookie HttpOnly)
 3. Hiển thị: chẩn đoán, ghi chú, danh sách thuốc (tên, số lượng, liều dùng, ghi chú)
 
 ---
@@ -489,7 +490,7 @@ GET /api/health → { success: true, message: "Server đang hoạt động!", ti
 1. **Route đã khai báo?** → Kiểm tra `server/src/routes/*.routes.js` và `routes/index.js`
 2. **Validation đúng field?** → Kiểm tra `server/src/validations/*.validation.js`
 3. **Frontend gọi đúng endpoint?** → Kiểm tra `client/src/services/*.js`
-4. **Access Token có hết hạn?** → Gọi `/api/auth/refresh` để lấy token mới
+4. **Access Token hết hạn?** → Gọi `/api/auth/refresh` để làm mới cookie
 5. **Role đúng với authorize?** → Kiểm tra `authorize("admin", "bac_si")` trong route
 6. **Ownership check?** → Bệnh nhân chỉ xem/sửa/xóa dữ liệu của chính mình
 7. **Prisma schema khớp?** → Kiểm tra `schema.prisma` và chạy `npx prisma generate`

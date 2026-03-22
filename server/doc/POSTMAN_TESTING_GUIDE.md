@@ -278,30 +278,26 @@ Mở `http://localhost:5555` → Bạn có thể duyệt tất cả bảng, xem 
 | Variable | Initial Value | Description |
 |----------|---------------|-------------|
 | `base_url` | `http://localhost:5000/api` | URL gốc của API |
-| `admin_token` | _(để trống, sẽ lấy sau)_ | Access Token của admin |
-| `doctor_token` | _(để trống)_ | Access Token của bác sĩ |
-| `patient_token` | _(để trống)_ | Access Token của bệnh nhân |
 
 4. Click **"Save"** → Chọn environment `Local` ở dropdown góc trên phải
+
+> **Lưu ý**: Không cần biến `admin_token`, `doctor_token`, `patient_token` nữa vì token được lưu trong **HttpOnly Cookie** do Postman tự quản lý.
 
 ### 3.3 Cách sử dụng biến
 
 Trong Postman, dùng `{{ten_bien}}` để reference biến. Ví dụ:
 - URL: `{{base_url}}/auth/login`
-- Header: `Bearer {{admin_token}}`
 
-### 3.4 Lưu ý về Dual JWT
+### 3.4 Lưu ý về Dual JWT (HttpOnly Cookie)
 
-Hệ thống sử dụng **Dual JWT**:
-- **Access Token**: trả trong JSON body → bạn lưu vào biến environment `*_token`
-- **Refresh Token**: set vào **HttpOnly Cookie** → Postman tự quản lý cookie
+Hệ thống sử dụng **Dual JWT** với **cả 2 token đều lưu trong HttpOnly Cookie**:
+- **Access Token**: set vào cookie `accessToken` (HttpOnly, 15 phút)
+- **Refresh Token**: set vào cookie `refreshToken` (HttpOnly, 7 ngày)
+- Response JSON **KHÔNG trả token** — chỉ trả thông tin user
 
-Khi gọi API cần xác thực, thêm header:
-```
-Authorization: Bearer {{admin_token}}
-```
+**Khi gọi API cần xác thực**: Postman **tự gửi cookie** kèm request (không cần header `Authorization`).
 
-Khi gọi refresh, Postman sẽ **tự gửi cookie** nếu cookie được lưu cho domain `localhost`.
+> **Quan trọng**: Đảm bảo trong Postman đã bật **"Automatically follow redirects"** và **cookies được lưu** cho domain `localhost`.
 
 ---
 
@@ -399,15 +395,15 @@ POST {{base_url}}/auth/login
       "email": "admin@clinic.vn",
       "vaiTro": "admin",
       "hoTen": "Admin"
-    },
-    "accessToken": "eyJhbGciOiJIUzI1NiIs..."
+    }
   }
 }
 ```
 
 > **Quan trọng**:
-> 1. Copy giá trị `accessToken` từ response → Paste vào biến `admin_token` trong Environment
-> 2. Kiểm tra tab **"Cookies"** trong Postman → sẽ thấy `refreshToken` cookie cho `localhost`
+> 1. Response **không chứa token** — token được set vào cookie tự động
+> 2. Kiểm tra tab **"Cookies"** trong Postman → sẽ thấy **2 cookie**: `accessToken` và `refreshToken` cho `localhost`
+> 3. Postman sẽ **tự gửi cookie** này trong các request tiếp theo
 
 **Kiểm thử lỗi**:
 - Sai mật khẩu → `401` "Email hoặc mật khẩu không đúng"
@@ -430,7 +426,7 @@ POST {{base_url}}/auth/login
 }
 ```
 
-> Copy `accessToken` → Paste vào biến `doctor_token`.
+> Đăng nhập thành công → Postman tự lưu cookie cho các request tiếp theo.
 
 ---
 
@@ -448,14 +444,14 @@ POST {{base_url}}/auth/login
 }
 ```
 
-> Copy `accessToken` → Paste vào biến `patient_token`.
+> Đăng nhập thành công → Postman tự lưu cookie cho các request tiếp theo.
 
 ---
 
 ### 4.6 Làm mới Access Token (Refresh)
 
-> Khi Access Token hết hạn (sau 15 phút), dùng endpoint này để lấy token mới.
-> Refresh Token được gửi tự động qua cookie.
+> Khi Access Token hết hạn (sau 15 phút), dùng endpoint này để làm mới cả 2 cookie.
+> Cookie refreshToken được Postman tự gửi.
 
 ```
 POST {{base_url}}/auth/refresh
@@ -467,14 +463,11 @@ Không cần header Authorization, không cần body.
 ```json
 {
   "success": true,
-  "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIs... (token mới)"
-  }
+  "message": "Token đã được làm mới"
 }
 ```
 
-> Cookie `refreshToken` cũng được cập nhật (Token Rotation).
-> Cập nhật lại biến `*_token` trong Environment với accessToken mới.
+> Cả 2 cookie `accessToken` và `refreshToken` được cập nhật tự động (Token Rotation).
 
 **Kiểm thử lỗi**:
 - Không có cookie refreshToken → `401` "Refresh token không hợp lệ"
@@ -488,10 +481,7 @@ Không cần header Authorization, không cần body.
 GET {{base_url}}/auth/me
 ```
 
-**Headers**:
-| Key | Value |
-|-----|-------|
-| Authorization | Bearer {{admin_token}} |
+Không cần header `Authorization` — cookie `accessToken` được Postman tự gửi.
 
 **Kết quả mong đợi** (Status: `200 OK`):
 ```json
@@ -533,7 +523,8 @@ PUT {{base_url}}/auth/doi-mat-khau
 | Key | Value |
 |-----|-------|
 | Content-Type | application/json |
-| Authorization | Bearer {{patient_token}} |
+
+> Cookie `accessToken` được Postman tự gửi kèm request.
 
 **Body**:
 ```json
@@ -569,7 +560,8 @@ PUT {{base_url}}/auth/cap-nhat-ho-so
 | Key | Value |
 |-----|-------|
 | Content-Type | application/json |
-| Authorization | Bearer {{patient_token}} |
+
+> Cookie `accessToken` được Postman tự gửi kèm request.
 
 **Body**:
 ```json
@@ -606,10 +598,7 @@ PUT {{base_url}}/auth/cap-nhat-ho-so
 POST {{base_url}}/auth/logout
 ```
 
-**Headers**:
-| Key | Value |
-|-----|-------|
-| Authorization | Bearer {{patient_token}} |
+Không cần header — cookie `accessToken` được Postman tự gửi.
 
 **Kết quả mong đợi** (Status: `200 OK`):
 ```json
@@ -619,9 +608,8 @@ POST {{base_url}}/auth/logout
 }
 ```
 
-> Sau khi logout, Refresh Token trong DB bị xóa, cookie bị clear.
-> Dùng Access Token cũ vẫn hoạt động cho đến khi hết hạn (15 phút).
-> Nhưng không thể refresh token mới nữa.
+> Sau khi logout, cả 2 cookie `accessToken` và `refreshToken` bị xóa, Refresh Token trong DB cũng bị xóa.
+> Mọi request sau đều sẽ nhận `401`.
 
 ---
 

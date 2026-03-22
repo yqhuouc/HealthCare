@@ -43,7 +43,7 @@ Response  ◄─────────────  JSON { success, message, d
 - **Helmet**: bảo vệ HTTP headers
 - **Rate Limit**: giới hạn 100 requests / 15 phút / IP
 - **CORS**: chỉ cho phép origin từ `CLIENT_URL`
-- **Dual JWT**: Access Token (header) + Refresh Token (HttpOnly Cookie)
+- **Dual JWT**: Access Token (HttpOnly Cookie) + Refresh Token (HttpOnly Cookie)
 
 ---
 
@@ -214,23 +214,24 @@ Hệ thống sử dụng cơ chế **Dual JWT** với **Token Rotation**:
 │       │                                                     │
 │       ▼                                                     │
 │  Server kiểm tra → tạo 2 token:                            │
-│       ├── Access Token  (15 phút) → trả trong JSON body     │
+│       ├── Access Token  (15 phút) → set HttpOnly Cookie     │
 │       └── Refresh Token (7 ngày)  → set HttpOnly Cookie     │
 │                                     + lưu vào DB            │
+│  Response JSON chỉ trả { user } — KHÔNG trả token          │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
 │                      GỌI API                                │
 │                                                             │
-│  Client gửi request kèm header:                             │
-│    Authorization: Bearer <accessToken>                      │
+│  Browser tự gửi cookie accessToken kèm request              │
 │       │                                                     │
 │       ▼                                                     │
 │  authenticate middleware:                                   │
-│    1. Verify Access Token                                   │
-│    2. Query DB lấy user đầy đủ                              │
-│    3. Kiểm tra trangThaiTaiKhoan !== 0 (không bị khóa)     │
-│    4. Gắn user vào req.user                                 │
+│    1. Đọc req.cookies.accessToken                           │
+│    2. Verify Access Token (JWT)                             │
+│    3. Query DB lấy user đầy đủ                              │
+│    4. Kiểm tra trangThaiTaiKhoan !== 0 (không bị khóa)     │
+│    5. Gắn user vào req.user                                 │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -238,12 +239,12 @@ Hệ thống sử dụng cơ chế **Dual JWT** với **Token Rotation**:
 │                                                             │
 │  Khi Access Token hết hạn:                                  │
 │    Client gọi POST /api/auth/refresh                        │
-│    (Refresh Token tự gửi qua cookie)                        │
+│    (Cookie refreshToken tự gửi qua browser)                 │
 │       │                                                     │
 │       ▼                                                     │
 │  Server verify Refresh Token + so khớp DB                   │
 │    → Tạo cặp token mới (rotation)                           │
-│    → Trả Access Token mới + set Refresh Token mới           │
+│    → Set 2 cookie mới: accessToken + refreshToken           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -251,14 +252,14 @@ Hệ thống sử dụng cơ chế **Dual JWT** với **Token Rotation**:
 
 | Loại | Secret | Thời gian sống | Lưu trữ |
 |------|--------|----------------|---------|
-| **Access Token** | `JWT_ACCESS_SECRET` | 15 phút (mặc định) | Client lưu trong memory/localStorage |
-| **Refresh Token** | `JWT_REFRESH_SECRET` | 7 ngày (mặc định) | HttpOnly Cookie + cột `refreshToken` trong bảng TaiKhoan |
+| **Access Token** | `JWT_ACCESS_SECRET` | 15 phút (mặc định) | HttpOnly Cookie (`accessToken`) |
+| **Refresh Token** | `JWT_REFRESH_SECRET` | 7 ngày (mặc định) | HttpOnly Cookie (`refreshToken`) + cột `refreshToken` trong bảng TaiKhoan |
 
-**Cookie options cho Refresh Token**:
-- `httpOnly: true` – không truy cập được từ JavaScript
+**Cookie options chung cho cả 2 token**:
+- `httpOnly: true` – JavaScript không truy cập được → chặn XSS
 - `secure: true` (production) – chỉ gửi qua HTTPS
 - `sameSite: "strict"` – chống CSRF
-- `maxAge: 7 ngày`
+- `maxAge`: Access Token = 15 phút, Refresh Token = 7 ngày
 
 ### 4.3 Phân quyền (Authorization)
 
@@ -298,9 +299,9 @@ Ngoài phân quyền theo vai trò, hệ thống còn kiểm tra quyền sở h�
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|--------|-------|
 | `POST` | `/auth/register` | Đăng ký tài khoản bệnh nhân | Public |
-| `POST` | `/auth/login` | Đăng nhập → nhận Access Token + Refresh Cookie | Public |
-| `POST` | `/auth/refresh` | Làm mới Access Token bằng Refresh Cookie | Public |
-| `POST` | `/auth/logout` | Đăng xuất, xóa Refresh Token | JWT |
+| `POST` | `/auth/login` | Đăng nhập → set 2 HttpOnly Cookie (accessToken + refreshToken) | Public |
+| `POST` | `/auth/refresh` | Làm mới cả 2 cookie bằng Refresh Cookie | Public |
+| `POST` | `/auth/logout` | Đăng xuất, xóa cả 2 cookie + nullify DB | Cookie |
 | `GET` | `/auth/me` | Lấy thông tin user đang đăng nhập | JWT |
 | `PUT` | `/auth/doi-mat-khau` | Đổi mật khẩu | JWT |
 | `PUT` | `/auth/cap-nhat-ho-so` | Cập nhật hồ sơ (giới tính, ngày sinh, địa chỉ, ảnh) | JWT |
@@ -575,5 +576,5 @@ npx prisma studio
 6. **Transaction**: Khi tạo/xóa dữ liệu liên quan nhiều bảng, dùng Prisma `$transaction`
 7. **Phân quyền rõ ràng**: Mỗi route khai báo `authenticate` + `authorize(role)` tường minh
 8. **Ownership Check**: Kiểm tra quyền sở hữu (bệnh nhân chỉ xem/sửa/xóa của mình)
-9. **Secure by Default**: Helmet, rate limit, CORS strict, HttpOnly cookie cho refresh token
+9. **Secure by Default**: Helmet, rate limit, CORS strict, HttpOnly cookie cho **cả Access Token + Refresh Token**
 10. **BigInt Handling**: Prisma dùng BigInt cho ID, serialize sang Number qua `toJSON` override
