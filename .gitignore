@@ -5,5 +5,9 @@ dist/
 .DS_Store
 Thumbs.db
 .gitignore
-docx
-diagrams 
+diagrams/
+doc/
+docx/
+
+# Ignore documentation folder inside backend
+server/doc/
