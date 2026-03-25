@@ -8,7 +8,7 @@ const bacSiService = require("../services/bacSi.service");
 // GET /api/bac-si — danh sách + pagination (public)
 const getAll = asyncHandler(async (req, res) => {
   const result = await bacSiService.getAll(req.query);
-  res.json({ success: true, data: result.bacSis, pagination: result.pagination });
+  res.json({ success: true, data: result.bacSiList, pagination: result.pagination });
 });
 
 // GET /api/bac-si/:id — chi tiết (public)

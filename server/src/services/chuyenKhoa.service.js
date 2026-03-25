@@ -8,7 +8,7 @@ const { AppError } = require("../middlewares/error.middleware");
 // Danh sách + đếm số bác sĩ mỗi khoa
 const getAll = async () => {
   return prisma.chuyenKhoa.findMany({
-    include: { _count: { select: { bacSis: true } } },
+    include: { _count: { select: { bacSiList: true } } },
     orderBy: { tenChuyenKhoa: "asc" },
   });
 };
@@ -18,7 +18,7 @@ const getById = async (id) => {
   const chuyenKhoa = await prisma.chuyenKhoa.findUnique({
     where: { id: BigInt(id) },
     include: {
-      bacSis: { select: { id: true, tenBacSi: true, hocViChucDanh: true, moTaNgan: true, giaKham: true } },
+      bacSiList: { select: { id: true, tenBacSi: true, hocViChucDanh: true, moTaNgan: true, giaKham: true } },
     },
   });
 

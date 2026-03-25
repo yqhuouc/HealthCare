@@ -13,7 +13,7 @@ const getAll = async ({ chuyenKhoaId, search, page = 1, limit = 10 }) => {
   if (chuyenKhoaId) where.chuyenKhoaId = BigInt(chuyenKhoaId);
   if (search) where.tenBacSi = { contains: search, mode: "insensitive" };
 
-  const [bacSis, total] = await Promise.all([
+  const [bacSiList, total] = await Promise.all([
     prisma.bacSi.findMany({
       where,
       include: {
@@ -28,7 +28,7 @@ const getAll = async ({ chuyenKhoaId, search, page = 1, limit = 10 }) => {
   ]);
 
   return {
-    bacSis,
+    bacSiList,
     pagination: { total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / Number(limit)) },
   };
 };

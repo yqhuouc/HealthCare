@@ -45,7 +45,7 @@ model ChuyenKhoa {
   anhChuyenKhoa  String? @db.VarChar(255)
   moTaChuyenKhoa String? @db.Text
 
-  bacSis BacSi[]
+  bacSiList BacSi[]
 
   @@map("ChuyenKhoa")
 }

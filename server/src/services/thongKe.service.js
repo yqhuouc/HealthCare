@@ -62,12 +62,12 @@ const thongKeLichHen = async ({ tuNgay, denNgay }) => {
 
   // Lấy tên bác sĩ
   const bacSiIds = lichHenTheoBacSi.map((item) => item.bacSiId).filter(Boolean);
-  const bacSis = await prisma.bacSi.findMany({
+  const bacSiList = await prisma.bacSi.findMany({
     where: { id: { in: bacSiIds } },
     select: { id: true, tenBacSi: true },
   });
 
-  const bacSiMap = new Map(bacSis.map((bs) => [Number(bs.id), bs.tenBacSi]));
+  const bacSiMap = new Map(bacSiList.map((bs) => [Number(bs.id), bs.tenBacSi]));
 
   return {
     lichHenTheoNgay: lichHenTheoNgay.map((item) => ({

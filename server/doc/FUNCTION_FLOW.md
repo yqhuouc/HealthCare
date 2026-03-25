@@ -227,7 +227,7 @@ capNhatHoSoSchema:
      - Build `where` clause từ query params (chuyenKhoaId, search theo tên)
      - Query `prisma.bacSi.findMany` với include chuyenKhoa + taiKhoan
      - Đếm total → tính pagination
-   - Trả: `{ bacSis: [...], pagination: { total, page, limit, totalPages } }`
+  - Trả: `{ bacSiList: [...], pagination: { total, page, limit, totalPages } }`
 5. Frontend render danh sách + phân trang
 
 ### 8.2 Chi tiết bác sĩ
@@ -394,7 +394,7 @@ createDatLichSchema:
 ### 12.3 Quản lý chuyên khoa
 
 1. Xem: `/admin/specialties` → `AdminSpecialtiesPage.jsx`
-   - `GET /api/chuyen-khoa` (public) — trả danh sách kèm `_count.bacSis`
+   - `GET /api/chuyen-khoa` (public) — trả danh sách kèm `_count.bacSiList`
 2. Thêm: `/admin/specialties/add` → `AdminAddSpecialtyPage.jsx`
    - `POST /api/chuyen-khoa` (admin) — body: `{ tenChuyenKhoa, anhChuyenKhoa, moTaChuyenKhoa }`
 3. Sửa: `PUT /api/chuyen-khoa/:id` (admin)
@@ -451,7 +451,7 @@ Public FAQ: `GET /api/cau-hoi-thuong-gap` — chỉ trả FAQ có dangHoatDong =
 
 1. `/specialties` → `SpecialtyListPage.jsx`
 2. `GET /api/chuyen-khoa` (public)
-3. Trả danh sách chuyên khoa kèm `_count.bacSis` (số bác sĩ mỗi chuyên khoa)
+3. Trả danh sách chuyên khoa kèm `_count.bacSiList` (số bác sĩ mỗi chuyên khoa)
 
 ### 13.2 Chi tiết chuyên khoa
 

@@ -633,7 +633,7 @@ Không cần token. Kết quả trả về mảng chuyên khoa kèm số lượn
       "tenChuyenKhoa": "Tim mạch",
       "anhChuyenKhoa": null,
       "moTaChuyenKhoa": "Khám và điều trị các bệnh về tim, mạch máu",
-      "_count": { "bacSis": 2 }
+      "_count": { "bacSiList": 2 }
     }
   ]
 }
