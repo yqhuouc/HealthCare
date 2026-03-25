@@ -18,7 +18,14 @@ const getAll = async ({ chuyenKhoaId, search, page = 1, limit = 10 }) => {
       where,
       include: {
         chuyenKhoa: { select: { id: true, tenChuyenKhoa: true } },
-        taiKhoan: { select: { id: true, email: true, anhDaiDien: true, trangThaiTaiKhoan: true } },
+        taiKhoan: {
+          select: {
+            id: true,
+            email: true,
+            anhDaiDien: true,
+            trangThaiTaiKhoan: true,
+          },
+        },
       },
       skip,
       take: Number(limit),
@@ -29,7 +36,12 @@ const getAll = async ({ chuyenKhoaId, search, page = 1, limit = 10 }) => {
 
   return {
     bacSiList,
-    pagination: { total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / Number(limit)) },
+    pagination: {
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / Number(limit)),
+    },
   };
 };
 
@@ -39,7 +51,16 @@ const getById = async (id) => {
     where: { id: BigInt(id) },
     include: {
       chuyenKhoa: true,
-      taiKhoan: { select: { id: true, email: true, anhDaiDien: true, gioiTinh: true, ngaySinh: true, diaChi: true } },
+      taiKhoan: {
+        select: {
+          id: true,
+          email: true,
+          anhDaiDien: true,
+          gioiTinh: true,
+          ngaySinh: true,
+          diaChi: true,
+        },
+      },
     },
   });
 
@@ -50,7 +71,9 @@ const getById = async (id) => {
 // Email trùng → 409; không email thì tạo email giả + mật khẩu mặc định nếu thiếu
 const create = async (data) => {
   if (data.email) {
-    const exists = await prisma.taiKhoan.findUnique({ where: { email: data.email } });
+    const exists = await prisma.taiKhoan.findUnique({
+      where: { email: data.email },
+    });
     if (exists) throw new AppError("Email đã được sử dụng", 409);
   }
 
@@ -97,8 +120,10 @@ const update = async (id, data) => {
       hocViChucDanh: data.hocViChucDanh,
       moTaNgan: data.moTaNgan,
       moTaChiTiet: data.moTaChiTiet,
-      giaKham: data.giaKham !== undefined ? parseFloat(data.giaKham) : undefined,
-      chuyenKhoaId: data.chuyenKhoaId !== undefined ? BigInt(data.chuyenKhoaId) : undefined,
+      giaKham:
+        data.giaKham !== undefined ? parseFloat(data.giaKham) : undefined,
+      chuyenKhoaId:
+        data.chuyenKhoaId !== undefined ? BigInt(data.chuyenKhoaId) : undefined,
     },
   });
 };
@@ -108,9 +133,14 @@ const remove = async (id) => {
   const existing = await prisma.bacSi.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy bác sĩ", 404);
 
-  const appointmentCount = await prisma.datLich.count({ where: { bacSiId: BigInt(id) } });
+  const appointmentCount = await prisma.datLich.count({
+    where: { bacSiId: BigInt(id) },
+  });
   if (appointmentCount > 0) {
-    throw new AppError(`Không thể xóa vì bác sĩ có ${appointmentCount} lịch hẹn`, 400);
+    throw new AppError(
+      `Không thể xóa vì bác sĩ có ${appointmentCount} lịch hẹn`,
+      400,
+    );
   }
 
   await prisma.$transaction(async (tx) => {
