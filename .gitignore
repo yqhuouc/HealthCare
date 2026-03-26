@@ -6,8 +6,3 @@ dist/
 Thumbs.db
 .gitignore
 diagrams/
-doc/
-docx/
-
-# Ignore documentation folder inside backend
-server/doc/
