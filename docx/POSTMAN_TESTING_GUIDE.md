@@ -905,7 +905,50 @@ DELETE {{base_url}}/benh-nhan/1
 > Đây là phần quan trọng nhất. Test theo đúng thứ tự để đảm bảo dữ liệu nhất quán.
 > **Yêu cầu**: Phải tạo lịch làm việc cho bác sĩ trước khi đặt lịch (xem mục 9).
 
-### 8.1 Tạo lịch hẹn mới
+### 8.1 Lấy danh sách slot trống (Public)
+
+> Khách hàng xem danh sách các slot khám tự sinh từ ca làm việc để chọn đặt.
+
+```
+GET {{base_url}}/dat-lich/slot-trong?bacSiId=1&ngayDat=2026-03-25
+```
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "data": {
+    "bacSi": {
+      "id": 1,
+      "tenBacSi": "Nguyễn Văn An",
+      "chuyenKhoa": "Tim mạch",
+      "thoiLuongKham": 20
+    },
+    "ngayDat": "2026-03-25",
+    "slots": [
+      {
+        "gioBatDau": "08:00",
+        "gioKetThuc": "08:20",
+        "daDat": false,
+        "lichLamViecId": 1,
+        "conTrong": true
+      },
+      {
+        "gioBatDau": "08:20",
+        "gioKetThuc": "08:40",
+        "daDat": false,
+        "lichLamViecId": 1,
+        "conTrong": true
+      }
+    ],
+    "slotTrong": [ ... các slot chưa đặt ... ]
+  }
+}
+```
+
+---
+
+### 8.2 Tạo lịch hẹn mới
 
 ```
 POST {{base_url}}/dat-lich
@@ -913,12 +956,11 @@ POST {{base_url}}/dat-lich
 
 **Headers**: Content-Type: application/json, Authorization: Bearer {{patient_token}}
 
-**Body**:
+**Body** (chú ý: không truyền `gioKetThuc`):
 ```json
 {
   "ngayDat": "2026-03-25",
   "gioBatDau": "08:00",
-  "gioKetThuc": "09:00",
   "lyDoKham": "Đau đầu kéo dài, chóng mặt",
   "bacSiId": 1,
   "benhNhanId": 1,
@@ -935,33 +977,32 @@ POST {{base_url}}/dat-lich
     "id": 1,
     "ngayDat": "2026-03-25T00:00:00.000Z",
     "gioBatDau": "1970-01-01T08:00:00.000Z",
-    "gioKetThuc": "1970-01-01T09:00:00.000Z",
+    "gioKetThuc": "1970-01-01T08:20:00.000Z",
     "lyDoKham": "Đau đầu kéo dài, chóng mặt",
     "giaKham": "500000",
     "trangThai": 0,
+    "lichLamViecId": "1",
     "bacSi": {
       "id": 1,
       "tenBacSi": "Nguyễn Văn An",
       "hocViChucDanh": "PGS.TS",
-      "chuyenKhoa": { "tenChuyenKhoa": "Tim mạch" }
+      "chuyenKhoa": { "tenChuyenKhoa": "Tim mạch", "thoiLuongKham": 20 }
     },
-    "benhNhan": { "id": 1, "hoTen": "Nguyễn Bệnh Nhân", "soDienThoai": "0912345678" },
-    "hinhThucThanhToan": { "id": 1, "tenHinhThuc": "Tiền mặt" },
-    "donThuoc": null
+    "benhNhan": { "id": 1, "hoTen": "Nguyễn Bệnh Nhân", "soDienThoai": "0912345678" }
   }
 }
 ```
 
-> Ghi lại `id` của lịch hẹn vừa tạo (ví dụ: `1`) để dùng cho các test tiếp theo.
+> Tạo thành công thì sức chứa `soBenhNhanHienTai` của ca làm việc tương ứng sẽ tự động tăng 1.
 
 **Kiểm thử lỗi**:
-- Bác sĩ không có lịch làm việc ngày đó → `400` "Bác sĩ không có lịch làm việc vào ngày này"
-- bacSiId không tồn tại → `404` "Không tìm thấy bác sĩ"
-- benhNhanId không tồn tại → `404` "Không tìm thấy bệnh nhân"
+- Bác sĩ không có lịch làm việc ngày đó / khung giờ đó không nằm trong ca → `400`
+- Ca làm việc đã đầy (`soBenhNhanHienTai` >= `soBenhNhanToiDa`) → `400`
+- Trùng lịch (slot đã có người đặt) → `409`
 
 ---
 
-### 8.2 Test trùng lịch
+### 8.3 Test trùng lịch
 
 Gửi lại **cùng request** ở 8.1 (cùng bác sĩ + cùng ngày + cùng giờ bắt đầu):
 
@@ -975,13 +1016,12 @@ Gửi lại **cùng request** ở 8.1 (cùng bác sĩ + cùng ngày + cùng gi�
 
 ---
 
-### 8.3 Tạo thêm lịch hẹn (khung giờ khác)
+### 8.4 Tạo thêm lịch hẹn (khung giờ khác)
 
 ```json
 {
   "ngayDat": "2026-03-25",
-  "gioBatDau": "09:00",
-  "gioKetThuc": "10:00",
+  "gioBatDau": "08:20",
   "lyDoKham": "Khám định kỳ",
   "bacSiId": 2,
   "benhNhanId": 1,
@@ -991,7 +1031,7 @@ Gửi lại **cùng request** ở 8.1 (cùng bác sĩ + cùng ngày + cùng gi�
 
 ---
 
-### 8.4 Lấy tất cả lịch hẹn (Admin)
+### 8.5 Lấy tất cả lịch hẹn (Admin)
 
 ```
 GET {{base_url}}/dat-lich
@@ -1078,7 +1118,7 @@ PUT {{base_url}}/dat-lich/1/trang-thai
 
 ---
 
-### 8.10 Hủy lịch hẹn
+### 8.11 Hủy lịch hẹn
 
 ```
 PUT {{base_url}}/dat-lich/2/trang-thai
@@ -1091,9 +1131,11 @@ PUT {{base_url}}/dat-lich/2/trang-thai
 }
 ```
 
+> Nếu chuyển sang hủy, sức chứa `soBenhNhanHienTai` của ca sẽ giảm 1.
+
 ---
 
-### 8.11 Xóa lịch hẹn
+### 8.12 Xóa lịch hẹn
 
 ```
 DELETE {{base_url}}/dat-lich/2
@@ -1110,17 +1152,17 @@ DELETE {{base_url}}/dat-lich/2
 
 ## 9. Test Lịch làm việc & Khung giờ
 
-### 9.1 Lấy danh sách khung giờ (Public)
+### 9.1 Lấy danh sách khung giờ (ca làm việc) (Public)
 
 ```
 GET {{base_url}}/lich-lam-viec/khung-gio
 ```
 
-**Kết quả mong đợi**: Danh sách 8 khung giờ (07:00-08:00, 08:00-09:00, ..., 16:00-17:00)
+**Kết quả mong đợi**: Danh sách khung giờ đóng vai trò là ca làm việc (VD: Ca Sáng 07:00-11:00, Ca Chiều 13:00-17:00)
 
 ---
 
-### 9.2 Tạo khung giờ mới (Admin)
+### 9.2 Tạo ca làm việc mới (Admin)
 
 ```
 POST {{base_url}}/lich-lam-viec/khung-gio
@@ -1128,11 +1170,11 @@ POST {{base_url}}/lich-lam-viec/khung-gio
 
 **Headers**: Authorization: Bearer {{admin_token}}
 
-**Body**:
+**Body** (phải đảm bảo gioBatDau < gioKetThuc):
 ```json
 {
-  "gioBatDau": "17:00",
-  "gioKetThuc": "18:00"
+  "gioBatDau": "18:00",
+  "gioKetThuc": "21:00"
 }
 ```
 
@@ -1161,17 +1203,16 @@ POST {{base_url}}/lich-lam-viec
 
 **Headers**: Authorization: Bearer {{admin_token}}
 
-**Body**:
+**Body** (Nếu không kèm `soBenhNhanToiDa`, backend sẽ tự tính dựa vào `thoiLuongKham` của chuyên khoa):
 ```json
 {
   "ngayLamViec": "2026-03-25",
   "bacSiId": 1,
-  "khungGioId": 2,
-  "soBenhNhanToiDa": 10
+  "khungGioId": 1
 }
 ```
 
-> `khungGioId: 2` tương ứng khung 08:00-09:00 (theo seed data).
+> `khungGioId: 1` tương ứng ca 07:00-11:00 (4 tiếng).
 
 **Kết quả mong đợi** (Status: `201 Created`):
 ```json
@@ -1182,13 +1223,13 @@ POST {{base_url}}/lich-lam-viec
     "id": 1,
     "ngayLamViec": "2026-03-25T00:00:00.000Z",
     "soBenhNhanHienTai": 0,
-    "soBenhNhanToiDa": 10,
+    "soBenhNhanToiDa": 12,
     "sanSang": 1,
     "bacSi": { "id": 1, "tenBacSi": "Nguyễn Văn An" },
     "khungGio": {
-      "id": 2,
-      "gioBatDau": "1970-01-01T08:00:00.000Z",
-      "gioKetThuc": "1970-01-01T09:00:00.000Z"
+      "id": 1,
+      "gioBatDau": "1970-01-01T07:00:00.000Z",
+      "gioKetThuc": "1970-01-01T11:00:00.000Z"
     }
   }
 }
@@ -1656,16 +1697,17 @@ Dùng checklist này để đánh dấu các API đã test qua:
 - [ ] Không xóa được lịch đã xác nhận/đã khám
 - [ ] Ownership check: BN không xóa lịch BN khác
 
-### Lịch làm việc (7 endpoints)
+### Lịch làm việc & Đặt lịch (10 endpoints)
 - [ ] Lấy khung giờ `GET /api/lich-lam-viec/khung-gio`
-- [ ] Tạo khung giờ (admin) `POST /api/lich-lam-viec/khung-gio`
-- [ ] Xóa khung giờ (admin) `DELETE /api/lich-lam-viec/khung-gio/:id`
-- [ ] Không xóa được khung giờ đang sử dụng
-- [ ] Tạo lịch làm việc `POST /api/lich-lam-viec`
-- [ ] Test trùng lịch làm việc
-- [ ] Lấy lịch theo bác sĩ + ngày `GET /api/lich-lam-viec?bacSiId=&ngayLamViec=`
-- [ ] Cập nhật sẵn sàng `PUT /api/lich-lam-viec/:id`
-- [ ] Xóa lịch `DELETE /api/lich-lam-viec/:id`
+- [ ] Tạo khung giờ (admin) `POST /api/lich-lam-viec/khung-gio` (validate thời gian trước sau)
+- [ ] Lấy slot khám trống (BN đặt lịch) `GET /api/dat-lich/slot-trong`
+- [ ] Lỗi đặt lịch nếu xóa/hủy khung giờ đã có lịch
+- [ ] Tạo lịch làm việc `POST /api/lich-lam-viec` (chờ tự tính `soBenhNhanToiDa`)
+- [ ] Tạo lịch hẹn `POST /api/dat-lich` (chỉ cần `gioBatDau`, sức chứa ca tự tăng)
+- [ ] Cập nhật trạng thái lịch hẹn: chờ → xác nhận (1), đến đã khám (2), hủy (3 - sức chứa tự giảm)
+- [ ] Validate trùng lịch hẹn
+- [ ] Lấy lịch hẹn, lấy lịch làm việc theo BS
+- [ ] Xóa lịch `DELETE /api/lich-lam-viec/:id` (lỗi nếu có lịch hẹn ko)
 
 ### Đơn thuốc (4 endpoints)
 - [ ] Tạo đơn thuốc (bác sĩ) `POST /api/don-thuoc` với chi tiết thuốc

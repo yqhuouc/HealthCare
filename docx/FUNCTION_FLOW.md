@@ -247,22 +247,24 @@ capNhatHoSoSchema:
 ### Luồng chi tiết
 
 1. Người dùng vào `/booking/:doctorId` → `BookingPage.jsx`
-2. Chọn ngày, khung giờ, hình thức thanh toán, nhập lý do khám
-3. Bấm **"Đặt lịch"**
-4. Frontend gọi `appointmentService.create(data)`
-5. API: `POST /api/dat-lich`
-6. Backend flow:
+2. Người dùng lấy danh sách slot trống: gọi `GET /api/dat-lich/slot-trong?bacSiId=X&ngayDat=Y`
+3. Chọn ngày, chọn 1 slot trống trong danh sách, hình thức thanh toán, nhập lý do khám
+4. Bấm **"Đặt lịch"**
+5. Frontend gọi `appointmentService.create(data)` (lưu ý: không gửi `gioKetThuc`)
+6. API: `POST /api/dat-lich`
+7. Backend flow:
    - `authenticate` (bắt buộc đăng nhập — đọc accessToken từ cookie)
    - `validate(createDatLichSchema)`
    - Controller → Service:
-     - **Bước 1**: Kiểm tra bác sĩ tồn tại → nếu không throw `404`
+     - **Bước 1**: Kiểm tra bác sĩ tồn tại và lấy `thoiLuongKham` của chuyên khoa → nếu không có BS throw `404`
      - **Bước 2**: Kiểm tra bệnh nhân tồn tại → nếu không throw `404`
-     - **Bước 3**: Kiểm tra bác sĩ có lịch làm việc ngày đó + sẵn sàng → nếu không throw `400`
-     - **Bước 4**: Kiểm tra trùng lịch (cùng bacSiId + ngayDat + gioBatDau) → nếu trùng throw `409`
-     - **Bước 5**: Tạo DatLich với trangThai = 0 (chờ xác nhận)
-     - Nếu không truyền giaKham → lấy giá khám mặc định của bác sĩ
-7. Trả về lịch hẹn vừa tạo (include đầy đủ bác sĩ, bệnh nhân, hình thức thanh toán)
-8. Frontend hiển thị "Đặt lịch thành công" → điều hướng về lịch sử
+     - **Bước 3**: Tự động tính `gioKetThuc` = `gioBatDau` + `thoiLuongKham` (phút)
+     - **Bước 4**: Tìm ca làm việc (LichLamViecBacSi) nằm trong ngày đó, `sanSang = 1`, chứa trọn slot giờ này → nếu không có ca phù hợp throw `400`
+     - **Bước 5**: Kiểm tra sức chứa (`soBenhNhanHienTai` < `soBenhNhanToiDa`) → nếu đầy throw `400`
+     - **Bước 6**: Kiểm tra trùng slot hẹn (kiểm tra `gioBatDau`) → nếu trùng throw `409`
+     - **Bước 7**: Transaction: Tạo DatLich (chờ xác nhận = 0) và Tăng `soBenhNhanHienTai` của ca làm việc lên 1.
+8. Trả về lịch hẹn vừa tạo (include đầy đủ bác sĩ, bệnh nhân, hình thức thanh toán)
+9. Frontend hiển thị "Đặt lịch thành công" → điều hướng về lịch sử
 
 ### Validation (Zod)
 
@@ -270,7 +272,6 @@ capNhatHoSoSchema:
 createDatLichSchema:
   - ngayDat: string, min 1 (bắt buộc) — format "YYYY-MM-DD"
   - gioBatDau: string, regex HH:mm (bắt buộc)
-  - gioKetThuc: string, regex HH:mm (bắt buộc)
   - bacSiId: string|number, > 0 (bắt buộc)
   - benhNhanId: string|number, > 0 (bắt buộc)
   - lyDoKham: string, max 255 (tùy chọn)
@@ -295,19 +296,20 @@ createDatLichSchema:
    - Include: bác sĩ (tên, học vị, chuyên khoa), hình thức thanh toán, đơn thuốc
 5. Frontend render danh sách theo trạng thái (chờ / xác nhận / đã khám / hủy)
 
-### 10.2 Hủy lịch
+### 10.2 Hủy/Xóa lịch
 
 1. Bấm **"Hủy lịch"** trên lịch hẹn đang ở trạng thái "Chờ xác nhận" (0)
-2. Frontend gọi `DELETE /api/dat-lich/:id`
+2. Frontend gọi `DELETE /api/dat-lich/:id` (xóa) hoặc `PUT /api/dat-lich/:id/trang-thai` (cập nhật trạng thái = 3)
 3. Backend flow:
    - `authenticate` đọc accessToken từ cookie → verify
    - Service:
      - Kiểm tra lịch hẹn tồn tại
-     - **Ownership check**: bệnh nhân chỉ xóa được lịch của mình
-     - Kiểm tra trạng thái: **không cho xóa** nếu trangThai = 1 (đã xác nhận) hoặc 2 (đã khám)
+     - **Ownership check**: bệnh nhân chỉ thao tác lịch của mình
+     - Kiểm tra trạng thái: **không cho xóa/hủy** nếu trangThai = 1 (đã xác nhận) hoặc 2 (đã khám)
      - Dùng `$transaction`:
        - Xóa đơn thuốc liên quan (nếu có)
-       - Xóa lịch hẹn
+       - Xóa lịch hẹn / Cập nhật trạng thái thành 3
+       - Giảm `soBenhNhanHienTai` của ca làm việc xuống 1
 4. Trả success → Frontend reload danh sách
 
 ---
@@ -334,7 +336,7 @@ createDatLichSchema:
 1. Bác sĩ bấm **Xác nhận** / **Hoàn tất** / **Hủy** trên chi tiết lịch
 2. API: `PUT /api/dat-lich/:id/trang-thai` (authorize: admin hoặc bac_si)
 3. Body: `{ "trangThai": 1 }` (xác nhận) / `{ "trangThai": 2 }` (đã khám) / `{ "trangThai": 3 }` (hủy)
-4. Backend kiểm tra lịch hẹn tồn tại → update trạng thái → trả lịch hẹn đã cập nhật
+4. Backend kiểm tra lịch hẹn tồn tại → update trạng thái trong Transaction. Nếu trạng thái là Hủy (3), giảm `soBenhNhanHienTai` của ca làm việc đi 1. Trả lịch hẹn đã cập nhật.
 
 ### 11.4 Quản lý lịch làm việc
 
@@ -343,9 +345,9 @@ createDatLichSchema:
 3. Thêm ca: `/doctor/schedule/add` → `DoctorAddShiftPage.jsx`
    - API: `POST /api/lich-lam-viec` (authorize: admin hoặc bac_si)
    - Body: `{ ngayLamViec, bacSiId, khungGioId, soBenhNhanToiDa }`
-   - Backend kiểm tra bác sĩ + khung giờ tồn tại, kiểm tra trùng lịch
+   - Backend kiểm tra bác sĩ + khung giờ tồn tại, kiểm tra trùng ca làm việc. Nếu `soBenhNhanToiDa` không truyền, tự tính dựa trên độ dài ca làm việc / thời lượng khám chuyên khoa.
 4. Cập nhật sẵn sàng: `PUT /api/lich-lam-viec/:id` → `{ sanSang: 0 }` hoặc `{ sanSang: 1 }`
-5. Xóa lịch: `DELETE /api/lich-lam-viec/:id`
+5. Xóa lịch: `DELETE /api/lich-lam-viec/:id` (chặn xóa nếu ca đang có lịch hẹn)
 
 ### 11.5 Kê đơn thuốc
 
