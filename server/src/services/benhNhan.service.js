@@ -31,7 +31,7 @@ const getAll = async ({ search, page = 1, limit = 10 }) => {
 };
 
 // Chi tiết + include taiKhoan (ảnh, giới tính, ...)
-const getById = async (id) => {
+const getById = async (id, requestUser) => {
   const benhNhan = await prisma.benhNhan.findUnique({
     where: { id: BigInt(id) },
     include: {
@@ -40,6 +40,14 @@ const getById = async (id) => {
   });
 
   if (!benhNhan) throw new AppError("Không tìm thấy bệnh nhân", 404);
+
+  // Ownership check:
+  // - benh_nhan chỉ xem được hồ sơ thuộc taiKhoanId của chính họ
+  // - admin được phép xem tất cả (authorize ở route đã chặn các role khác)
+  if (requestUser?.vaiTro === "benh_nhan" && benhNhan.taiKhoanId !== requestUser.id) {
+    throw new AppError("Bạn không có quyền xem hồ sơ này", 403);
+  }
+
   return benhNhan;
 };
 

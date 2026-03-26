@@ -1,20 +1,20 @@
 /**
  * Zod: đặt lịch (giờ HH:mm) + PATCH trạng thái lịch.
  * POST /dat-lich; PUT /dat-lich/:id/trang-thai.
+ *
+ * gioKetThuc đã bị loại bỏ — backend tự tính từ ChuyenKhoa.thoiLuongKham.
  */
 const { z } = require("zod");
 
 const timeRegex = /^\d{2}:\d{2}$/;
 
-// POST — ngày + khung giờ + bacSiId, benhNhanId, ...
+// POST — ngày + gioBatDau + bacSiId, benhNhanId, ...
+// gioKetThuc: backend tự tính = gioBatDau + thoiLuongKham (phút)
 const createDatLichSchema = z.object({
   ngayDat: z.string().min(1, "Ngày đặt không được để trống"),
   gioBatDau: z
     .string()
     .regex(timeRegex, "Giờ bắt đầu phải đúng định dạng HH:mm"),
-  gioKetThuc: z
-    .string()
-    .regex(timeRegex, "Giờ kết thúc phải đúng định dạng HH:mm"),
   bacSiId: z.union([z.string(), z.number()]).refine((val) => Number(val) > 0, {
     message: "bacSiId phải là số nguyên dương",
   }),

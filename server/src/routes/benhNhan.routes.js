@@ -12,10 +12,10 @@ const { updateBenhNhanSchema } = require("../validations/benhNhan.validation");
 router.get("/", authenticate, authorize("admin"), benhNhanController.getAll);
 
 // GET /api/benh-nhan/:id - Lấy chi tiết bệnh nhân
-router.get("/:id", authenticate, benhNhanController.getById);
+router.get("/:id", authenticate, authorize("admin", "benh_nhan"), benhNhanController.getById);
 
 // PUT /api/benh-nhan/:id - Cập nhật thông tin bệnh nhân
-router.put("/:id", authenticate, validate(updateBenhNhanSchema), benhNhanController.update);
+router.put("/:id", authenticate, authorize("admin", "benh_nhan"), validate(updateBenhNhanSchema), benhNhanController.update);
 
 // DELETE /api/benh-nhan/:id - Xóa bệnh nhân (admin)
 router.delete("/:id", authenticate, authorize("admin"), benhNhanController.remove);

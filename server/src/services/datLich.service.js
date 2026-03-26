@@ -1,23 +1,35 @@
 /**
  * Lịch hẹn (datLich): admin xem tất cả; bệnh nhân/bác sĩ xem theo ownership.
- * Tạo lịch kiểm tra lichLamViec, trùng slot; xóa kèm donThuoc (transaction).
+ * Tạo lịch: tự tính gioKetThuc từ thoiLuongKham, check ca + capacity, transaction.
+ * Xóa/hủy: giảm soBenhNhanHienTai trong LichLamViecBacSi.
  */
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 
-// Chuỗi "HH:mm" → Date (cùng ngày epoch) để lưu/so khớp Prisma
 const parseTime = (timeStr) => new Date(`1970-01-01T${timeStr}:00.000Z`);
+
+const formatTime = (date) => {
+  const h = String(date.getUTCHours()).padStart(2, "0");
+  const m = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+};
 
 const defaultInclude = {
   bacSi: {
-    select: { id: true, tenBacSi: true, hocViChucDanh: true, chuyenKhoa: { select: { tenChuyenKhoa: true } } },
+    select: {
+      id: true,
+      tenBacSi: true,
+      hocViChucDanh: true,
+      chuyenKhoa: { select: { tenChuyenKhoa: true, thoiLuongKham: true } },
+    },
   },
   benhNhan: { select: { id: true, hoTen: true, soDienThoai: true } },
   hinhThucThanhToan: true,
+  lichLamViec: { include: { khungGio: true } },
   donThuoc: { include: { chiTietDonThuoc: true } },
 };
 
-// GET /dat-lich — lọc trangThai, ngayDat + phân trang
+// ─── GET /dat-lich ──────────────────────────────────────────────
 const getAll = async ({ trangThai, ngayDat, page = 1, limit = 10 }) => {
   const skip = (Number(page) - 1) * Number(limit);
   const where = {};
@@ -26,7 +38,10 @@ const getAll = async ({ trangThai, ngayDat, page = 1, limit = 10 }) => {
 
   const [datLichs, total] = await Promise.all([
     prisma.datLich.findMany({
-      where, include: defaultInclude, skip, take: Number(limit),
+      where,
+      include: defaultInclude,
+      skip,
+      take: Number(limit),
       orderBy: [{ ngayDat: "desc" }, { gioBatDau: "asc" }],
     }),
     prisma.datLich.count({ where }),
@@ -34,7 +49,12 @@ const getAll = async ({ trangThai, ngayDat, page = 1, limit = 10 }) => {
 
   return {
     datLichs,
-    pagination: { total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / Number(limit)) },
+    pagination: {
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / Number(limit)),
+    },
   };
 };
 
@@ -47,7 +67,6 @@ const getById = async (id) => {
   return datLich;
 };
 
-// benh_nhan chỉ được xem đúng benhNhanId trùng tài khoản
 const getByBenhNhan = async (benhNhanId, requestUser) => {
   if (requestUser.vaiTro === "benh_nhan") {
     const benhNhan = await prisma.benhNhan.findUnique({ where: { id: BigInt(benhNhanId) } });
@@ -63,7 +82,6 @@ const getByBenhNhan = async (benhNhanId, requestUser) => {
   });
 };
 
-// bac_si chỉ xem đúng lịch của mình (taiKhoan → bacSi)
 const getByBacSi = async (bacSiId, requestUser) => {
   if (requestUser.vaiTro === "bac_si") {
     const bacSi = await prisma.bacSi.findUnique({ where: { id: BigInt(bacSiId) } });
@@ -79,68 +97,129 @@ const getByBacSi = async (bacSiId, requestUser) => {
   });
 };
 
-// Có lịch làm việc sanSang ngày đó; không trùng unique (bacSi + ngay + gioBatDau)
+// ─── POST /dat-lich ─────────────────────────────────────────────
+// Flow: tìm BS → tính gioKetThuc → tìm ca phù hợp → check capacity → transaction
 const create = async (data) => {
-  const bacSi = await prisma.bacSi.findUnique({ where: { id: BigInt(data.bacSiId) } });
+  // 1. Tìm bác sĩ + lấy thoiLuongKham từ chuyên khoa
+  const bacSi = await prisma.bacSi.findUnique({
+    where: { id: BigInt(data.bacSiId) },
+    include: { chuyenKhoa: { select: { thoiLuongKham: true } } },
+  });
   if (!bacSi) throw new AppError("Không tìm thấy bác sĩ", 404);
 
   const benhNhan = await prisma.benhNhan.findUnique({ where: { id: BigInt(data.benhNhanId) } });
   if (!benhNhan) throw new AppError("Không tìm thấy bệnh nhân", 404);
 
+  // 2. Tính gioKetThuc = gioBatDau + thoiLuongKham (phút)
+  const thoiLuongKham = bacSi.chuyenKhoa?.thoiLuongKham || 20;
+  const gioBatDauDate = parseTime(data.gioBatDau);
+  const gioKetThucDate = new Date(gioBatDauDate.getTime() + thoiLuongKham * 60_000);
+
+  // 3. Tìm ca làm việc phù hợp (sanSang + slot nằm trong ca)
   const lichLamViec = await prisma.lichLamViecBacSi.findFirst({
     where: {
       bacSiId: BigInt(data.bacSiId),
       ngayLamViec: new Date(data.ngayDat),
       sanSang: 1,
+      khungGio: {
+        gioBatDau: { lte: gioBatDauDate },
+        gioKetThuc: { gte: gioKetThucDate },
+      },
     },
+    include: { khungGio: true },
   });
 
   if (!lichLamViec) {
-    throw new AppError("Bác sĩ không có lịch làm việc vào ngày này", 400);
+    throw new AppError(
+      "Bác sĩ không có ca làm việc phù hợp cho khung giờ này. " +
+        `Slot yêu cầu: ${data.gioBatDau} – ${formatTime(gioKetThucDate)}`,
+      400,
+    );
   }
 
+  // 4. Check capacity
+  if (lichLamViec.soBenhNhanHienTai >= lichLamViec.soBenhNhanToiDa) {
+    throw new AppError("Ca làm việc đã đầy, vui lòng chọn khung giờ khác", 400);
+  }
+
+  // 5. Check trùng slot (unique constraint cũng sẽ bắt, nhưng check trước cho UX tốt hơn)
   const trungLich = await prisma.datLich.findUnique({
     where: {
       unique_lich: {
         bacSiId: BigInt(data.bacSiId),
         ngayDat: new Date(data.ngayDat),
-        gioBatDau: parseTime(data.gioBatDau),
+        gioBatDau: gioBatDauDate,
       },
     },
   });
-
   if (trungLich) {
-    throw new AppError("Bác sĩ đã có lịch hẹn vào khung giờ này. Vui lòng chọn giờ khác.", 409);
+    throw new AppError("Slot này đã được đặt. Vui lòng chọn giờ khác.", 409);
   }
 
-  return prisma.datLich.create({
-    data: {
-      ngayDat: new Date(data.ngayDat),
-      gioBatDau: parseTime(data.gioBatDau),
-      gioKetThuc: parseTime(data.gioKetThuc),
-      lyDoKham: data.lyDoKham,
-      giaKham: data.giaKham ? parseFloat(data.giaKham) : bacSi.giaKham,
-      trangThai: 0,
-      bacSiId: BigInt(data.bacSiId),
-      benhNhanId: BigInt(data.benhNhanId),
-      hinhThucThanhToanId: data.hinhThucThanhToanId ? BigInt(data.hinhThucThanhToanId) : null,
-    },
-    include: defaultInclude,
+  // 6. Transaction: tạo lịch + cập nhật capacity
+  return prisma.$transaction(async (tx) => {
+    const datLich = await tx.datLich.create({
+      data: {
+        ngayDat: new Date(data.ngayDat),
+        gioBatDau: gioBatDauDate,
+        gioKetThuc: gioKetThucDate,
+        lyDoKham: data.lyDoKham,
+        giaKham: data.giaKham ? parseFloat(data.giaKham) : bacSi.giaKham,
+        trangThai: 0,
+        bacSiId: BigInt(data.bacSiId),
+        benhNhanId: BigInt(data.benhNhanId),
+        hinhThucThanhToanId: data.hinhThucThanhToanId ? BigInt(data.hinhThucThanhToanId) : null,
+        lichLamViecId: lichLamViec.id,
+      },
+      include: defaultInclude,
+    });
+
+    await tx.lichLamViecBacSi.update({
+      where: { id: lichLamViec.id },
+      data: { soBenhNhanHienTai: { increment: 1 } },
+    });
+
+    return datLich;
   });
 };
 
+// ─── PUT /dat-lich/:id/trang-thai ───────────────────────────────
+// Khi hủy (trangThai = 3): giảm capacity. Khi khôi phục từ hủy: tăng lại.
 const updateTrangThai = async (id, trangThai) => {
   const existing = await prisma.datLich.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
-  return prisma.datLich.update({
-    where: { id: BigInt(id) },
-    data: { trangThai: Number(trangThai) },
-    include: defaultInclude,
+  const oldTrangThai = existing.trangThai;
+  const newTrangThai = Number(trangThai);
+
+  return prisma.$transaction(async (tx) => {
+    const datLich = await tx.datLich.update({
+      where: { id: BigInt(id) },
+      data: { trangThai: newTrangThai },
+      include: defaultInclude,
+    });
+
+    // Hủy lịch (chuyển sang 3) → giảm capacity
+    if (oldTrangThai !== 3 && newTrangThai === 3 && existing.lichLamViecId) {
+      await tx.lichLamViecBacSi.update({
+        where: { id: existing.lichLamViecId },
+        data: { soBenhNhanHienTai: { decrement: 1 } },
+      });
+    }
+
+    // Khôi phục từ hủy (từ 3 → khác 3) → tăng capacity
+    if (oldTrangThai === 3 && newTrangThai !== 3 && existing.lichLamViecId) {
+      await tx.lichLamViecBacSi.update({
+        where: { id: existing.lichLamViecId },
+        data: { soBenhNhanHienTai: { increment: 1 } },
+      });
+    }
+
+    return datLich;
   });
 };
 
-// benh_nhan chỉ xóa lịch của mình; không xóa lịch đã xác nhận/đã khám; xóa donThuoc trước
+// ─── DELETE /dat-lich/:id ───────────────────────────────────────
 const remove = async (id, requestUser) => {
   const existing = await prisma.datLich.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
@@ -159,7 +238,95 @@ const remove = async (id, requestUser) => {
   await prisma.$transaction(async (tx) => {
     await tx.donThuoc.deleteMany({ where: { datLichId: BigInt(id) } });
     await tx.datLich.delete({ where: { id: BigInt(id) } });
+
+    // Giảm capacity nếu lịch chưa bị hủy trước đó
+    if (existing.trangThai !== 3 && existing.lichLamViecId) {
+      await tx.lichLamViecBacSi.update({
+        where: { id: existing.lichLamViecId },
+        data: { soBenhNhanHienTai: { decrement: 1 } },
+      });
+    }
   });
 };
 
-module.exports = { getAll, getById, getByBenhNhan, getByBacSi, create, updateTrangThai, remove };
+// ─── GET /dat-lich/slot-trong?bacSiId=1&ngayDat=2026-03-26 ─────
+// Sinh danh sách slot trống cho FE hiển thị
+const getSlotTrong = async ({ bacSiId, ngayDat }) => {
+  if (!bacSiId || !ngayDat) {
+    throw new AppError("Cần truyền bacSiId và ngayDat", 400);
+  }
+
+  // Lấy bác sĩ + thoiLuongKham
+  const bacSi = await prisma.bacSi.findUnique({
+    where: { id: BigInt(bacSiId) },
+    include: { chuyenKhoa: { select: { thoiLuongKham: true, tenChuyenKhoa: true } } },
+  });
+  if (!bacSi) throw new AppError("Không tìm thấy bác sĩ", 404);
+
+  const thoiLuongKham = bacSi.chuyenKhoa?.thoiLuongKham || 20;
+
+  // Lấy tất cả ca làm việc của BS ngày đó
+  const lichLamViecs = await prisma.lichLamViecBacSi.findMany({
+    where: {
+      bacSiId: BigInt(bacSiId),
+      ngayLamViec: new Date(ngayDat),
+      sanSang: 1,
+    },
+    include: { khungGio: true },
+    orderBy: { khungGio: { gioBatDau: "asc" } },
+  });
+
+  if (lichLamViecs.length === 0) return [];
+
+  // Lấy tất cả DatLich (chưa hủy) của BS ngày đó để loại slot đã đặt
+  const datLichs = await prisma.datLich.findMany({
+    where: {
+      bacSiId: BigInt(bacSiId),
+      ngayDat: new Date(ngayDat),
+      trangThai: { not: 3 },
+    },
+    select: { gioBatDau: true },
+  });
+
+  const bookedTimes = new Set(datLichs.map((d) => d.gioBatDau.getTime()));
+
+  // Sinh slot cho từng ca
+  const allSlots = [];
+  for (const llv of lichLamViecs) {
+    if (!llv.khungGio) continue;
+
+    const caStart = llv.khungGio.gioBatDau.getTime();
+    const caEnd = llv.khungGio.gioKetThuc.getTime();
+    const slotMs = thoiLuongKham * 60_000;
+
+    let cursor = caStart;
+    while (cursor + slotMs <= caEnd) {
+      const slotStart = new Date(cursor);
+      const slotEnd = new Date(cursor + slotMs);
+
+      allSlots.push({
+        gioBatDau: formatTime(slotStart),
+        gioKetThuc: formatTime(slotEnd),
+        daDat: bookedTimes.has(cursor),
+        lichLamViecId: llv.id,
+        conTrong: llv.soBenhNhanHienTai < llv.soBenhNhanToiDa,
+      });
+
+      cursor += slotMs;
+    }
+  }
+
+  return {
+    bacSi: {
+      id: bacSi.id,
+      tenBacSi: bacSi.tenBacSi,
+      chuyenKhoa: bacSi.chuyenKhoa?.tenChuyenKhoa,
+      thoiLuongKham,
+    },
+    ngayDat,
+    slots: allSlots,
+    slotTrong: allSlots.filter((s) => !s.daDat && s.conTrong),
+  };
+};
+
+module.exports = { getAll, getById, getByBenhNhan, getByBacSi, create, updateTrangThai, remove, getSlotTrong };

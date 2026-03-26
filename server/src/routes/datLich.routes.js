@@ -1,5 +1,5 @@
 /**
- * Routes /api/dat-lich — đặt lịch, xem theo bệnh nhân/bác sĩ, cập nhật trạng thái, xóa.
+ * Routes /api/dat-lich — đặt lịch, xem theo bệnh nhân/bác sĩ, slot trống, cập nhật trạng thái, xóa.
  */
 const express = require("express");
 const router = express.Router();
@@ -7,6 +7,9 @@ const datLichController = require("../controllers/datLich.controller");
 const { authenticate, authorize } = require("../middlewares/auth.middleware");
 const { validate } = require("../middlewares/validate.middleware");
 const { createDatLichSchema, updateTrangThaiSchema } = require("../validations/datLich.validation");
+
+// GET /api/dat-lich/slot-trong?bacSiId=1&ngayDat=2026-03-27 — Lấy slot trống (public)
+router.get("/slot-trong", datLichController.getSlotTrong);
 
 // GET /api/dat-lich - Lấy tất cả lịch hẹn (admin)
 router.get("/", authenticate, authorize("admin"), datLichController.getAll);

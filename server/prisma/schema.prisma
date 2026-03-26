@@ -44,6 +44,7 @@ model ChuyenKhoa {
   tenChuyenKhoa  String  @db.VarChar(120)
   anhChuyenKhoa  String? @db.VarChar(255)
   moTaChuyenKhoa String? @db.Text
+  thoiLuongKham  Int     @default(20) // Thời lượng khám (phút), mặc định 20 phút
 
   bacSiList BacSi[]
 
@@ -114,6 +115,7 @@ model LichLamViecBacSi {
 
   bacSi    BacSi?    @relation(fields: [bacSiId], references: [id])
   khungGio KhungGio? @relation(fields: [khungGioId], references: [id])
+  datLichs DatLich[] // Danh sách lịch hẹn thuộc ca này
 
   @@map("LichLamViecBacSi")
 }
@@ -144,10 +146,12 @@ model DatLich {
   bacSiId             BigInt?
   benhNhanId          BigInt?
   hinhThucThanhToanId BigInt?
+  lichLamViecId       BigInt?  // Liên kết đến ca làm việc
 
   bacSi             BacSi?             @relation(fields: [bacSiId], references: [id])
   benhNhan          BenhNhan?          @relation(fields: [benhNhanId], references: [id])
   hinhThucThanhToan HinhThucThanhToan? @relation(fields: [hinhThucThanhToanId], references: [id])
+  lichLamViec       LichLamViecBacSi?  @relation(fields: [lichLamViecId], references: [id])
   donThuoc          DonThuoc?
 
   // Ràng buộc: 1 bác sĩ không thể có 2 lịch cùng ngày + cùng giờ bắt đầu

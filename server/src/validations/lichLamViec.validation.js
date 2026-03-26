@@ -6,11 +6,16 @@ const { z } = require("zod");
 
 const timeRegex = /^\d{2}:\d{2}$/;
 
-// POST /khung-gio — gioBatDau, gioKetThuc
-const khungGioSchema = z.object({
-  gioBatDau: z.string().regex(timeRegex, "Giờ bắt đầu phải đúng định dạng HH:mm"),
-  gioKetThuc: z.string().regex(timeRegex, "Giờ kết thúc phải đúng định dạng HH:mm"),
-});
+// POST /khung-gio — gioBatDau, gioKetThuc (validate giờ kết thúc > giờ bắt đầu)
+const khungGioSchema = z
+  .object({
+    gioBatDau: z.string().regex(timeRegex, "Giờ bắt đầu phải đúng định dạng HH:mm"),
+    gioKetThuc: z.string().regex(timeRegex, "Giờ kết thúc phải đúng định dạng HH:mm"),
+  })
+  .refine((data) => data.gioKetThuc > data.gioBatDau, {
+    message: "Giờ kết thúc phải sau giờ bắt đầu",
+    path: ["gioKetThuc"],
+  });
 
 // POST /lich-lam-viec — ngày + bacSi + khung + soBenhNhanToiDa tuỳ chọn
 const lichLamViecSchema = z.object({

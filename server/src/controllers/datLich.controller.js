@@ -1,5 +1,6 @@
 /**
  * Controller đặt lịch: lọc theo quyền, tạo/cập nhật/xóa qua datLich.service.
+ * Thêm: getSlotTrong — lấy danh sách slot trống cho bệnh nhân chọn.
  * Lỗi → asyncHandler → errorHandler.
  */
 const { asyncHandler } = require("../middlewares/error.middleware");
@@ -9,6 +10,12 @@ const datLichService = require("../services/datLich.service");
 const getAll = asyncHandler(async (req, res) => {
   const result = await datLichService.getAll(req.query);
   res.json({ success: true, data: result.datLichs, pagination: result.pagination });
+});
+
+// GET /api/dat-lich/slot-trong?bacSiId=1&ngayDat=2026-03-27 — slot trống (public)
+const getSlotTrong = asyncHandler(async (req, res) => {
+  const slots = await datLichService.getSlotTrong(req.query);
+  res.json({ success: true, data: slots });
 });
 
 // GET /api/dat-lich/:id — chi tiết một lịch
@@ -47,4 +54,4 @@ const remove = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Xóa lịch hẹn thành công" });
 });
 
-module.exports = { getAll, getById, getByBenhNhan, getByBacSi, create, updateTrangThai, remove };
+module.exports = { getAll, getSlotTrong, getById, getByBenhNhan, getByBacSi, create, updateTrangThai, remove };

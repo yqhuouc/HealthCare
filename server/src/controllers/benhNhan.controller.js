@@ -13,7 +13,7 @@ const getAll = asyncHandler(async (req, res) => {
 
 // GET /api/benh-nhan/:id — chi tiết (đăng nhập)
 const getById = asyncHandler(async (req, res) => {
-  const benhNhan = await benhNhanService.getById(req.params.id);
+  const benhNhan = await benhNhanService.getById(req.params.id, req.user);
   res.json({ success: true, data: benhNhan });
 });
 
