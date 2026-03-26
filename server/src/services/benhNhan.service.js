@@ -43,13 +43,19 @@ const getById = async (id) => {
   return benhNhan;
 };
 
-// Transaction: cập nhật benhNhan + (tuỳ) taiKhoan; kiểm tra requestUser với vai trò benh_nhan
+// Transaction: cập nhật benhNhan + (tuỳ) taiKhoan.
+// - admin: sửa mọi bệnh nhân
+// - benh_nhan: chỉ sửa bệnh nhân thuộc taiKhoan của chính mình
 const update = async (id, data, requestUser) => {
   const existing = await prisma.benhNhan.findUnique({ where: { id: BigInt(id) } });
   if (!existing) throw new AppError("Không tìm thấy bệnh nhân", 404);
 
-  // Kiểm tra quyền sở hữu: bệnh nhân chỉ được sửa hồ sơ của mình
-  if (requestUser.vaiTro === "benh_nhan" && existing.taiKhoanId !== requestUser.id) {
+  // Kiểm tra quyền:
+  // - admin: được phép
+  // - benh_nhan: chỉ được phép nếu đúng bản ghi thuộc taiKhoanId của mình
+  // - các role khác (vd bac_si): không được phép
+  const isOwner = existing.taiKhoanId && existing.taiKhoanId === requestUser.id;
+  if (requestUser.vaiTro !== "admin" && !(requestUser.vaiTro === "benh_nhan" && isOwner)) {
     throw new AppError("Bạn không có quyền chỉnh sửa hồ sơ này", 403);
   }
 
