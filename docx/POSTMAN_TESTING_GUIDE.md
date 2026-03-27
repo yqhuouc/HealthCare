@@ -633,6 +633,7 @@ Không cần token. Kết quả trả về mảng chuyên khoa kèm số lượn
       "tenChuyenKhoa": "Tim mạch",
       "anhChuyenKhoa": null,
       "moTaChuyenKhoa": "Khám và điều trị các bệnh về tim, mạch máu",
+      "thoiLuongKham": 20,
       "_count": { "bacSiList": 2 }
     }
   ]
@@ -667,7 +668,8 @@ POST {{base_url}}/chuyen-khoa
 ```json
 {
   "tenChuyenKhoa": "Chấn thương chỉnh hình",
-  "moTaChuyenKhoa": "Khám và điều trị các bệnh về xương khớp, cơ bắp"
+  "moTaChuyenKhoa": "Khám và điều trị các bệnh về xương khớp, cơ bắp",
+  "thoiLuongKham": 30
 }
 ```
 
@@ -680,7 +682,8 @@ POST {{base_url}}/chuyen-khoa
     "id": 9,
     "tenChuyenKhoa": "Chấn thương chỉnh hình",
     "anhChuyenKhoa": null,
-    "moTaChuyenKhoa": "Khám và điều trị các bệnh về xương khớp, cơ bắp"
+    "moTaChuyenKhoa": "Khám và điều trị các bệnh về xương khớp, cơ bắp",
+    "thoiLuongKham": 30
   }
 }
 ```
@@ -703,7 +706,8 @@ PUT {{base_url}}/chuyen-khoa/9
 ```json
 {
   "tenChuyenKhoa": "Chấn thương chỉnh hình - Cơ Xương Khớp",
-  "moTaChuyenKhoa": "Điều trị chấn thương thể thao, gãy xương, thoái hóa khớp"
+  "moTaChuyenKhoa": "Điều trị chấn thương thể thao, gãy xương, thoái hóa khớp",
+  "thoiLuongKham": 25
 }
 ```
 
@@ -1657,8 +1661,8 @@ Dùng checklist này để đánh dấu các API đã test qua:
 ### Chuyên khoa (5 endpoints)
 - [ ] Lấy danh sách `GET /api/chuyen-khoa`
 - [ ] Lấy chi tiết `GET /api/chuyen-khoa/:id`
-- [ ] Tạo mới (admin) `POST /api/chuyen-khoa`
-- [ ] Cập nhật (admin) `PUT /api/chuyen-khoa/:id`
+- [ ] Tạo mới (admin) `POST /api/chuyen-khoa` (kèm thoiLuongKham)
+- [ ] Cập nhật (admin) `PUT /api/chuyen-khoa/:id` (kèm thoiLuongKham)
 - [ ] Xóa (admin) `DELETE /api/chuyen-khoa/:id`
 - [ ] Phân quyền: bác sĩ/bệnh nhân không tạo/sửa/xóa được
 

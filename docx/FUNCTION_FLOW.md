@@ -420,14 +420,14 @@ createDatLichSchema:
 1. Xem: `/admin/specialties` → `AdminSpecialtiesPage.jsx`
    - `GET /api/chuyen-khoa` (public) — trả danh sách kèm `_count.bacSiList`
 2. Tạo chuyên khoa: `/admin/specialties/add` → `AdminAddSpecialtyPage.jsx`
-   - API: `POST /api/chuyen-khoa` (admin) — body: `{ tenChuyenKhoa, anhChuyenKhoa, moTaChuyenKhoa }`
+   - API: `POST /api/chuyen-khoa` (admin) — body: `{ tenChuyenKhoa, anhChuyenKhoa, moTaChuyenKhoa, thoiLuongKham }`
    - Backend flow:
      - `authenticate` (cookie accessToken) → `authorize` (admin)
      - `validate(createChuyenKhoaSchema)` (Zod)
      - Controller gọi `chuyenKhoaService.create(...)`
      - Service: tạo `ChuyenKhoa` bằng Prisma → trả record vừa tạo
 3. Cập nhật chuyên khoa: `/admin/specialties/:id/edit` → `AdminEditSpecialtyPage.jsx`
-   - API: `PUT /api/chuyen-khoa/:id` (admin)
+   - API: `PUT /api/chuyen-khoa/:id` (admin) — body: `{ tenChuyenKhoa, anhChuyenKhoa, moTaChuyenKhoa, thoiLuongKham }`
    - Backend flow:
      - `authenticate` → `authorize` (admin)
      - `validate(updateChuyenKhoaSchema)` (Zod)

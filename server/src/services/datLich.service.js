@@ -69,7 +69,9 @@ const getById = async (id) => {
 
 const getByBenhNhan = async (benhNhanId, requestUser) => {
   if (requestUser.vaiTro === "benh_nhan") {
-    const benhNhan = await prisma.benhNhan.findUnique({ where: { id: BigInt(benhNhanId) } });
+    const benhNhan = await prisma.benhNhan.findUnique({
+      where: { id: BigInt(benhNhanId) },
+    });
     if (!benhNhan || benhNhan.taiKhoanId !== requestUser.id) {
       throw new AppError("Bạn không có quyền xem lịch hẹn này", 403);
     }
@@ -84,7 +86,9 @@ const getByBenhNhan = async (benhNhanId, requestUser) => {
 
 const getByBacSi = async (bacSiId, requestUser) => {
   if (requestUser.vaiTro === "bac_si") {
-    const bacSi = await prisma.bacSi.findUnique({ where: { id: BigInt(bacSiId) } });
+    const bacSi = await prisma.bacSi.findUnique({
+      where: { id: BigInt(bacSiId) },
+    });
     if (!bacSi || bacSi.taiKhoanId !== requestUser.id) {
       throw new AppError("Bạn không có quyền xem lịch hẹn này", 403);
     }
@@ -107,13 +111,17 @@ const create = async (data) => {
   });
   if (!bacSi) throw new AppError("Không tìm thấy bác sĩ", 404);
 
-  const benhNhan = await prisma.benhNhan.findUnique({ where: { id: BigInt(data.benhNhanId) } });
+  const benhNhan = await prisma.benhNhan.findUnique({
+    where: { id: BigInt(data.benhNhanId) },
+  });
   if (!benhNhan) throw new AppError("Không tìm thấy bệnh nhân", 404);
 
   // 2. Tính gioKetThuc = gioBatDau + thoiLuongKham (phút)
   const thoiLuongKham = bacSi.chuyenKhoa?.thoiLuongKham || 20;
   const gioBatDauDate = parseTime(data.gioBatDau);
-  const gioKetThucDate = new Date(gioBatDauDate.getTime() + thoiLuongKham * 60_000);
+  const gioKetThucDate = new Date(
+    gioBatDauDate.getTime() + thoiLuongKham * 60_000,
+  );
 
   // 3. Tìm ca làm việc phù hợp (sanSang + slot nằm trong ca)
   const lichLamViec = await prisma.lichLamViecBacSi.findFirst({
@@ -168,7 +176,9 @@ const create = async (data) => {
         trangThai: 0,
         bacSiId: BigInt(data.bacSiId),
         benhNhanId: BigInt(data.benhNhanId),
-        hinhThucThanhToanId: data.hinhThucThanhToanId ? BigInt(data.hinhThucThanhToanId) : null,
+        hinhThucThanhToanId: data.hinhThucThanhToanId
+          ? BigInt(data.hinhThucThanhToanId)
+          : null,
         lichLamViecId: lichLamViec.id,
       },
       include: defaultInclude,
@@ -186,7 +196,9 @@ const create = async (data) => {
 // ─── PUT /dat-lich/:id/trang-thai ───────────────────────────────
 // Khi hủy (trangThai = 3): giảm capacity. Khi khôi phục từ hủy: tăng lại.
 const updateTrangThai = async (id, trangThai) => {
-  const existing = await prisma.datLich.findUnique({ where: { id: BigInt(id) } });
+  const existing = await prisma.datLich.findUnique({
+    where: { id: BigInt(id) },
+  });
   if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
   const oldTrangThai = existing.trangThai;
@@ -221,11 +233,15 @@ const updateTrangThai = async (id, trangThai) => {
 
 // ─── DELETE /dat-lich/:id ───────────────────────────────────────
 const remove = async (id, requestUser) => {
-  const existing = await prisma.datLich.findUnique({ where: { id: BigInt(id) } });
+  const existing = await prisma.datLich.findUnique({
+    where: { id: BigInt(id) },
+  });
   if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
   if (requestUser.vaiTro === "benh_nhan") {
-    const benhNhan = await prisma.benhNhan.findFirst({ where: { taiKhoanId: requestUser.id } });
+    const benhNhan = await prisma.benhNhan.findFirst({
+      where: { taiKhoanId: requestUser.id },
+    });
     if (!benhNhan || existing.benhNhanId !== benhNhan.id) {
       throw new AppError("Bạn không có quyền xóa lịch hẹn này", 403);
     }
@@ -259,7 +275,9 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
   // Lấy bác sĩ + thoiLuongKham
   const bacSi = await prisma.bacSi.findUnique({
     where: { id: BigInt(bacSiId) },
-    include: { chuyenKhoa: { select: { thoiLuongKham: true, tenChuyenKhoa: true } } },
+    include: {
+      chuyenKhoa: { select: { thoiLuongKham: true, tenChuyenKhoa: true } },
+    },
   });
   if (!bacSi) throw new AppError("Không tìm thấy bác sĩ", 404);
 
@@ -329,4 +347,13 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
   };
 };
 
-module.exports = { getAll, getById, getByBenhNhan, getByBacSi, create, updateTrangThai, remove, getSlotTrong };
+module.exports = {
+  getAll,
+  getById,
+  getByBenhNhan,
+  getByBacSi,
+  create,
+  updateTrangThai,
+  remove,
+  getSlotTrong,
+};

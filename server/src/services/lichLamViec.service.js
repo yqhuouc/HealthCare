@@ -29,12 +29,19 @@ const createKhungGio = async (data) => {
 };
 
 const deleteKhungGio = async (id) => {
-  const existing = await prisma.khungGio.findUnique({ where: { id: BigInt(id) } });
+  const existing = await prisma.khungGio.findUnique({
+    where: { id: BigInt(id) },
+  });
   if (!existing) throw new AppError("Không tìm thấy khung giờ", 404);
 
-  const usageCount = await prisma.lichLamViecBacSi.count({ where: { khungGioId: BigInt(id) } });
+  const usageCount = await prisma.lichLamViecBacSi.count({
+    where: { khungGioId: BigInt(id) },
+  });
   if (usageCount > 0) {
-    throw new AppError(`Không thể xóa vì khung giờ đang được ${usageCount} lịch sử dụng`, 400);
+    throw new AppError(
+      `Không thể xóa vì khung giờ đang được ${usageCount} lịch sử dụng`,
+      400,
+    );
   }
 
   await prisma.khungGio.delete({ where: { id: BigInt(id) } });
@@ -53,7 +60,8 @@ const getLichLamViec = async ({ bacSiId, ngayLamViec }) => {
     include: {
       bacSi: {
         select: {
-          id: true, tenBacSi: true,
+          id: true,
+          tenBacSi: true,
           chuyenKhoa: { select: { tenChuyenKhoa: true, thoiLuongKham: true } },
         },
       },
@@ -73,7 +81,9 @@ const createLichLamViec = async (data) => {
   });
   if (!bacSi) throw new AppError("Không tìm thấy bác sĩ", 404);
 
-  const khungGio = await prisma.khungGio.findUnique({ where: { id: BigInt(data.khungGioId) } });
+  const khungGio = await prisma.khungGio.findUnique({
+    where: { id: BigInt(data.khungGioId) },
+  });
   if (!khungGio) throw new AppError("Không tìm thấy khung giờ", 404);
 
   const existing = await prisma.lichLamViecBacSi.findFirst({
@@ -84,7 +94,8 @@ const createLichLamViec = async (data) => {
     },
   });
 
-  if (existing) throw new AppError("Bác sĩ đã có lịch làm việc vào khung giờ này", 409);
+  if (existing)
+    throw new AppError("Bác sĩ đã có lịch làm việc vào khung giờ này", 409);
 
   // Tự tính soBenhNhanToiDa nếu không truyền
   let soBenhNhanToiDa = data.soBenhNhanToiDa;
@@ -108,7 +119,8 @@ const createLichLamViec = async (data) => {
     include: {
       bacSi: {
         select: {
-          id: true, tenBacSi: true,
+          id: true,
+          tenBacSi: true,
           chuyenKhoa: { select: { tenChuyenKhoa: true, thoiLuongKham: true } },
         },
       },
@@ -118,21 +130,29 @@ const createLichLamViec = async (data) => {
 };
 
 const updateLichLamViec = async (id, data) => {
-  const existing = await prisma.lichLamViecBacSi.findUnique({ where: { id: BigInt(id) } });
+  const existing = await prisma.lichLamViecBacSi.findUnique({
+    where: { id: BigInt(id) },
+  });
   if (!existing) throw new AppError("Không tìm thấy lịch làm việc", 404);
 
   return prisma.lichLamViecBacSi.update({
     where: { id: BigInt(id) },
     data: {
       sanSang: data.sanSang !== undefined ? data.sanSang : undefined,
-      soBenhNhanHienTai: data.soBenhNhanHienTai !== undefined ? data.soBenhNhanHienTai : undefined,
-      soBenhNhanToiDa: data.soBenhNhanToiDa !== undefined ? data.soBenhNhanToiDa : undefined,
+      soBenhNhanHienTai:
+        data.soBenhNhanHienTai !== undefined
+          ? data.soBenhNhanHienTai
+          : undefined,
+      soBenhNhanToiDa:
+        data.soBenhNhanToiDa !== undefined ? data.soBenhNhanToiDa : undefined,
     },
   });
 };
 
 const deleteLichLamViec = async (id) => {
-  const existing = await prisma.lichLamViecBacSi.findUnique({ where: { id: BigInt(id) } });
+  const existing = await prisma.lichLamViecBacSi.findUnique({
+    where: { id: BigInt(id) },
+  });
   if (!existing) throw new AppError("Không tìm thấy lịch làm việc", 404);
 
   // Kiểm tra có lịch hẹn nào đang dùng ca này không
@@ -140,13 +160,21 @@ const deleteLichLamViec = async (id) => {
     where: { lichLamViecId: BigInt(id), trangThai: { notIn: [3] } },
   });
   if (datLichCount > 0) {
-    throw new AppError(`Không thể xóa vì ca đang có ${datLichCount} lịch hẹn chưa hủy`, 400);
+    throw new AppError(
+      `Không thể xóa vì ca đang có ${datLichCount} lịch hẹn chưa hủy`,
+      400,
+    );
   }
 
   await prisma.lichLamViecBacSi.delete({ where: { id: BigInt(id) } });
 };
 
 module.exports = {
-  getAllKhungGio, createKhungGio, deleteKhungGio,
-  getLichLamViec, createLichLamViec, updateLichLamViec, deleteLichLamViec,
+  getAllKhungGio,
+  createKhungGio,
+  deleteKhungGio,
+  getLichLamViec,
+  createLichLamViec,
+  updateLichLamViec,
+  deleteLichLamViec,
 };
