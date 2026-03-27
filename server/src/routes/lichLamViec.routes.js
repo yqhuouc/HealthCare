@@ -6,7 +6,7 @@ const router = express.Router();
 const lichLamViecController = require("../controllers/lichLamViec.controller");
 const { authenticate, authorize } = require("../middlewares/auth.middleware");
 const { validate } = require("../middlewares/validate.middleware");
-const { khungGioSchema, lichLamViecSchema } = require("../validations/lichLamViec.validation");
+const { khungGioSchema, lichLamViecSchema, updateLichLamViecSchema } = require("../validations/lichLamViec.validation");
 
 // ===== KHUNG GIỜ =====
 
@@ -28,7 +28,7 @@ router.get("/", lichLamViecController.getLichLamViec);
 router.post("/", authenticate, authorize("admin", "bac_si"), validate(lichLamViecSchema), lichLamViecController.createLichLamViec);
 
 // PUT /api/lich-lam-viec/:id - Cập nhật (admin, bác sĩ)
-router.put("/:id", authenticate, authorize("admin", "bac_si"), lichLamViecController.updateLichLamViec);
+router.put("/:id", authenticate, authorize("admin", "bac_si"), validate(updateLichLamViecSchema), lichLamViecController.updateLichLamViec);
 
 // DELETE /api/lich-lam-viec/:id - Xóa (admin, bác sĩ)
 router.delete("/:id", authenticate, authorize("admin", "bac_si"), lichLamViecController.deleteLichLamViec);

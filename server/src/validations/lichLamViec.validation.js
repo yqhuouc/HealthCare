@@ -29,4 +29,10 @@ const lichLamViecSchema = z.object({
   soBenhNhanToiDa: z.number().int().min(1).optional(),
 });
 
-module.exports = { khungGioSchema, lichLamViecSchema };
+// PUT /api/lich-lam-viec/:id — update sanSang (0/1) hoặc soBenhNhanToiDa
+const updateLichLamViecSchema = z.object({
+  sanSang: z.number().int().min(0).max(1, "San sang chi nhan 0 hoac 1").optional(),
+  soBenhNhanToiDa: z.number().int().min(1, "So benh nhan toi da phai lon hon 0").optional(),
+});
+
+module.exports = { khungGioSchema, lichLamViecSchema, updateLichLamViecSchema };
