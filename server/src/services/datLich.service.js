@@ -128,24 +128,43 @@ const create = async (data) => {
     gioBatDauDate.getTime() + thoiLuongKham * 60_000,
   );
 
-  // 3. Tìm ca làm việc phù hợp (sanSang + slot nằm trong ca)
-  const lichLamViec = await prisma.lichLamViecBacSi.findFirst({
+  // 3. Lấy tất cả các ca làm việc của bác sĩ trong ngày (đang mở)
+  const availableShifts = await prisma.lichLamViecBacSi.findMany({
     where: {
       bacSiId: BigInt(data.bacSiId),
       ngayLamViec: new Date(data.ngayDat),
       sanSang: 1,
-      khungGio: {
-        gioBatDau: { lte: gioBatDauDate },
-        gioKetThuc: { gte: gioKetThucDate },
-      },
     },
     include: { khungGio: true },
   });
 
+  // 4. Tìm ca làm việc nào đang "chứa" cái slot mà user request bằng vòng lặp y như getSlotTrong
+  let lichLamViec = null;
+  const requestedSlotStart = gioBatDauDate.getTime();
+  const slotMs = thoiLuongKham * 60_000;
+
+  for (const shift of availableShifts) {
+    if (!shift.khungGio) continue;
+
+    let cursor = shift.khungGio.gioBatDau.getTime();
+    let sloted = 0;
+
+    // Tự động quét các slot dựa theo giới hạn capacity (hỗ trợ Admin thêm giờ lố)
+    while (sloted < shift.soBenhNhanToiDa) {
+      if (cursor === requestedSlotStart) {
+        lichLamViec = shift;
+        break;
+      }
+      cursor += slotMs;
+      sloted++;
+    }
+
+    if (lichLamViec) break;
+  }
+
   if (!lichLamViec) {
     throw new AppError(
-      "Bác sĩ không có ca làm việc phù hợp cho khung giờ này. " +
-        `Slot yêu cầu: ${data.gioBatDau} – ${formatTime(gioKetThucDate)}`,
+      `Không thể đặt lịch: Slot ${data.gioBatDau} – ${formatTime(gioKetThucDate)} này không nằm trong bất kỳ ca làm việc nào hoặc ca đó đã bị đóng/kín chỗ.`,
       400,
     );
   }
@@ -323,7 +342,11 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
     const slotMs = thoiLuongKham * 60_000;
 
     let cursor = caStart;
-    while (cursor + slotMs <= caEnd) {
+    let sloted = 0;
+
+    // Sinh slot dựa trên Công Suất Tối Đa (soBenhNhanToiDa) thay vì chốt chặn Giờ Kết Thúc
+    // Điều này cho phép Admin "nới ca" thêm giờ lố bằng cách tăng soBenhNhanToiDa
+    while (sloted < llv.soBenhNhanToiDa) {
       const slotStart = new Date(cursor);
       const slotEnd = new Date(cursor + slotMs);
 
@@ -333,9 +356,11 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
         daDat: bookedTimes.has(cursor),
         lichLamViecId: llv.id,
         conTrong: llv.soBenhNhanHienTai < llv.soBenhNhanToiDa,
+        isOvertime: cursor + slotMs > caEnd, // true nếu slot này vượt ra ngoài giờ hành chính của ca
       });
 
       cursor += slotMs;
+      sloted++;
     }
   }
 
