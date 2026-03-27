@@ -10,6 +10,7 @@ const chuyenKhoaSchema = z.object({
     .max(120, "Tên chuyên khoa tối đa 120 ký tự"),
   anhChuyenKhoa: z.string().max(255).optional(),
   moTaChuyenKhoa: z.string().optional(),
+  thoiLuongKham: z.coerce.number().int().min(5, "Thời lượng khám tối thiểu 5 phút").max(120, "Thời lượng khám tối đa 120 phút").optional(),
 });
 
 module.exports = { chuyenKhoaSchema };

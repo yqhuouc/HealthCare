@@ -28,7 +28,12 @@ const getById = async (id) => {
 
 const create = async (data) => {
   return prisma.chuyenKhoa.create({
-    data: { tenChuyenKhoa: data.tenChuyenKhoa, anhChuyenKhoa: data.anhChuyenKhoa, moTaChuyenKhoa: data.moTaChuyenKhoa },
+    data: { 
+      tenChuyenKhoa: data.tenChuyenKhoa, 
+      anhChuyenKhoa: data.anhChuyenKhoa, 
+      moTaChuyenKhoa: data.moTaChuyenKhoa,
+      thoiLuongKham: data.thoiLuongKham 
+    },
   });
 };
 
@@ -38,7 +43,12 @@ const update = async (id, data) => {
 
   return prisma.chuyenKhoa.update({
     where: { id: BigInt(id) },
-    data: { tenChuyenKhoa: data.tenChuyenKhoa, anhChuyenKhoa: data.anhChuyenKhoa, moTaChuyenKhoa: data.moTaChuyenKhoa },
+    data: { 
+      tenChuyenKhoa: data.tenChuyenKhoa, 
+      anhChuyenKhoa: data.anhChuyenKhoa, 
+      moTaChuyenKhoa: data.moTaChuyenKhoa,
+      thoiLuongKham: data.thoiLuongKham 
+    },
   });
 };
 
