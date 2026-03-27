@@ -1273,7 +1273,19 @@ PUT {{base_url}}/lich-lam-viec/1
 
 ---
 
-### 9.7 Xóa lịch làm việc
+### 9.7 Lấy danh sách slot trống (BN đặt lịch)
+
+> **Mẹo**: Nếu bạn muốn test tính năng **"Nới ca / Thêm người khám ngoài giờ"**, hãy tăng `soBenhNhanToiDa` ở bước 9.6 lên cao hơn công suất thực tế. Lúc này gọi API này sẽ thấy xuất hiện thêm các slot mới lố giờ hành chính (kèm cờ `isOvertime: true`).
+
+```
+GET {{base_url}}/dat-lich/slot-trong?bacSiId=1&ngayDat=2026-03-25
+```
+
+**Phản hồi**: Trả về danh sách object slot { gioBatDau, gioKetThuc, conTrong, isOvertime }.
+
+---
+
+### 9.8 Xóa lịch làm việc
 
 ```
 DELETE {{base_url}}/lich-lam-viec/1

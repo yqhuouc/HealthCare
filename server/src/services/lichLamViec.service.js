@@ -6,12 +6,12 @@
  * 1. Khung Giờ (KhungGio): Thường được hiểu như "Ca Làm Việc".
  *    Ví dụ: Ca Sáng (07:00-11:00), Ca Chiều (13:00-17:00).
  *    Admin tự do tạo trước các Khung Giờ chung này để dùng cho toàn hệ thống.
- * 
- * 2. Lịch Làm Việc (LichLamViecBacSi): Bác sĩ sẽ "gắn kết" bản thân với 1 
+ *
+ * 2. Lịch Làm Việc (LichLamViecBacSi): Bác sĩ sẽ "gắn kết" bản thân với 1
  *    Khung Giờ vào 1 Ngày Cụ Thể (ví dụ: Bác sĩ A làm sáng 27/03/2026).
- *    Nếu thời gian khám 1 lượt của chuyên khoa bác sĩ đó là 30 phút, 
+ *    Nếu thời gian khám 1 lượt của chuyên khoa bác sĩ đó là 30 phút,
  *    hệ thống có thể chia ca 4 tiếng (07h-11h) thành 8 bệnh nhân (soBenhNhanToiDa).
- * 
+ *
  * KhungGio không bao giờ cho bệnh nhân đặt trực tiếp. Nó chỉ là khuôn viền
  * để backend tính toán số lượng slot và validator giới hạn giờ hợp lệ.
  */
@@ -24,7 +24,7 @@ const { AppError } = require("../middlewares/error.middleware");
  * Chuyển chuỗi "HH:mm" thành kiểu Date. Do Backend ở các máy chủ cloud
  * thường dùng múi giờ UTC, ta sử dụng thẳng "+07:00" để ép tạo Date theo
  * đúng múi giờ VN (khi DB lưu dưới dạng chuẩn UTC 00 thì sẽ tự lùi đi 7 tiếng).
- * 
+ *
  * @param {string} timeStr Chuỗi giờ phút, ví dụ: "13:00"
  * @returns {Date} Object Date quy chiếu theo 01/01/1970
  */
@@ -72,13 +72,14 @@ const deleteKhungGio = async (id) => {
   const existing = await prisma.khungGio.findUnique({
     where: { id: BigInt(id) },
   });
-  if (!existing) throw new AppError("Khung giờ mà bạn định xóa không tồn tại!", 404);
+  if (!existing)
+    throw new AppError("Khung giờ mà bạn định xóa không tồn tại!", 404);
 
   // Đếm xem khung giờ này đã có ai (bác sĩ) dùng chưa
   const usageCount = await prisma.lichLamViecBacSi.count({
     where: { khungGioId: BigInt(id) },
   });
-  
+
   if (usageCount > 0) {
     throw new AppError(
       `Khung giờ này vẫn đang được (${usageCount}) bác sĩ sử dụng, vui lòng xóa Lịch bác sĩ trước.`,
@@ -191,7 +192,8 @@ const updateLichLamViec = async (id, data) => {
   const existing = await prisma.lichLamViecBacSi.findUnique({
     where: { id: BigInt(id) },
   });
-  if (!existing) throw new AppError("Lịch làm việc không được tìm thấy trên hệ thống.", 404);
+  if (!existing)
+    throw new AppError("Lịch làm việc không được tìm thấy trên hệ thống.", 404);
 
   // undefined: Bỏ qua trường không truyền lên. Chỉ update đúng field nào có gửi giá trị.
   return prisma.lichLamViecBacSi.update({
@@ -219,11 +221,11 @@ const deleteLichLamViec = async (id) => {
   });
   if (!existing) throw new AppError("Lịch trống trơn hoặc không tồn tại.", 404);
 
-  // notIn: [3] -> Tìm các lịch không thuộc dạng bị Hủy. (Tức Cò Đang Chờ/Xác nhận/Đã Khám)
+  // notIn: [3] -> Tìm các lịch không thuộc dạng bị Hủy. (Tức Là Đang Chờ/Xác nhận/Đã Khám)
   const datLichCount = await prisma.datLich.count({
     where: { lichLamViecId: BigInt(id), trangThai: { notIn: [3] } },
   });
-  
+
   if (datLichCount > 0) {
     throw new AppError(
       `Từ chối hủy Ca: Đang có (${datLichCount}) bệnh nhân hẹn khám trong ca này! Vui lòng gọi điện dời lịch và hủy lịch bệnh nhân trước.`,
