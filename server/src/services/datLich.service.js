@@ -6,12 +6,17 @@
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 
-const parseTime = (timeStr) => new Date(`1970-01-01T${timeStr}:00.000Z`);
+// Chuỗi "HH:mm" → Date (cùng ngày epoch, timezone VN UTC+7) để lưu/so khớp Prisma
+const parseTime = (timeStr) => new Date(`1970-01-01T${timeStr}:00.000+07:00`);
 
+// Date → "HH:mm" theo giờ VN
 const formatTime = (date) => {
-  const h = String(date.getUTCHours()).padStart(2, "0");
-  const m = String(date.getUTCMinutes()).padStart(2, "0");
-  return `${h}:${m}`;
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(date));
 };
 
 const defaultInclude = {

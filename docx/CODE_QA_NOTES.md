@@ -57,6 +57,7 @@ Ghi chú câu hỏi — trả lời khi đọc / làm backend. **Mỗi mục có
 |----|------------------|
 | [qa-db-001](#qa-db-001) | Vì sao xóa bản ghi rồi tạo mới thì `id` không quay lại số cũ? |
 | [qa-db-002](#qa-db-002) | Prisma `findMany`: `include`, `_count`, `orderBy`, `asc/desc` là gì? |
+| [qa-db-003](#qa-db-003) | Xử lý múi giờ: Tại sao `parseTime` lại dùng `+07:00` còn `formatTime` cộng 7? |
 
 ---
 
@@ -458,6 +459,44 @@ Giải thích nhanh:
 - `"asc"`: tăng dần (A -> Z), `"desc"`: giảm dần (Z -> A).
 
 Tóm tắt: query này trả danh sách chuyên khoa, kèm số bác sĩ mỗi khoa và sắp xếp tên từ A-Z.
+
+[↑ Về mục lục DB](#toc-db)
+
+---
+
+<a id="qa-db-003"></a>
+
+### DB-003 — Xử lý múi giờ: Tại sao `parseTime` lại dùng `+07:00` còn `formatTime` cộng 7?
+
+**Vấn đề:** 
+Hệ thống (Node.js/Prisma) tự động lưu trữ định dạng Time bằng chuẩn giờ UTC (giờ Quốc tế). Việc lưu UTC giúp mọi Client trên thế giới tự đồng bộ múi giờ với hệ thống tự động, nhưng backend nếu trích xuất Time sai sẽ sinh ra lỗi lệch múi giờ.
+
+**Cách giải quyết 2 chiều (ở backend):**
+
+1. **Chiều IN - Khi nhận `"HH:mm"` từ client (`parseTime`):**
+   ```javascript
+   const parseTime = (timeStr) => new Date(`1970-01-01T${timeStr}:00.000+07:00`);
+   ```
+   Ta dùng `+07:00`. Ví dụ: dữ liệu client gửi là `"13:00"`. Khi khởi tạo `Date()`, Node hiểu đây là *"13h giờ VN"* -> tự động quy đổi lùi về thành *"06h chuẩn UTC"* để lưu vào Prisma. Khi Prisma GET và nhả ra JSON (như `"1970-01-01T06:00:00.000Z"`), trình duyệt ở VN sẽ parse JSON này tự động `+7` hiển thị trên màn hình là 13:00 chuẩn xác.
+
+2. **Chiều OUT - Khi trích xuất chữ ở API backend (`formatTime`):**
+   Thay vì phải cộng (+7) thủ công rồi ghép chuỗi dễ xảy ra lỗi nếu host server ở múi giờ lạ, cách **chuẩn mực và an toàn nhất** là sử dụng `Intl.DateTimeFormat`:
+   ```javascript
+   const formatTime = (date) => {
+     return new Intl.DateTimeFormat("vi-VN", {
+       timeZone: "Asia/Ho_Chi_Minh",
+       hour: "2-digit",
+       minute: "2-digit",
+       hour12: false,
+     }).format(new Date(date));
+   };
+   ```
+   Nếu API backend cần lấy biến Date `06:00 UTC` mà Prisma trả về, engine của Javascript sẽ dùng thư viện định dạng múi giờ nội tại (`Asia/Ho_Chi_Minh`) tự động tra cứu chuẩn Quốc tế và quy ra thẳng `"13:00"`.
+   Lợi ích là **bất luận máy chủ Node.js (AWS/Vercel/Render,...) đang để múi giờ gì**, chuỗi cuối cùng trích xuất ra luôn là `"13:00"` giờ Việt Nam chuẩn xác 100%.
+
+**Tóm lược công thức VIP**:
+- Chiều IN -> Ép nhận format `+07:00` vào lúc Parse Date → Để DB lưu chuẩn lùi về UTC.
+- Chiều OUT -> Dùng hàm siêu cấp `Intl.DateTimeFormat` với `timeZone: "Asia/Ho_Chi_Minh"`.
 
 [↑ Về mục lục DB](#toc-db)
 

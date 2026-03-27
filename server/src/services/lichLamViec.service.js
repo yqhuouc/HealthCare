@@ -6,7 +6,7 @@
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 
-const parseTime = (timeStr) => new Date(`1970-01-01T${timeStr}:00.000Z`);
+const parseTime = (timeStr) => new Date(`1970-01-01T${timeStr}:00.000+07:00`);
 
 // --- Khung giờ (Ca làm việc) ---
 
