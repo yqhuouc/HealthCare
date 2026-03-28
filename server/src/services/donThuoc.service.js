@@ -65,10 +65,13 @@ const getById = async (id, user = null) => {
   if (user && user.vaiTro === "benh_nhan") {
     const trangThaiTT = donThuoc.datLich?.trangThaiThanhToan ?? 0;
     if (trangThaiTT < 2) {
-      // Ẩn chi tiết thuốc, chỉ trả thông tin chung
+      // Ẩn chi tiết y tế, chỉ trả về thông tin tài chính để phục vụ thanh toán
       return {
         ...donThuoc,
+        chanDoan: "*** (Yêu cầu thanh toán)",
+        ghiChu: "*** (Yêu cầu thanh toán)",
         chiTietDonThuoc: [],
+        isLocked: true,
         _thongBao: "Vui lòng thanh toán để xem chi tiết đơn thuốc.",
       };
     }

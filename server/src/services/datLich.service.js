@@ -1,34 +1,43 @@
 /**
  * ============================================================================
- * DỊCH VỤ ĐẶT LỊCH (DAT LICH SERVICE)
+ * DAT LICH SERVICE (DỊCH VỤ QUẢN LÝ LỊCH HẸN)
  * ============================================================================
- * File này quản lý toàn bộ vòng đời của một Lịch Hẹn:
- * 1. Tra cứu: Slot trống, Lịch theo Bệnh nhân/Bác sĩ.
- * 2. Tạo mới: Tính toán giờ kết thúc, kiểm tra ca làm việc (Shift),
- *    kiểm tra công suất (Capacity), và thực hiện Transaction để đảm bảo dữ liệu.
- * 3. Cập nhật: Thay đổi trạng thái (Hủy/Xác nhận) và hoàn trả capacity.
- * 4. Xóa: Xóa cứng record và xử lý liên đới đơn thuốc.
+ * Chịu trách nhiệm xử lý toàn bộ logic nghiệp vụ liên quan đến lịch hẹn:
+ * - Tra cứu: Tìm kiếm slot khám bệnh, xem lịch sử theo bệnh nhân/bác sĩ.
+ * - Đặt lịch: Kiểm tra công suất ca trực (Capacity), tính toán giờ kết thúc,
+ *   đảm bảo tính toàn vẹn dữ liệu qua Transaction.
+ * - Cập nhật/Xóa: Thay đổi trạng thái, thanh toán, giải phóng slot khi hủy.
  *
- * ĐIỂM ĐẶC BIỆT: Hệ thống hỗ trợ "Nới ca Admin" - Tức là sinh slot lố giờ hành chính
- * nếu Admin chủ động tăng soBenhNhanToiDa trong LichLamViecBacSi.
+ * Tính năng nổi bật: "Nới ca (Overtime)" - Tự động sinh slot ngoài giờ hành chính
+ * nếu Admin tăng giới hạn số lượng bệnh nhân của ca làm việc.
  */
 
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 
+// ============================================================================
+// 1. TIỆN ÍCH XỬ LÝ THỜI GIAN VÀ DỮ LIỆU
+// ============================================================================
+
 /**
- * parseTime: Chuyển "HH:mm" thành Date (Múi giờ VN +07:00)
- * Giúp Prisma lưu vào DB dưới dạng chuẩn UTC chuẩn xác.
+ * Chuyển đổi chuỗi "HH:mm" thành đối tượng Date với múi giờ tĩnh (UTC+7).
+ * Cố định mốc ngày 01/01/2000 để chuẩn hóa việc so sánh giờ.
+ *
+ * @param {string} timeStr - Chuỗi thời gian định dạng "HH:mm"
+ * @returns {Date} Đối tượng Date
  */
 const parseTime = (timeStr) => new Date(`2000-01-01T${timeStr}:00.000+07:00`);
 
 /**
- * formatTime: Chuyển Date thành chuỗi "HH:mm" hiển thị đúng giờ VN
- * Sử dụng Intl.DateTimeFormat để đảm bảo độ chính xác bất kể server đặt ở đâu.
+ * Định dạng đối tượng Date thành chuỗi "HH:mm" chuẩn theo múi giờ Việt Nam.
+ * Ép về năm 2000 trước khi định dạng để tránh các lỗi sai lệch múi giờ lịch sử.
+ *
+ * @param {Date|string|number} date - Thời gian cần định dạng
+ * @returns {string} Chuỗi hiển thị thời gian "HH:mm"
  */
 const formatTime = (date) => {
   const d = new Date(date);
-  d.setFullYear(2000); // Đưa về năm 2000 để tránh lỗi múi giờ lịch sử 1970 (+8)
+  d.setFullYear(2000);
   return new Intl.DateTimeFormat("vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh",
     hour: "2-digit",
@@ -37,32 +46,43 @@ const formatTime = (date) => {
   }).format(d);
 };
 
-// Hàm chuẩn hóa thời gian để so sánh (chỉ lấy giờ/phút, bỏ qua năm)
+/**
+ * Bình chuẩn hóa Date thành timestamp (milliseconds) chỉ dựa trên giờ và phút,
+ * bỏ qua mọi khác biệt về ngày/tháng/năm để dùng cho việc so sánh.
+ *
+ * @param {Date|string|number} date - Thời gian cần chuẩn hóa
+ * @returns {number} Timestamp đại diện cho giờ và phút
+ */
 const normalizeTime = (date) => {
   const d = new Date(date);
-  d.setFullYear(2000, 0, 1); 
+  d.setFullYear(2000, 0, 1);
   d.setSeconds(0, 0);
   return d.getTime();
 };
 
 /**
- * redactSensitiveData: Hàm phụ để ẩn thông tin nhạy cảm (Đơn thuốc)
- * dựa trên quyền hạn và trạng thái thanh toán.
+ * Ẩn các thông tin nhạy cảm (như Chi tiết Đơn thuốc) dựa trên quyền
+ * và trạng thái thanh toán của người dùng hiện tại (Data Ownership).
+ *
+ * @param {Object|Array} data - Dữ liệu lịch hẹn cần xử lý
+ * @param {Object} requestUser - Thông tin người dùng đang gọi API
+ * @returns {Object|Array} Dữ liệu đã được làm sạch
  */
 const redactSensitiveData = (data, requestUser) => {
   if (!data) return data;
 
-  // Nếu là mảng (ví dụ kết quả findMany)
   if (Array.isArray(data)) {
     return data.map((item) => redactSensitiveData(item, requestUser));
   }
 
-  // Logic chặn: Nếu role là bệnh nhân và chưa trả tiền thuốc (status < 2)
-  // thì ẩn donThuoc đi hoặc chỉ để lại thông báo.
+  // Khóa đơn thuốc nếu bệnh nhân chưa thanh toán đầy đủ (trangThaiThanhToan < 2)
   if (requestUser?.vaiTro === "benh_nhan" && data.trangThaiThanhToan < 2) {
     if (data.donThuoc) {
       data.donThuoc = {
-        message: "Vui lòng hoàn tất thanh toán để xem chi tiết đơn thuốc và kết quả khám.",
+        id: data.donThuoc.id,
+        tongTien: data.donThuoc.tongTien, // Giữ lại tổng tiền để Frontend tạo giao dịch thanh toán
+        message:
+          "Vui lòng hoàn tất thanh toán để xem chi tiết đơn thuốc và kết quả khám.",
         isLocked: true,
       };
     }
@@ -72,8 +92,7 @@ const redactSensitiveData = (data, requestUser) => {
 };
 
 /**
- * defaultInclude: Cấu hình mặc định khi Query để lấy đầy đủ thông tin liên quan
- * (Bác sĩ, Bệnh nhân, Hình thức thanh toán, Đơn thuốc...)
+ * Cấu hình Prisma include mặc định để join các bảng liên quan.
  */
 const defaultInclude = {
   bacSi: {
@@ -90,15 +109,19 @@ const defaultInclude = {
   donThuoc: { include: { chiTietDonThuoc: true } },
 };
 
-// ─── LẤY DANH SÁCH LỊCH HẸN (Dành cho Admin quản lý tổng) ──────────
+// ============================================================================
+// 2. CÁC NGHIỆP VỤ TRUY VẤN (QUERIES)
+// ============================================================================
+
+/**
+ * Lấy danh sách toàn bộ lịch hẹn có phân trang (Chủ yếu dành cho Admin).
+ * Hỗ trợ lọc theo trạng thái và ngày đặt.
+ */
 const getAll = async ({ trangThai, ngayDat, page = 1, limit = 10 }) => {
   const skip = (Number(page) - 1) * Number(limit);
   const where = {};
 
-  // Lọc theo trạng thái (0: Chờ, 1: Xác nhận, 2: Đã khám, 3: Hủy)
   if (trangThai !== undefined) where.trangThai = Number(trangThai);
-
-  // Lọc theo ngày cụ thể
   if (ngayDat) where.ngayDat = new Date(ngayDat);
 
   const [datLichs, total] = await Promise.all([
@@ -107,7 +130,7 @@ const getAll = async ({ trangThai, ngayDat, page = 1, limit = 10 }) => {
       include: defaultInclude,
       skip,
       take: Number(limit),
-      orderBy: [{ ngayDat: "desc" }, { gioBatDau: "asc" }], // Ngày mới nhất lên đầu, trong ngày thì sort theo giờ
+      orderBy: [{ ngayDat: "desc" }, { gioBatDau: "asc" }],
     }),
     prisma.datLich.count({ where }),
   ]);
@@ -124,23 +147,27 @@ const getAll = async ({ trangThai, ngayDat, page = 1, limit = 10 }) => {
 };
 
 /**
- * Lấy chi tiết 1 lịch hẹn qua ID.
- * Kiểm tra Ownership: Bệnh nhân chỉ xem được lịch của mình,
- * Bác sĩ chỉ xem được lịch do mình khám, Admin xem được tất cả.
+ * Lấy chi tiết một lịch hẹn cụ thể.
+ * Tích hợp kiểm tra quyền truy cập: Bệnh nhân/Bác sĩ chỉ được xem lịch liên quan.
  */
 const getById = async (id, requestUser) => {
   const datLich = await prisma.datLich.findUnique({
     where: { id: BigInt(id) },
     include: defaultInclude,
   });
+
   if (!datLich) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
-  // Kiểm tra quyền sở hữu
+  // Bảo mật Data Ownership
   if (requestUser?.vaiTro === "benh_nhan") {
-    if (!requestUser.benhNhan || datLich.benhNhanId !== requestUser.benhNhan.id) {
+    if (
+      !requestUser.benhNhan ||
+      datLich.benhNhanId !== requestUser.benhNhan.id
+    ) {
       throw new AppError("Bạn không có quyền xem lịch hẹn này", 403);
     }
   }
+
   if (requestUser?.vaiTro === "bac_si") {
     if (!requestUser.bacSi || datLich.bacSiId !== requestUser.bacSi.id) {
       throw new AppError("Bạn không có quyền xem lịch hẹn này", 403);
@@ -151,22 +178,27 @@ const getById = async (id, requestUser) => {
 };
 
 /**
- * Lấy danh sách lịch hẹn của 1 Bệnh nhân cụ thể.
- * Ownership: Bệnh nhân chỉ xem được lịch của chính mình.
- * Bác sĩ không được dùng API này để "rình" lịch sử bệnh nhân.
- * Chỉ Admin mới được xem lịch của bất kỳ bệnh nhân nào.
+ * Lấy danh sách lịch sử khám bệnh của một bệnh nhân.
+ * Chỉ cho phép chính Bệnh nhân đó hoặc Admin. Bác sĩ bị chặn.
  */
 const getByBenhNhan = async (benhNhanId, requestUser) => {
-  // Bệnh nhân: chỉ xem lịch của chính mình
   if (requestUser.vaiTro === "benh_nhan") {
-    if (!requestUser.benhNhan || BigInt(benhNhanId) !== requestUser.benhNhan.id) {
-      throw new AppError("Bạn không có quyền xem lịch hẹn của bệnh nhân khác", 403);
+    if (
+      !requestUser.benhNhan ||
+      BigInt(benhNhanId) !== requestUser.benhNhan.id
+    ) {
+      throw new AppError(
+        "Bạn không có quyền xem lịch hẹn của bệnh nhân khác",
+        403,
+      );
     }
   }
 
-  // Bác sĩ: không được xem toàn bộ lịch sử của bệnh nhân (bảo mật y tế)
   if (requestUser.vaiTro === "bac_si") {
-    throw new AppError("Bác sĩ không có quyền xem toàn bộ lịch sử khám của bệnh nhân", 403);
+    throw new AppError(
+      "Bác sĩ không có quyền xem toàn bộ lịch sử khám của bệnh nhân",
+      403,
+    );
   }
 
   const results = await prisma.datLich.findMany({
@@ -179,22 +211,24 @@ const getByBenhNhan = async (benhNhanId, requestUser) => {
 };
 
 /**
- * Lấy lịch hẹn của 1 Bác sĩ cụ thể.
- * Ownership: Bác sĩ chỉ xem được danh sách lịch khám do chính mình phụ trách.
- * Bệnh nhân không được dùng API này.
- * Chỉ Admin mới được xem lịch của bất kỳ bác sĩ nào.
+ * Lấy danh sách lịch hẹn thuộc về một bác sĩ cụ thể.
+ * Chỉ cho phép chính Bác sĩ đó hoặc Admin truy cập.
  */
 const getByBacSi = async (bacSiId, requestUser) => {
-  // Bác sĩ: chỉ xem lịch của chính mình
   if (requestUser.vaiTro === "bac_si") {
     if (!requestUser.bacSi || BigInt(bacSiId) !== requestUser.bacSi.id) {
-      throw new AppError("Bạn không có quyền xem lịch khám của bác sĩ khác", 403);
+      throw new AppError(
+        "Bạn không có quyền xem lịch khám của bác sĩ khác",
+        403,
+      );
     }
   }
 
-  // Bệnh nhân: không được xem danh sách lịch của bác sĩ
   if (requestUser.vaiTro === "benh_nhan") {
-    throw new AppError("Bệnh nhân không có quyền xem danh sách lịch khám của bác sĩ", 403);
+    throw new AppError(
+      "Bệnh nhân không có quyền xem danh sách lịch khám của bác sĩ",
+      403,
+    );
   }
 
   return prisma.datLich.findMany({
@@ -204,10 +238,16 @@ const getByBacSi = async (bacSiId, requestUser) => {
   });
 };
 
-// ─── TẠO MỚI LỊCH HẸN (LUỒNG QUAN TRỌNG NHẤT) ──────────────────────────
-// Flow: Tìm BS -> Tính giờ kết thúc -> Khớp Ca làm việc -> Check sức chứa -> Transaction lưu DB
+// ============================================================================
+// 3. CÁC NGHIỆP VỤ THAY ĐỔI DỮ LIỆU (MUTATIONS)
+// ============================================================================
+
+/**
+ * Đặt lịch mới (Quy trình lõi).
+ * Bao gồm tính toán thời gian, kiểm tra công suất ca trực và ghi nhận qua Transaction.
+ */
 const create = async (data) => {
-  // 1. Tìm bác sĩ + lấy thoiLuongKham từ chuyên khoa
+  // 1. Xác thực thông tin liên đới
   const bacSi = await prisma.bacSi.findUnique({
     where: { id: BigInt(data.bacSiId) },
     include: { chuyenKhoa: { select: { thoiLuongKham: true } } },
@@ -219,25 +259,24 @@ const create = async (data) => {
   });
   if (!benhNhan) throw new AppError("Không tìm thấy bệnh nhân", 404);
 
-  // 2. Tự động tính gioKetThuc dựa trên thoiLuongKham của Chuyên Khoa
-  const thoiLuongKham = bacSi.chuyenKhoa?.thoiLuongKham || 20; // Mặc định 20p nếu thiếu data
+  // 2. Tính toán khung giờ
+  const thoiLuongKham = bacSi.chuyenKhoa?.thoiLuongKham || 20;
   const gioBatDauDate = parseTime(data.gioBatDau);
   const gioKetThucDate = new Date(
     gioBatDauDate.getTime() + thoiLuongKham * 60_000,
   );
 
-  // 3. Lấy danh sách các ca (Shift) mà bác sĩ này đăng ký trong ngày
+  // 3. Lấy danh sách ca làm việc hợp lệ trong ngày của bác sĩ
   const availableShifts = await prisma.lichLamViecBacSi.findMany({
     where: {
       bacSiId: BigInt(data.bacSiId),
       ngayLamViec: new Date(data.ngayDat),
-      sanSang: 1, // Chỉ lấy những ca bác sĩ đang mở cửa nhận khách
+      sanSang: 1, // Ca làm việc đang mở
     },
     include: { khungGio: true },
   });
 
-  // 4. XÁC THỰC KHUNG GIỜ: Kiểm tra xem cái "Giờ bắt đầu" mà bệnh nhân chọn
-  // có nằm trong danh sách các Slot có thể sinh ra từ Ca làm việc đó không.
+  // 4. Đối chiếu giờ bắt đầu với các slot thời gian trong ca làm việc
   let lichLamViec = null;
   const slotMs = thoiLuongKham * 60_000;
 
@@ -247,16 +286,15 @@ const create = async (data) => {
     let cursor = shift.khungGio.gioBatDau.getTime();
     let sloted = 0;
 
-    // Quét qua toàn bộ slot mà ca này cho phép (dựa theo soBenhNhanToiDa)
+    // Quét slot dựa trên sức chứa (soBenhNhanToiDa)
     while (sloted < shift.soBenhNhanToiDa) {
       if (normalizeTime(cursor) === normalizeTime(gioBatDauDate)) {
-        lichLamViec = shift; // Tìm thấy ca "chủ quản" của slot này
+        lichLamViec = shift;
         break;
       }
       cursor += slotMs;
       sloted++;
     }
-
     if (lichLamViec) break;
   }
 
@@ -267,15 +305,15 @@ const create = async (data) => {
     );
   }
 
-  // 5. Kiểm tra sức chứa (Capacity) của Ca
+  // 5. Kiểm tra sức chứa thực tế của ca
   if (lichLamViec.soBenhNhanHienTai >= lichLamViec.soBenhNhanToiDa) {
     throw new AppError(
-      "Ca làm việc đã đầy, hoặc hiện tại không còn slot trống nào, vui lòng chọn ca khác.",
+      "Ca làm việc đã đầy hoặc không còn slot trống, vui lòng chọn ca khác.",
       400,
     );
   }
 
-  // 6. Chặn đặt trùng slot: 1 Bác sĩ - 1 Ngày - 1 Giờ chỉ có duy nhất 1 Bệnh nhân
+  // 6. Chống đặt trùng (Unique Constraint: Bác Sĩ + Ngày + Giờ)
   const trungLich = await prisma.datLich.findUnique({
     where: {
       unique_lich: {
@@ -285,24 +323,24 @@ const create = async (data) => {
       },
     },
   });
+
   if (trungLich) {
     throw new AppError(
-      "Xin lỗi, khung giờ này vừa có người khác nhanh tay đặt mất rồi. Vui lòng chọn giờ khác!",
+      "Khung giờ này đã có người đăng ký, vui lòng chọn khung giờ khác.",
       409,
     );
   }
 
-  // 7. THỰC HIỆN TRANSACTION: Đảm bảo "Đặt lịch" đi đôi với "Tăng sĩ số ca"
-  // Nếu 1 trong 2 bước lỗi (ví dụ DB rớt mạng giữa chừng), hệ thống sẽ ROLLBACK lại hết.
+  // 7. Transaction: Ghi nhận lịch hẹn và phân bổ slot
   return prisma.$transaction(async (tx) => {
     const datLich = await tx.datLich.create({
       data: {
         ngayDat: new Date(data.ngayDat),
         gioBatDau: gioBatDauDate,
-        gioKetThuc: gioKetThucDate, // Lưu giờ kết thúc đã tính ở bước 2
+        gioKetThuc: gioKetThucDate,
         lyDoKham: data.lyDoKham,
         giaKham: data.giaKham ? parseFloat(data.giaKham) : bacSi.giaKham,
-        trangThai: 0, // 0: Chờ xác nhận
+        trangThai: 0,
         trangThaiThanhToan: data.trangThaiThanhToan
           ? Number(data.trangThaiThanhToan)
           : 0,
@@ -316,7 +354,7 @@ const create = async (data) => {
       include: defaultInclude,
     });
 
-    // Cập nhật tăng số người hiện tại đang chiếm trong Ca này
+    // Tăng số lượng bệnh nhân đang chiếm dụng trong ca
     await tx.lichLamViecBacSi.update({
       where: { id: lichLamViec.id },
       data: { soBenhNhanHienTai: { increment: 1 } },
@@ -327,13 +365,14 @@ const create = async (data) => {
 };
 
 /**
- * Cập nhật Trạng thái Lịch hẹn (Xác nhận/Hủy/Khám xong).
- * Đặc biệt xử lý logic Hủy: Trả lại 1 slot trống cho Ca làm việc.
+ * Cập nhật trạng thái tổng thể của lịch hẹn.
+ * Tự động hoàn trả slot cho ca làm việc nếu lịch bị Hủy (Trạng thái 3).
  */
 const updateTrangThai = async (id, trangThai) => {
   const existing = await prisma.datLich.findUnique({
     where: { id: BigInt(id) },
   });
+
   if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
   const oldTrangThai = existing.trangThai;
@@ -346,7 +385,7 @@ const updateTrangThai = async (id, trangThai) => {
       include: defaultInclude,
     });
 
-    // Hủy lịch (chuyển sang 3) → giảm capacity
+    // Nếu vừa hủy lịch -> Giải phóng slot
     if (oldTrangThai !== 3 && newTrangThai === 3 && existing.lichLamViecId) {
       await tx.lichLamViecBacSi.update({
         where: { id: existing.lichLamViecId },
@@ -354,7 +393,7 @@ const updateTrangThai = async (id, trangThai) => {
       });
     }
 
-    // Khôi phục từ hủy (từ 3 → khác 3) → tăng capacity
+    // Nếu khôi phục từ trạng thái hủy -> Chiếm lại slot
     if (oldTrangThai === 3 && newTrangThai !== 3 && existing.lichLamViecId) {
       await tx.lichLamViecBacSi.update({
         where: { id: existing.lichLamViecId },
@@ -367,16 +406,34 @@ const updateTrangThai = async (id, trangThai) => {
 };
 
 /**
- * Xóa vĩnh viễn Lịch hẹn khỏi DB (Thường chỉ Admin mới dùng).
- * Cần dọn dẹp Đơn thuốc đi kèm và trả lại Capacity nếu lịch chưa bị Hủy.
+ * Cập nhật tiến độ thanh toán của lịch hẹn.
+ * (0: Chưa thanh toán, 1: Thanh toán phí khám, 2: Hoàn tất toàn bộ).
+ */
+const updateThanhToan = async (id, trangThaiThanhToan) => {
+  const existing = await prisma.datLich.findUnique({
+    where: { id: BigInt(id) },
+  });
+
+  if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
+
+  return prisma.datLich.update({
+    where: { id: BigInt(id) },
+    data: { trangThaiThanhToan: Number(trangThaiThanhToan) },
+    include: defaultInclude,
+  });
+};
+
+/**
+ * Xóa vĩnh viễn dữ liệu lịch hẹn (Hard Delete).
+ * Đi kèm với các hệ quả: dọn dẹp đơn thuốc và trả lại sức chứa ca làm việc.
  */
 const remove = async (id, requestUser) => {
   const existing = await prisma.datLich.findUnique({
     where: { id: BigInt(id) },
   });
+
   if (!existing) throw new AppError("Không tìm thấy dữ liệu để xóa", 404);
 
-  // Quyền sở hữu: Bệnh nhân chỉ được xóa (hủy/xóa) lịch của chính họ
   if (requestUser.vaiTro === "benh_nhan") {
     const benhNhan = await prisma.benhNhan.findFirst({
       where: { taiKhoanId: requestUser.id },
@@ -386,22 +443,21 @@ const remove = async (id, requestUser) => {
     }
   }
 
-  // Chặn xóa nếu lịch đã ở trạng thái quan trọng (Xác nhận / Đã khám)
   if (existing.trangThai === 1 || existing.trangThai === 2) {
     throw new AppError(
-      "Lịch đã xác nhận hoặc đã khám xong, không thể xóa cứng khỏi hệ thống.",
+      "Không thể xóa cứng đối với lịch hẹn đã xác nhận hoặc đã khám.",
       400,
     );
   }
 
   await prisma.$transaction(async (tx) => {
-    // 1. Xóa các dữ liệu phụ liên quan (Đơn thuốc)
+    // Dọn dẹp dữ liệu con
     await tx.donThuoc.deleteMany({ where: { datLichId: BigInt(id) } });
 
-    // 2. Xóa lịch hẹn chính
+    // Xóa bản ghi gốc
     await tx.datLich.delete({ where: { id: BigInt(id) } });
 
-    // 3. Nếu lịch đang ở trạng thái 'Đang hoạt động' (0/1/2) mà bị xóa -> lùi sĩ số Ca lại
+    // Khôi phục sức chứa nếu lịch chưa hủy
     if (existing.trangThai !== 3 && existing.lichLamViecId) {
       await tx.lichLamViecBacSi.update({
         where: { id: existing.lichLamViecId },
@@ -412,26 +468,26 @@ const remove = async (id, requestUser) => {
 };
 
 /**
- * LẤY DANH SÁCH SLOT TRỐNG (Dành cho Frontend hiển thị cho bệnh nhân chọn giờ)
- * Hàm này sinh ra các mốc giờ 08:00, 08:20... dựa trên Ca làm việc.
+ * Lấy danh sách các Slot khả dụng để Bệnh nhân đặt lịch trên Website.
+ * Kết hợp thông vị ca làm việc và danh sách các lịch đã book để trả về các Slot còn chỗ.
  */
 const getSlotTrong = async ({ bacSiId, ngayDat }) => {
   if (!bacSiId || !ngayDat) {
-    throw new AppError("Cần truyền bacSiId và ngayDat", 400);
+    throw new AppError("Yêu cầu thông tin Bác sĩ và Ngày đặt", 400);
   }
 
-  // Lấy bác sĩ + thoiLuongKham
   const bacSi = await prisma.bacSi.findUnique({
     where: { id: BigInt(bacSiId) },
     include: {
       chuyenKhoa: { select: { thoiLuongKham: true, tenChuyenKhoa: true } },
     },
   });
+
   if (!bacSi) throw new AppError("Không tìm thấy bác sĩ", 404);
 
   const thoiLuongKham = bacSi.chuyenKhoa?.thoiLuongKham || 20;
 
-  // Lấy tất cả ca làm việc của BS ngày đó
+  // Thu thập các ca làm việc khả dụng
   const lichLamViecs = await prisma.lichLamViecBacSi.findMany({
     where: {
       bacSiId: BigInt(bacSiId),
@@ -444,20 +500,19 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
 
   if (lichLamViecs.length === 0) return [];
 
-  // Lấy tất cả DatLich (chưa hủy) của BS ngày đó để loại slot đã đặt
+  // Thu thập danh sách Slot đã bị chiếm dụng
   const datLichs = await prisma.datLich.findMany({
     where: {
       bacSiId: BigInt(bacSiId),
       ngayDat: new Date(ngayDat),
-      trangThai: { not: 3 },
+      trangThai: { not: 3 }, // Bỏ qua những lịch đã hủy
     },
     select: { gioBatDau: true },
   });
 
   const bookedTimes = new Set(datLichs.map((d) => d.gioBatDau.getTime()));
-
-  // Sinh slot cho từng ca
   const allSlots = [];
+
   for (const llv of lichLamViecs) {
     if (!llv.khungGio) continue;
 
@@ -468,12 +523,7 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
     let cursor = caStart;
     let sloted = 0;
 
-    /**
-     * THUẬT TOÁN SINH SLOT ĐỘNG:
-     * Chạy vòng lặp đúng số lần 'soBenhNhanToiDa'.
-     * Nếu Admin tăng con số này lên lố giờ ca hành chính,
-     * vòng lặp while sẽ tự động đẻ thêm các Slot nằm ngoài ca (isOvertime = true).
-     */
+    // Sinh các danh sách Slot linh động theo mức tối đa cho phép
     while (sloted < llv.soBenhNhanToiDa) {
       const slotStart = new Date(cursor);
       const slotEnd = new Date(cursor + slotMs);
@@ -481,10 +531,10 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
       allSlots.push({
         gioBatDau: formatTime(slotStart),
         gioKetThuc: formatTime(slotEnd),
-        daDat: bookedTimes.has(cursor), // Slot này đã có BN khác book chưa?
+        daDat: bookedTimes.has(cursor),
         lichLamViecId: llv.id,
         conTrong: llv.soBenhNhanHienTai < llv.soBenhNhanToiDa,
-        isOvertime: cursor + slotMs > caEnd, // Cờ báo hiệu đây là slot làm thêm giờ
+        isOvertime: cursor + slotMs > caEnd, // Cờ báo làm thêm giờ
       });
 
       cursor += slotMs;
@@ -503,23 +553,6 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
     slots: allSlots,
     slotTrong: allSlots.filter((s) => !s.daDat && s.conTrong),
   };
-};
-
-/**
- * Cập nhật Trạng thái Thanh toán (0: Chưa, 1: Tiền khám, 2: Toàn bộ)
- * Dùng cho Admin (xác nhận offline) hoặc hệ thống (xác nhận thanh toán online).
- */
-const updateThanhToan = async (id, trangThaiThanhToan) => {
-  const existing = await prisma.datLich.findUnique({
-    where: { id: BigInt(id) },
-  });
-  if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
-
-  return prisma.datLich.update({
-    where: { id: BigInt(id) },
-    data: { trangThaiThanhToan: Number(trangThaiThanhToan) },
-    include: defaultInclude,
-  });
 };
 
 module.exports = {
