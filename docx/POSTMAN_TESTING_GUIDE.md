@@ -968,9 +968,12 @@ POST {{base_url}}/dat-lich
   "lyDoKham": "Đau đầu kéo dài, chóng mặt",
   "bacSiId": 1,
   "benhNhanId": 1,
-  "hinhThucThanhToanId": 1
+  "hinhThucThanhToanId": 1,
+  "trangThaiThanhToan": 0
 }
 ```
+
+> **Ghi chú:** `trangThaiThanhToan` có thể là: `0` (Chưa trả), `1` (Đã trả phí khám).
 
 **Kết quả mong đợi** (Status: `201 Created`):
 ```json
@@ -985,6 +988,7 @@ POST {{base_url}}/dat-lich
     "lyDoKham": "Đau đầu kéo dài, chóng mặt",
     "giaKham": "500000",
     "trangThai": 0,
+    "trangThaiThanhToan": 0,
     "lichLamViecId": "1",
     "bacSi": {
       "id": 1,
@@ -1119,6 +1123,27 @@ PUT {{base_url}}/dat-lich/1/trang-thai
 ```
 
 > **Quan trọng**: Sau bước này mới có thể tạo đơn thuốc cho lịch hẹn.
+
+---
+
+### 8.10 Cập nhật Trạng thái Thanh toán (Admin / Online Payment)
+
+> Dùng để xác nhận BN đã trả phí khám hoặc trả nốt tiền thuốc.
+
+```
+PUT {{base_url}}/dat-lich/1/thanh-toan
+```
+
+**Headers**: Authorization: Bearer {{admin_token}}
+
+**Body**:
+```json
+{
+  "trangThaiThanhToan": 2
+}
+```
+
+> **Giá trị mẫu:** `1` (Đã trả phí khám), `2` (Đã trả toàn bộ - bao gồm tiền thuốc).
 
 ---
 
@@ -1318,18 +1343,21 @@ POST {{base_url}}/don-thuoc
     {
       "tenThuoc": "Amoxicillin 500mg",
       "soLuong": 21,
+      "donGia": 15000,
       "lieuDung": "1 viên x 3 lần/ngày",
       "ghiChu": "Uống sau ăn"
     },
     {
       "tenThuoc": "Paracetamol 500mg",
       "soLuong": 10,
+      "donGia": 2000,
       "lieuDung": "1 viên khi sốt > 38.5°C",
       "ghiChu": "Cách 4-6 tiếng mới uống tiếp"
     },
     {
       "tenThuoc": "Vitamin C 1000mg",
       "soLuong": 14,
+      "donGia": 5000,
       "lieuDung": "1 viên/ngày",
       "ghiChu": "Uống buổi sáng"
     }
@@ -1347,19 +1375,17 @@ POST {{base_url}}/don-thuoc
     "datLichId": 1,
     "chanDoan": "Viêm họng cấp, sốt nhẹ",
     "ghiChu": "Uống nhiều nước ấm, nghỉ ngơi...",
+    "tongTien": "385000",
     "ngayTao": "2026-03-20T...",
-    "datLich": {
-      "bacSi": { "id": 1, "tenBacSi": "Nguyễn Văn An", "hocViChucDanh": "PGS.TS" },
-      "benhNhan": { "id": 1, "hoTen": "Nguyễn Bệnh Nhân", "soDienThoai": "0912345678" }
-    },
     "chiTietDonThuoc": [
-      { "id": 1, "tenThuoc": "Amoxicillin 500mg", "soLuong": 21, "lieuDung": "1 viên x 3 lần/ngày", "ghiChu": "Uống sau ăn" },
-      { "id": 2, "tenThuoc": "Paracetamol 500mg", "soLuong": 10, "lieuDung": "1 viên khi sốt > 38.5°C", "ghiChu": "Cách 4-6 tiếng" },
-      { "id": 3, "tenThuoc": "Vitamin C 1000mg", "soLuong": 14, "lieuDung": "1 viên/ngày", "ghiChu": "Uống buổi sáng" }
+      { "id": 1, "tenThuoc": "Amoxicillin 500mg", "soLuong": 21, "donGia": "15000", ... },
+      { "id": 2, "tenThuoc": "Paracetamol 500mg", "soLuong": 10, "donGia": "2000", ... }
     ]
   }
 }
 ```
+
+> **Lưu ý:** `tongTien` được Backend tự động tính toán từ `Sum(soLuong * donGia)`.
 
 **Kiểm thử lỗi**:
 - Lịch hẹn chưa khám (trangThai != 2) → `400` "Chỉ tạo đơn thuốc cho lịch hẹn đã khám xong (trạng thái = 2)"
@@ -1401,11 +1427,51 @@ Hỗ trợ phân trang: `?page=1&limit=10`
 GET {{base_url}}/don-thuoc/1
 ```
 
-**Headers**: Authorization: Bearer {{patient_token}}
+**Headers**: Cookie `accessToken` được Postman tự gửi.
 
-Trả chi tiết đầy đủ: chẩn đoán, ghi chú, bác sĩ kê đơn, bệnh nhân, danh sách thuốc.
+#### Kịch bản 1: Bệnh nhân chưa thanh toán xong (`trangThaiThanhToan < 2`)
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "chanDoan": "Viêm họng cấp, sốt nhẹ",
+    "ghiChu": "Uống nhiều nước ấm...",
+    "tongTien": "385000",
+    "chiTietDonThuoc": [],
+    "_thongBao": "Vui lòng thanh toán để xem chi tiết đơn thuốc."
+  }
+}
+```
+
+> **Chú ý:** `chiTietDonThuoc` trống và có trường `_thongBao` yêu cầu thanh toán.
+
+#### Kịch bản 2: Bệnh nhân đã thanh toán xong (`trangThaiThanhToan === 2`)
+
+Sau khi Admin cập nhật `PUT /api/dat-lich/:id/thanh-toan` với `{ "trangThaiThanhToan": 2 }`, gọi lại:
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "chanDoan": "Viêm họng cấp, sốt nhẹ",
+    "tongTien": "385000",
+    "chiTietDonThuoc": [
+      { "id": 1, "tenThuoc": "Amoxicillin 500mg", "soLuong": 21, "donGia": "15000", ... },
+      { "id": 2, "tenThuoc": "Paracetamol 500mg", "soLuong": 10, "donGia": "2000", ... }
+    ]
+  }
+}
+```
+
+> **Lưu ý:** Admin và Bác sĩ luôn xem được toàn bộ chi tiết thuốc bất kể trạng thái thanh toán.
 
 ---
+
 
 ### 10.5 Xóa đơn thuốc (Admin)
 
@@ -1697,8 +1763,8 @@ Dùng checklist này để đánh dấu các API đã test qua:
 - [ ] Xóa (admin) `DELETE /api/benh-nhan/:id`
 - [ ] Không xóa được khi có lịch hẹn
 
-### Đặt lịch (7 endpoints)
-- [ ] Tạo lịch hẹn `POST /api/dat-lich`
+### Đặt lịch (8 endpoints)
+- [ ] Tạo lịch hẹn `POST /api/dat-lich` (hỗ trợ `trangThaiThanhToan`)
 - [ ] Test trùng lịch (cùng BS + ngày + giờ bắt đầu)
 - [ ] Test BS không có lịch làm việc ngày đó
 - [ ] Lấy tất cả (admin) `GET /api/dat-lich`
@@ -1709,6 +1775,7 @@ Dùng checklist này để đánh dấu các API đã test qua:
 - [ ] Cập nhật trạng thái: chờ → xác nhận (1)
 - [ ] Cập nhật trạng thái: xác nhận → đã khám (2)
 - [ ] Cập nhật trạng thái: hủy (3)
+- [ ] Cập nhật thanh toán `PUT /api/dat-lich/:id/thanh-toan` (0->1->2)
 - [ ] Xóa lịch chờ xác nhận/đã hủy
 - [ ] Không xóa được lịch đã xác nhận/đã khám
 - [ ] Ownership check: BN không xóa lịch BN khác
@@ -1767,11 +1834,13 @@ Dùng checklist này để đánh dấu các API đã test qua:
 6. **Khung giờ & Lịch làm việc** → Tạo lịch cho bác sĩ
 7. **Hình thức thanh toán** → Dữ liệu phụ trợ
 8. **Đặt lịch** → Tạo → test trùng → cập nhật trạng thái (0 → 1 → 2)
-9. **Đơn thuốc** → Tạo sau khi lịch đã khám xong (trangThai = 2)
-10. **FAQ** → CRUD + ẩn/hiện
-11. **Thống kê** → Xem dashboard + thống kê lịch hẹn
-12. **Auth nâng cao** → Đổi mật khẩu, cập nhật hồ sơ, refresh token, logout
-13. **Edge cases** → Phân quyền, ownership, ràng buộc dữ liệu
+9. **Thanh toán phí khám** → Cập nhật `trangThaiThanhToan = 1`
+10. **Đơn thuốc** → Tạo sau khi lịch đã khám xong (trangThai = 2) + truyền `donGia`
+11. **Thanh toán toàn bộ** → Cập nhật `trangThaiThanhToan = 2` sau khi có đơn thuốc
+12. **FAQ** → CRUD + ẩn/hiện
+13. **Thống kê** → Xem dashboard + thống kê lịch hẹn
+14. **Auth nâng cao** → Đổi mật khẩu, cập nhật hồ sơ, refresh token, logout
+15. **Edge cases** → Phân quyền, ownership, ràng buộc dữ liệu
 
 ---
 

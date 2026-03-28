@@ -266,6 +266,12 @@ capNhatHoSoSchema:
 8. Trả về lịch hẹn vừa tạo (include đầy đủ bác sĩ, bệnh nhân, hình thức thanh toán)
 9. Frontend hiển thị "Đặt lịch thành công" → điều hướng về lịch sử
 
+### Thanh toán đa tầng (Payment Flow)
+Hệ thống hỗ trợ luồng thanh toán linh hoạt:
+- **Bước 1 (Đặt lịch/Check-in):** Bệnh nhân trả phí khám (cố định). `trangThaiThanhToan` chuyển sang **1** (Đã trả phí khám).
+- **Bước 2 (Khám xong):** Bác sĩ kê đơn thuốc (có `tongTien` thuốc phát sinh).
+- **Bước 3 (Settlement):** Admin (xác nhận offline) hoặc bệnh nhân trả nốt tiền thuốc qua cổng thanh toán online. `trangThaiThanhToan` chuyển sang **2** (Đã thanh toán toàn bộ).
+
 ### Validation (Zod)
 
 ```
@@ -277,6 +283,7 @@ createDatLichSchema:
   - lyDoKham: string, max 255 (tùy chọn)
   - hinhThucThanhToanId: string|number (tùy chọn)
   - giaKham: string|number (tùy chọn)
+  - trangThaiThanhToan: number, 0 (chưa trả) hoặc 1 (đã trả phí khám) (tùy chọn)
 ```
 
 ---
@@ -332,11 +339,8 @@ createDatLichSchema:
 3. Backend trả chi tiết đầy đủ: bác sĩ, bệnh nhân, hình thức thanh toán, đơn thuốc + chi tiết thuốc
 
 ### 11.3 Cập nhật trạng thái lịch hẹn
-
-1. Bác sĩ bấm **Xác nhận** / **Hoàn tất** / **Hủy** trên chi tiết lịch
-2. API: `PUT /api/dat-lich/:id/trang-thai` (authorize: admin hoặc bac_si)
-3. Body: `{ "trangThai": 1 }` (xác nhận) / `{ "trangThai": 2 }` (đã khám) / `{ "trangThai": 3 }` (hủy)
-4. Backend kiểm tra lịch hẹn tồn tại → update trạng thái trong Transaction. Nếu trạng thái là Hủy (3), giảm `soBenhNhanHienTai` của ca làm việc đi 1. Trả lịch hẹn đã cập nhật.
+API: `PUT /api/dat-lich/:id/trang-thai` — Cập nhật trạng thái khám (0->1->2->3)
+API: `PUT /api/dat-lich/:id/thanh-toan` — Cập nhật trạng thái thanh toán (0->1->2)
 
 ### 11.4 Quản lý lịch làm việc
 
@@ -361,12 +365,13 @@ createDatLichSchema:
      "chanDoan": "Viêm họng cấp",
      "ghiChu": "Uống nhiều nước, nghỉ ngơi",
      "chiTietDonThuoc": [
-       { "tenThuoc": "Amoxicillin 500mg", "soLuong": 21, "lieuDung": "1 viên x 3 lần/ngày", "ghiChu": "Uống sau ăn" },
-       { "tenThuoc": "Paracetamol 500mg", "soLuong": 10, "lieuDung": "1 viên khi sốt > 38.5°C" }
+       { "tenThuoc": "Amoxicillin 500mg", "soLuong": 21, "donGia": 15000, "lieuDung": "1 viên x 3 lần/ngày", "ghiChu": "Uống sau ăn" },
+       { "tenThuoc": "Paracetamol 500mg", "soLuong": 10, "donGia": 2000, "lieuDung": "1 viên khi sốt > 38.5°C" }
      ]
    }
    ```
-> `chiTietDonThuoc` là tùy chọn: nếu không gửi (hoặc mảng rỗng) thì chỉ tạo `DonThuoc` (không tạo `ChiTietDonThuoc`).
+> `chiTietDonThuoc` là tùy chọn: nếu không gửi (hoặc mảng rỗng) thì chỉ tạo `DonThuoc`.
+> **Backend tự động tính `tongTien`** dựa trên `soLuong * donGia` của từng loại thuốc.
 5. Backend flow:
    - Kiểm tra lịch hẹn tồn tại + trangThai phải = 2 → nếu không throw `400`
    - Kiểm tra chưa có đơn thuốc cho lịch này → nếu đã có throw `409`
@@ -537,7 +542,15 @@ Public FAQ: `GET /api/cau-hoi-thuong-gap` — chỉ trả FAQ có dangHoatDong =
 2. Từ lịch hẹn đã khám (trangThai = 2), xem đơn thuốc:
    - Đơn thuốc đã nằm trong include khi lấy danh sách lịch hẹn
    - Hoặc gọi riêng: `GET /api/don-thuoc/:id` (cookie HttpOnly)
-3. Hiển thị: chẩn đoán, ghi chú, danh sách thuốc (tên, số lượng, liều dùng, ghi chú)
+3. **Cơ chế khóa đơn thuốc (Payment Gate):**
+   - Nếu `trangThaiThanhToan < 2` (chưa thanh toán xong):
+     - Backend trả về thông tin chung (chẩn đoán, ghi chú, bác sĩ, `tongTien`)
+     - `chiTietDonThuoc` trả về **mảng rỗng**
+     - Kèm thông báo: `"Vui lòng thanh toán để xem chi tiết đơn thuốc."`
+   - Nếu `trangThaiThanhToan === 2` (đã thanh toán toàn bộ):
+     - Backend trả đầy đủ: chẩn đoán, ghi chú, danh sách thuốc (tên, số lượng, đơn giá, liều dùng, ghi chú)
+4. **Lưu ý**: Admin và Bác sĩ luôn xem được toàn bộ chi tiết đơn thuốc, không bị ảnh hưởng bởi cơ chế khóa.
+
 
 ---
 

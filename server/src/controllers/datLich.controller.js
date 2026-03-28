@@ -48,10 +48,26 @@ const updateTrangThai = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Cập nhật trạng thái thành công", data: datLich });
 });
 
+// PUT /api/dat-lich/:id/thanh-toan — đổi trạng thái thanh toán (admin)
+const updateThanhToan = asyncHandler(async (req, res) => {
+  const datLich = await datLichService.updateThanhToan(req.params.id, req.body.trangThaiThanhToan);
+  res.json({ success: true, message: "Cập nhật thanh toán thành công", data: datLich });
+});
+
 // DELETE /api/dat-lich/:id — xóa (có kiểm tra quyền trong service)
 const remove = asyncHandler(async (req, res) => {
   await datLichService.remove(req.params.id, req.user);
   res.json({ success: true, message: "Xóa lịch hẹn thành công" });
 });
 
-module.exports = { getAll, getSlotTrong, getById, getByBenhNhan, getByBacSi, create, updateTrangThai, remove };
+module.exports = {
+  getAll,
+  getSlotTrong,
+  getById,
+  getByBenhNhan,
+  getByBacSi,
+  create,
+  updateTrangThai,
+  updateThanhToan,
+  remove,
+};

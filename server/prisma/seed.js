@@ -19,7 +19,25 @@ BigInt.prototype.toJSON = function () {
 };
 
 async function main() {
-  console.log("🌱 Bắt đầu seed dữ liệu...\n");
+  console.log("🌱 Bắt đầu làm sạch và seed dữ liệu...\n");
+
+  // ===== 0. XÓA DỮ LIỆU CŨ (Tránh lỗi trùng lặp) =====
+  // Lưu ý: Thứ tự xóa quan trọng do ràng buộc khóa ngoại (Foreign Key)
+  await prisma.chiTietDonThuoc.deleteMany({});
+  await prisma.donThuoc.deleteMany({});
+  await prisma.datLich.deleteMany({});
+  await prisma.lichLamViecBacSi.deleteMany({});
+  await prisma.khungGio.deleteMany({});
+  await prisma.bacSi.deleteMany({});
+  await prisma.benhNhan.deleteMany({});
+  await prisma.chuyenKhoa.deleteMany({});
+  await prisma.cauHoiThuongGap.deleteMany({});
+  await prisma.hinhThucThanhToan.deleteMany({});
+  
+  // Không xóa TaiKhoan Admin, chỉ xóa các TaiKhoan vaiTro khác
+  await prisma.taiKhoan.deleteMany({ where: { vaiTro: { not: "admin" } } });
+
+  console.log("🧹 Đã làm sạch dữ liệu cũ.");
 
   // ===== 1. TẠO TÀI KHOẢN ADMIN =====
   const adminPassword = await bcrypt.hash("admin123", 10);

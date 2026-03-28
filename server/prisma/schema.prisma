@@ -143,6 +143,7 @@ model DatLich {
   lyDoKham            String?  @db.VarChar(255)
   giaKham             Decimal? @db.Decimal(10, 2)
   trangThai           Int?     @default(0) // 0=chờ, 1=xác nhận, 2=đã khám, 3=hủy
+  trangThaiThanhToan  Int?     @default(0) // 0=chưa trả, 1=đã trả phí khám, 2=đã trả toàn bộ (kèm thuốc)
   bacSiId             BigInt?
   benhNhanId          BigInt?
   hinhThucThanhToanId BigInt?
@@ -168,6 +169,7 @@ model DonThuoc {
   ngayTao   DateTime? @default(now())
   chanDoan  String?   @db.Text        // Chẩn đoán bệnh
   ghiChu    String?   @db.Text        // Ghi chú cho bệnh nhân
+  tongTien  Decimal?  @default(0) @db.Decimal(10, 2) // Tổng tiền thuốc phát sinh
 
   datLich         DatLich           @relation(fields: [datLichId], references: [id])
   chiTietDonThuoc ChiTietDonThuoc[]
@@ -183,7 +185,8 @@ model ChiTietDonThuoc {
   donThuocId BigInt
   tenThuoc   String  @db.VarChar(255)
   soLuong    Int?
-  lieuDung   String? @db.VarChar(255)  // VD: "1 viên x 3 lần/ngày"
+  donGia     Decimal? @default(0) @db.Decimal(10, 2) // Đơn giá mỗi loại thuốc
+  lieuDung   String?  @db.VarChar(255)  // VD: "1 viên x 3 lần/ngày"
   ghiChu     String? @db.VarChar(255)  // VD: "Uống sau ăn"
 
   donThuoc DonThuoc @relation(fields: [donThuocId], references: [id], onDelete: Cascade)

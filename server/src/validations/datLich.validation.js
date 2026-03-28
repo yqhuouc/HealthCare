@@ -24,6 +24,7 @@ const createDatLichSchema = z.object({
   lyDoKham: z.string().max(255, "Lý do khám tối đa 255 ký tự").optional(),
   hinhThucThanhToanId: z.union([z.string(), z.number()]).optional(),
   giaKham: z.union([z.string(), z.number()]).optional(),
+  trangThaiThanhToan: z.number().int().min(0).max(1).optional(), // 0=chưa trả, 1=đã trả phí khám (tại lúc đặt)
 });
 
 // PUT trạng thái — 0..3
@@ -35,4 +36,17 @@ const updateTrangThaiSchema = z.object({
     .max(3, "Trạng thái phải từ 0-3 (0=chờ, 1=xác nhận, 2=đã khám, 3=hủy)"),
 });
 
-module.exports = { createDatLichSchema, updateTrangThaiSchema };
+// PUT thanh toán — 0..2
+const updateThanhToanSchema = z.object({
+  trangThaiThanhToan: z
+    .number()
+    .int()
+    .min(0, "Trạng thái phải từ 0-2")
+    .max(2, "Trạng thái phải từ 0-2 (0=chưa, 1=phí khám, 2=toàn bộ)"),
+});
+
+module.exports = {
+  createDatLichSchema,
+  updateTrangThaiSchema,
+  updateThanhToanSchema,
+};

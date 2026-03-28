@@ -242,6 +242,9 @@ const create = async (data) => {
         lyDoKham: data.lyDoKham,
         giaKham: data.giaKham ? parseFloat(data.giaKham) : bacSi.giaKham,
         trangThai: 0, // 0: Chờ xác nhận
+        trangThaiThanhToan: data.trangThaiThanhToan
+          ? Number(data.trangThaiThanhToan)
+          : 0,
         bacSiId: BigInt(data.bacSiId),
         benhNhanId: BigInt(data.benhNhanId),
         hinhThucThanhToanId: data.hinhThucThanhToanId
@@ -441,6 +444,23 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
   };
 };
 
+/**
+ * Cập nhật Trạng thái Thanh toán (0: Chưa, 1: Tiền khám, 2: Toàn bộ)
+ * Dùng cho Admin (xác nhận offline) hoặc hệ thống (xác nhận thanh toán online).
+ */
+const updateThanhToan = async (id, trangThaiThanhToan) => {
+  const existing = await prisma.datLich.findUnique({
+    where: { id: BigInt(id) },
+  });
+  if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
+
+  return prisma.datLich.update({
+    where: { id: BigInt(id) },
+    data: { trangThaiThanhToan: Number(trangThaiThanhToan) },
+    include: defaultInclude,
+  });
+};
+
 module.exports = {
   getAll,
   getById,
@@ -448,6 +468,7 @@ module.exports = {
   getByBacSi,
   create,
   updateTrangThai,
+  updateThanhToan,
   remove,
   getSlotTrong,
 };

@@ -30,41 +30,91 @@ const getAll = async ({ page = 1, limit = 10 }) => {
 
   return {
     donThuocs,
-    pagination: { total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / Number(limit)) },
+    pagination: {
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / Number(limit)),
+    },
   };
 };
 
-const getById = async (id) => {
+/**
+ * Lấy chi tiết đơn thuốc.
+ * Nếu user là bệnh nhân và chưa thanh toán xong (trangThaiThanhToan < 2),
+ * hệ thống sẽ ẩn danh sách thuốc chi tiết và trả về thông báo yêu cầu thanh toán.
+ */
+const getById = async (id, user = null) => {
   const donThuoc = await prisma.donThuoc.findUnique({
     where: { id: BigInt(id) },
-    include: defaultInclude,
+    include: {
+      ...defaultInclude,
+      datLich: {
+        include: {
+          bacSi: { select: { id: true, tenBacSi: true, hocViChucDanh: true } },
+          benhNhan: {
+            select: { id: true, hoTen: true, soDienThoai: true, taiKhoanId: true },
+          },
+        },
+      },
+    },
   });
   if (!donThuoc) throw new AppError("Không tìm thấy đơn thuốc", 404);
+
+  // Nếu người gọi là bệnh nhân → kiểm tra thanh toán
+  if (user && user.vaiTro === "benh_nhan") {
+    const trangThaiTT = donThuoc.datLich?.trangThaiThanhToan ?? 0;
+    if (trangThaiTT < 2) {
+      // Ẩn chi tiết thuốc, chỉ trả thông tin chung
+      return {
+        ...donThuoc,
+        chiTietDonThuoc: [],
+        _thongBao: "Vui lòng thanh toán để xem chi tiết đơn thuốc.",
+      };
+    }
+  }
+
   return donThuoc;
 };
 
 // Chỉ khi datLich.trangThai === 2; mỗi lịch một đơn
 const create = async (data) => {
-  const datLich = await prisma.datLich.findUnique({ where: { id: BigInt(data.datLichId) } });
+  const datLich = await prisma.datLich.findUnique({
+    where: { id: BigInt(data.datLichId) },
+  });
   if (!datLich) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
   if (datLich.trangThai !== 2) {
-    throw new AppError("Chỉ tạo đơn thuốc cho lịch hẹn đã khám xong (trạng thái = 2)", 400);
+    throw new AppError(
+      "Chỉ tạo đơn thuốc cho lịch hẹn đã khám xong (trạng thái = 2)",
+      400,
+    );
   }
 
-  const existing = await prisma.donThuoc.findUnique({ where: { datLichId: BigInt(data.datLichId) } });
+  const existing = await prisma.donThuoc.findUnique({
+    where: { datLichId: BigInt(data.datLichId) },
+  });
   if (existing) throw new AppError("Lịch hẹn này đã có đơn thuốc", 409);
+
+  // Tính tổng tiền đơn thuốc
+  const tongTien =
+    data.chiTietDonThuoc?.reduce((sum, item) => {
+      const lineTotal = (item.soLuong || 0) * (item.donGia || 0);
+      return sum + lineTotal;
+    }, 0) || 0;
 
   return prisma.donThuoc.create({
     data: {
       datLichId: BigInt(data.datLichId),
       chanDoan: data.chanDoan || null,
       ghiChu: data.ghiChu || null,
+      tongTien: tongTien,
       chiTietDonThuoc: data.chiTietDonThuoc?.length
         ? {
             create: data.chiTietDonThuoc.map((ct) => ({
               tenThuoc: ct.tenThuoc,
               soLuong: ct.soLuong || null,
+              donGia: ct.donGia || 0,
               lieuDung: ct.lieuDung || null,
               ghiChu: ct.ghiChu || null,
             })),
@@ -76,7 +126,9 @@ const create = async (data) => {
 };
 
 const remove = async (id) => {
-  const existing = await prisma.donThuoc.findUnique({ where: { id: BigInt(id) } });
+  const existing = await prisma.donThuoc.findUnique({
+    where: { id: BigInt(id) },
+  });
   if (!existing) throw new AppError("Không tìm thấy đơn thuốc", 404);
 
   await prisma.donThuoc.delete({ where: { id: BigInt(id) } });

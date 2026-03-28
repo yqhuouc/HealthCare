@@ -12,8 +12,9 @@ const getAll = asyncHandler(async (req, res) => {
 });
 
 // GET /api/don-thuoc/:id — chi tiết (đăng nhập)
+// Nếu là bệnh nhân chưa thanh toán xong → ẩn chi tiết thuốc
 const getById = asyncHandler(async (req, res) => {
-  const donThuoc = await donThuocService.getById(req.params.id);
+  const donThuoc = await donThuocService.getById(req.params.id, req.user);
   res.json({ success: true, data: donThuoc });
 });
 
