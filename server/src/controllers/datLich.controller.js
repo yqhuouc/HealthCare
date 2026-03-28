@@ -20,7 +20,7 @@ const getSlotTrong = asyncHandler(async (req, res) => {
 
 // GET /api/dat-lich/:id — chi tiết một lịch
 const getById = asyncHandler(async (req, res) => {
-  const datLich = await datLichService.getById(req.params.id);
+  const datLich = await datLichService.getById(req.params.id, req.user);
   res.json({ success: true, data: datLich });
 });
 

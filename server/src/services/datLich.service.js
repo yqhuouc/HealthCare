@@ -46,6 +46,32 @@ const normalizeTime = (date) => {
 };
 
 /**
+ * redactSensitiveData: Hàm phụ để ẩn thông tin nhạy cảm (Đơn thuốc)
+ * dựa trên quyền hạn và trạng thái thanh toán.
+ */
+const redactSensitiveData = (data, requestUser) => {
+  if (!data) return data;
+
+  // Nếu là mảng (ví dụ kết quả findMany)
+  if (Array.isArray(data)) {
+    return data.map((item) => redactSensitiveData(item, requestUser));
+  }
+
+  // Logic chặn: Nếu role là bệnh nhân và chưa trả tiền thuốc (status < 2)
+  // thì ẩn donThuoc đi hoặc chỉ để lại thông báo.
+  if (requestUser?.vaiTro === "benh_nhan" && data.trangThaiThanhToan < 2) {
+    if (data.donThuoc) {
+      data.donThuoc = {
+        message: "Vui lòng hoàn tất thanh toán để xem chi tiết đơn thuốc và kết quả khám.",
+        isLocked: true,
+      };
+    }
+  }
+
+  return data;
+};
+
+/**
  * defaultInclude: Cấu hình mặc định khi Query để lấy đầy đủ thông tin liên quan
  * (Bác sĩ, Bệnh nhân, Hình thức thanh toán, Đơn thuốc...)
  */
@@ -100,13 +126,14 @@ const getAll = async ({ trangThai, ngayDat, page = 1, limit = 10 }) => {
 /**
  * Lấy chi tiết 1 lịch hẹn qua ID
  */
-const getById = async (id) => {
+const getById = async (id, requestUser) => {
   const datLich = await prisma.datLich.findUnique({
     where: { id: BigInt(id) },
     include: defaultInclude,
   });
   if (!datLich) throw new AppError("Không tìm thấy lịch hẹn", 404);
-  return datLich;
+
+  return redactSensitiveData(datLich, requestUser);
 };
 
 /**
@@ -124,11 +151,13 @@ const getByBenhNhan = async (benhNhanId, requestUser) => {
     }
   }
 
-  return prisma.datLich.findMany({
+  const results = await prisma.datLich.findMany({
     where: { benhNhanId: BigInt(benhNhanId) },
     include: defaultInclude,
     orderBy: [{ ngayDat: "desc" }, { gioBatDau: "asc" }],
   });
+
+  return redactSensitiveData(results, requestUser);
 };
 
 /**
