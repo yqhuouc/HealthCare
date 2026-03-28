@@ -20,19 +20,29 @@ const { AppError } = require("../middlewares/error.middleware");
  * parseTime: Chuyển "HH:mm" thành Date (Múi giờ VN +07:00)
  * Giúp Prisma lưu vào DB dưới dạng chuẩn UTC chuẩn xác.
  */
-const parseTime = (timeStr) => new Date(`1970-01-01T${timeStr}:00.000+07:00`);
+const parseTime = (timeStr) => new Date(`2000-01-01T${timeStr}:00.000+07:00`);
 
 /**
  * formatTime: Chuyển Date thành chuỗi "HH:mm" hiển thị đúng giờ VN
  * Sử dụng Intl.DateTimeFormat để đảm bảo độ chính xác bất kể server đặt ở đâu.
  */
 const formatTime = (date) => {
+  const d = new Date(date);
+  d.setFullYear(2000); // Đưa về năm 2000 để tránh lỗi múi giờ lịch sử 1970 (+8)
   return new Intl.DateTimeFormat("vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(new Date(date));
+  }).format(d);
+};
+
+// Hàm chuẩn hóa thời gian để so sánh (chỉ lấy giờ/phút, bỏ qua năm)
+const normalizeTime = (date) => {
+  const d = new Date(date);
+  d.setFullYear(2000, 0, 1); 
+  d.setSeconds(0, 0);
+  return d.getTime();
 };
 
 /**
@@ -177,7 +187,6 @@ const create = async (data) => {
   // 4. XÁC THỰC KHUNG GIỜ: Kiểm tra xem cái "Giờ bắt đầu" mà bệnh nhân chọn
   // có nằm trong danh sách các Slot có thể sinh ra từ Ca làm việc đó không.
   let lichLamViec = null;
-  const requestedSlotStart = gioBatDauDate.getTime();
   const slotMs = thoiLuongKham * 60_000;
 
   for (const shift of availableShifts) {
@@ -188,7 +197,7 @@ const create = async (data) => {
 
     // Quét qua toàn bộ slot mà ca này cho phép (dựa theo soBenhNhanToiDa)
     while (sloted < shift.soBenhNhanToiDa) {
-      if (cursor === requestedSlotStart) {
+      if (normalizeTime(cursor) === normalizeTime(gioBatDauDate)) {
         lichLamViec = shift; // Tìm thấy ca "chủ quản" của slot này
         break;
       }

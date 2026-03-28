@@ -1,11 +1,11 @@
 /**
  * ============================================================
- * SEED DATA - Dữ liệu mẫu ban đầu
+ * SEED DATA - Dữ liệu mẫu ban đầu (Đã đơn giản hóa)
  * ============================================================
  * Chạy: npx prisma db seed
- * Hoặc: node prisma/seed.js
+ * Hoặc: npm run setup
  *
- * Tạo: admin, chuyên khoa, bác sĩ, khung giờ, hình thức thanh toán, FAQ
+ * Tạo: admin, chuyên khoa, bác sĩ, khung giờ (3 ca), lịch mẫu, thanh toán, FAQ
  * ============================================================
  */
 const { PrismaClient } = require("@prisma/client");
@@ -13,7 +13,7 @@ const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
 
-// BigInt serialize fix
+// BigInt serialize fix (cần thiết cho Prisma khi trả về JSON)
 BigInt.prototype.toJSON = function () {
   return Number(this);
 };
@@ -22,7 +22,6 @@ async function main() {
   console.log("🌱 Bắt đầu làm sạch và seed dữ liệu...\n");
 
   // ===== 0. XÓA DỮ LIỆU CŨ (Tránh lỗi trùng lặp) =====
-  // Lưu ý: Thứ tự xóa quan trọng do ràng buộc khóa ngoại (Foreign Key)
   await prisma.chiTietDonThuoc.deleteMany({});
   await prisma.donThuoc.deleteMany({});
   await prisma.datLich.deleteMany({});
@@ -52,18 +51,18 @@ async function main() {
       gioiTinh: 1,
     },
   });
-  console.log("✅ Tạo tài khoản admin:", admin.email);
+  console.log("✅ Tài khoản admin: admin@clinic.vn / admin123");
 
   // ===== 2. TẠO CHUYÊN KHOA =====
   const chuyenKhoaData = [
-    { tenChuyenKhoa: "Tim mạch", moTaChuyenKhoa: "Khám và điều trị các bệnh về tim, mạch máu" },
-    { tenChuyenKhoa: "Thần kinh", moTaChuyenKhoa: "Khám và điều trị các bệnh về não, thần kinh" },
-    { tenChuyenKhoa: "Da liễu", moTaChuyenKhoa: "Khám và điều trị các bệnh về da" },
-    { tenChuyenKhoa: "Nhi khoa", moTaChuyenKhoa: "Khám và điều trị bệnh cho trẻ em" },
-    { tenChuyenKhoa: "Tai Mũi Họng", moTaChuyenKhoa: "Khám và điều trị bệnh tai, mũi, họng" },
-    { tenChuyenKhoa: "Mắt", moTaChuyenKhoa: "Khám và điều trị các bệnh về mắt" },
-    { tenChuyenKhoa: "Răng Hàm Mặt", moTaChuyenKhoa: "Khám và điều trị nha khoa" },
-    { tenChuyenKhoa: "Sản phụ khoa", moTaChuyenKhoa: "Khám thai, phụ khoa, sức khỏe sinh sản" },
+    { tenChuyenKhoa: "Tim mạch", thoiLuongKham: 30 },
+    { tenChuyenKhoa: "Thần kinh", thoiLuongKham: 30 },
+    { tenChuyenKhoa: "Da liễu", thoiLuongKham: 20 },
+    { tenChuyenKhoa: "Nhi khoa", thoiLuongKham: 20 },
+    { tenChuyenKhoa: "Tai Mũi Họng", thoiLuongKham: 15 },
+    { tenChuyenKhoa: "Mắt", thoiLuongKham: 15 },
+    { tenChuyenKhoa: "Răng Hàm Mặt", thoiLuongKham: 20 },
+    { tenChuyenKhoa: "Sản phụ khoa", thoiLuongKham: 30 },
   ];
 
   const chuyenKhoas = [];
@@ -73,47 +72,43 @@ async function main() {
   }
   console.log(`✅ Tạo ${chuyenKhoas.length} chuyên khoa`);
 
-  // ===== 3. TẠO BÁC SĨ (kèm tài khoản) =====
+  // ===== 3. TẠO BÁC SĨ =====
   const bacSiData = [
     { tenBacSi: "Nguyễn Văn An", hocViChucDanh: "PGS.TS", giaKham: 500000, chuyenKhoaIdx: 0 },
     { tenBacSi: "Trần Thị Bình", hocViChucDanh: "ThS.BS", giaKham: 350000, chuyenKhoaIdx: 1 },
     { tenBacSi: "Lê Hoàng Cường", hocViChucDanh: "TS.BS", giaKham: 450000, chuyenKhoaIdx: 2 },
     { tenBacSi: "Phạm Minh Đức", hocViChucDanh: "BS.CKI", giaKham: 300000, chuyenKhoaIdx: 3 },
-    { tenBacSi: "Hoàng Thị Em", hocViChucDanh: "BS.CKII", giaKham: 400000, chuyenKhoaIdx: 4 },
-    { tenBacSi: "Vũ Đình Phú", hocViChucDanh: "PGS.TS", giaKham: 550000, chuyenKhoaIdx: 0 },
-    { tenBacSi: "Đỗ Thị Giang", hocViChucDanh: "ThS.BS", giaKham: 320000, chuyenKhoaIdx: 5 },
-    { tenBacSi: "Bùi Văn Hải", hocViChucDanh: "TS.BS", giaKham: 480000, chuyenKhoaIdx: 6 },
   ];
 
+  const doctors = [];
   for (let i = 0; i < bacSiData.length; i++) {
     const bs = bacSiData[i];
     const email = `bacsi${i + 1}@clinic.vn`;
     const hashedPw = await bcrypt.hash("doctor123", 10);
 
-    await prisma.$transaction(async (tx) => {
-      const taiKhoan = await tx.taiKhoan.create({
-        data: {
-          email,
-          matKhau: hashedPw,
-          vaiTro: "bac_si",
-          trangThaiTaiKhoan: 1,
-          gioiTinh: i % 2 === 0 ? 1 : 2,
-        },
-      });
-
-      await tx.bacSi.create({
-        data: {
-          tenBacSi: bs.tenBacSi,
-          hocViChucDanh: bs.hocViChucDanh,
-          moTaNgan: `Bác sĩ ${bs.tenBacSi} - chuyên khoa ${chuyenKhoaData[bs.chuyenKhoaIdx].tenChuyenKhoa}`,
-          giaKham: bs.giaKham,
-          taiKhoanId: taiKhoan.id,
-          chuyenKhoaId: chuyenKhoas[bs.chuyenKhoaIdx].id,
-        },
-      });
+    const taiKhoan = await prisma.taiKhoan.create({
+      data: {
+        email,
+        matKhau: hashedPw,
+        vaiTro: "bac_si",
+        trangThaiTaiKhoan: 1,
+        gioiTinh: i % 2 === 0 ? 1 : 2,
+      },
     });
+
+    const createdBs = await prisma.bacSi.create({
+      data: {
+        tenBacSi: bs.tenBacSi,
+        hocViChucDanh: bs.hocViChucDanh,
+        moTaNgan: `Bác sĩ ${bs.tenBacSi} - chuyên môn giỏi, tận tâm.`,
+        giaKham: bs.giaKham,
+        taiKhoanId: taiKhoan.id,
+        chuyenKhoaId: chuyenKhoas[bs.chuyenKhoaIdx].id,
+      },
+    });
+    doctors.push(createdBs);
   }
-  console.log(`✅ Tạo ${bacSiData.length} bác sĩ`);
+  console.log(`✅ Tạo ${bacSiData.length} bác sĩ (bác sĩ 1 đến 4)`);
 
   // ===== 4. TẠO BỆNH NHÂN MẪU =====
   const benhNhanPassword = await bcrypt.hash("patient123", 10);
@@ -137,58 +132,75 @@ async function main() {
       taiKhoanId: bnAccount.id,
     },
   });
-  console.log("✅ Tạo 1 bệnh nhân mẫu");
+  console.log("✅ Tài khoản bệnh nhân: benhnhan@gmail.com / patient123");
 
-  // ===== 5. TẠO KHUNG GIỜ =====
+  // ===== 5. TẠO KHUNG GIỜ (CA LÀM VIỆC) =====
+  // Sử dụng offset +07:00 để lưu đúng giờ Việt Nam (Khi format ra sẽ khớp hoàn toàn)
   const khungGioData = [
-    { gioBatDau: "07:00", gioKetThuc: "08:00" },
-    { gioBatDau: "08:00", gioKetThuc: "09:00" },
-    { gioBatDau: "09:00", gioKetThuc: "10:00" },
-    { gioBatDau: "10:00", gioKetThuc: "11:00" },
-    { gioBatDau: "13:00", gioKetThuc: "14:00" },
-    { gioBatDau: "14:00", gioKetThuc: "15:00" },
-    { gioBatDau: "15:00", gioKetThuc: "16:00" },
-    { gioBatDau: "16:00", gioKetThuc: "17:00" },
+    { gioBatDau: "07:00", gioKetThuc: "11:00", label: "Ca Sáng" },
+    { gioBatDau: "13:00", gioKetThuc: "17:00", label: "Ca Chiều" },
+    { gioBatDau: "18:00", gioKetThuc: "21:00", label: "Ca Tối" },
   ];
 
+  const khungGios = [];
   for (const kg of khungGioData) {
-    await prisma.khungGio.create({
+    const created = await prisma.khungGio.create({
       data: {
-        gioBatDau: new Date(`1970-01-01T${kg.gioBatDau}:00.000Z`),
-        gioKetThuc: new Date(`1970-01-01T${kg.gioKetThuc}:00.000Z`),
+        gioBatDau: new Date(`2000-01-01T${kg.gioBatDau}:00.000+07:00`),
+        gioKetThuc: new Date(`2000-01-01T${kg.gioKetThuc}:00.000+07:00`),
       },
     });
+    khungGios.push(created);
   }
-  console.log(`✅ Tạo ${khungGioData.length} khung giờ`);
+  console.log(`✅ Tạo ${khungGios.length} ca làm việc chính (Sáng, Chiều, Tối)`);
 
-  // ===== 6. TẠO HÌNH THỨC THANH TOÁN =====
-  const hinhThucData = ["Tiền mặt", "Chuyển khoản ngân hàng", "Ví điện tử"];
+  // ===== 6. TẠO LỊCH LÀM VIỆC MẪU (LichLamViecBacSi) =====
+  // Lấy thời điểm hiện tại theo múi giờ Việt Nam
+  const now = new Date();
+  const today = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  const lichMau = [
+    { bacSiIdx: 0, khungGioIdx: 0, ngay: today },    // BS An - Sáng nay
+    { bacSiIdx: 1, khungGioIdx: 1, ngay: today },    // BS Bình - Chiều nay
+    { bacSiIdx: 2, khungGioIdx: 2, ngay: today },    // BS Cường - Tối nay
+    { bacSiIdx: 3, khungGioIdx: 0, ngay: tomorrow }, // BS Đức - Sáng mai
+  ];
+
+  for (const lm of lichMau) {
+    if (doctors[lm.bacSiIdx] && khungGios[lm.khungGioIdx]) {
+      await prisma.lichLamViecBacSi.create({
+        data: {
+          bacSiId: doctors[lm.bacSiIdx].id,
+          khungGioId: khungGios[lm.khungGioIdx].id,
+          ngayLamViec: lm.ngay,
+          soBenhNhanToiDa: 10,
+          soBenhNhanHienTai: 0,
+          sanSang: 1,
+        },
+      });
+    }
+  }
+  console.log(`✅ Đã tạo ${lichMau.length} lịch làm việc mẫu cho bác sĩ`);
+  // ===== 7. TẠO HÌNH THỨC THANH TOÁN & FAQ =====
+  const hinhThucData = ["Tiền mặt (tại quầy)", "Chuyển khoản (VNPay/Momo)"];
   for (const ht of hinhThucData) {
     await prisma.hinhThucThanhToan.create({ data: { tenHinhThuc: ht } });
   }
-  console.log(`✅ Tạo ${hinhThucData.length} hình thức thanh toán`);
 
-  // ===== 7. TẠO FAQ =====
   const faqData = [
-    { cauHoi: "Làm thế nào để đặt lịch khám?", traLoi: "Bạn đăng nhập vào hệ thống, chọn chuyên khoa → chọn bác sĩ → chọn ngày giờ → xác nhận đặt lịch." },
-    { cauHoi: "Tôi có thể hủy lịch khám không?", traLoi: "Bạn có thể hủy lịch khám khi lịch đang ở trạng thái 'Chờ xác nhận'. Vào mục Lịch hẹn → chọn lịch → nhấn Hủy." },
-    { cauHoi: "Phí khám bệnh là bao nhiêu?", traLoi: "Phí khám tùy theo bác sĩ và chuyên khoa, dao động từ 200.000đ - 600.000đ. Giá sẽ hiển thị khi bạn chọn bác sĩ." },
-    { cauHoi: "Tôi quên mật khẩu phải làm sao?", traLoi: "Vui lòng liên hệ hotline hoặc email hỗ trợ để được reset mật khẩu." },
-    { cauHoi: "Phòng khám hoạt động giờ nào?", traLoi: "Phòng khám hoạt động từ 7:00 - 17:00, thứ Hai đến thứ Bảy. Chủ nhật nghỉ." },
+    { cauHoi: "Lịch khám bao lâu thì có kết quả?", traLoi: "Thông thường kết quả sẽ có ngay sau khi bác sĩ kết luận và kê đơn." },
+    { cauHoi: "Tôi có thể thanh toán bằng thẻ không?", traLoi: "Hiện tại chúng tôi chấp nhận tiền mặt và chuyển khoản qua mã QR." },
   ];
-
   for (const faq of faqData) {
-    await prisma.cauHoiThuongGap.create({
-      data: { ...faq, dangHoatDong: 1 },
-    });
+    await prisma.cauHoiThuongGap.create({ data: { ...faq, dangHoatDong: 1 } });
   }
-  console.log(`✅ Tạo ${faqData.length} câu hỏi thường gặp`);
+  console.log("✅ Hoàn tất các thông tin bổ trợ (Thanh toán, FAQ)");
 
-  console.log("\n🎉 Seed dữ liệu hoàn tất!");
-  console.log("\n📌 Tài khoản đăng nhập:");
-  console.log("   Admin:     admin@clinic.vn / admin123");
-  console.log("   Bác sĩ 1:  bacsi1@clinic.vn / doctor123");
-  console.log("   Bệnh nhân: benhnhan@gmail.com / patient123\n");
+  console.log("\n🎉 SEED DỮ LIỆU THÀNH CÔNG! Hệ thống đã sẵn sàng để test.");
 }
 
 main()
