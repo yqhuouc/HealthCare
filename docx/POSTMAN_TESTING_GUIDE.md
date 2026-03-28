@@ -1062,7 +1062,17 @@ GET {{base_url}}/dat-lich?trangThai=0&page=1&limit=5
 GET {{base_url}}/dat-lich/1
 ```
 
-**Headers**: Authorization: Bearer {{patient_token}}
+**Headers**: Cookie chứa accessToken (tự động gửi)
+
+> **Phân quyền Data Ownership (Bảo mật mới):**
+> - **Admin**: Xem được tất cả lịch hẹn.
+> - **Bác sĩ**: Chỉ xem được lịch hẹn do **chính mình** là người khám. Nếu lịch hẹn thuộc về bác sĩ khác → `403 Forbidden`.
+> - **Bệnh nhân**: Chỉ xem được lịch hẹn của **chính mình**. Nếu lịch hẹn thuộc về bệnh nhân khác → `403 Forbidden`.
+> - **Ẩn đơn thuốc**: Nếu bệnh nhân xem lịch hẹn mà `trangThaiThanhToan < 2`, phần `donThuoc` sẽ bị ẩn và thay bằng thông báo yêu cầu thanh toán.
+
+**Test case bảo mật:**
+- Đăng nhập Bác sĩ A, xem lịch của Bác sĩ B → `403` "Bạn không có quyền xem lịch hẹn này"
+- Đăng nhập Bệnh nhân X, xem lịch của Bệnh nhân Y → `403` "Bạn không có quyền xem lịch hẹn này"
 
 ---
 
@@ -1072,9 +1082,16 @@ GET {{base_url}}/dat-lich/1
 GET {{base_url}}/dat-lich/benh-nhan/1
 ```
 
-**Headers**: Authorization: Bearer {{patient_token}}
+**Headers**: Cookie chứa accessToken (tự động gửi)
 
-> **Ownership check**: Bệnh nhân chỉ xem được lịch của chính mình.
+> **Phân quyền Data Ownership (Bảo mật mới):**
+> - **Admin**: Xem được lịch của bất kỳ bệnh nhân nào.
+> - **Bệnh nhân**: Chỉ xem được lịch của **chính mình**. Thay ID khác → `403`.
+> - **Bác sĩ**: **KHÔNG được phép** gọi API này (bảo mật y tế, không cho rình lịch sử bệnh nhân) → `403`.
+
+**Test case bảo mật:**
+- Bệnh nhân ID=1 gọi `/benh-nhan/2` → `403` "Bạn không có quyền xem lịch hẹn của bệnh nhân khác"
+- Bác sĩ gọi `/benh-nhan/1` → `403` "Bác sĩ không có quyền xem toàn bộ lịch sử khám của bệnh nhân"
 
 ---
 
@@ -1084,9 +1101,16 @@ GET {{base_url}}/dat-lich/benh-nhan/1
 GET {{base_url}}/dat-lich/bac-si/1
 ```
 
-**Headers**: Authorization: Bearer {{doctor_token}}
+**Headers**: Cookie chứa accessToken (tự động gửi)
 
-> **Ownership check**: Bác sĩ chỉ xem được lịch của chính mình.
+> **Phân quyền Data Ownership (Bảo mật mới):**
+> - **Admin**: Xem được lịch của bất kỳ bác sĩ nào.
+> - **Bác sĩ**: Chỉ xem được lịch khám do **chính mình** phụ trách. Thay ID khác → `403`.
+> - **Bệnh nhân**: **KHÔNG được phép** gọi API này → `403`.
+
+**Test case bảo mật:**
+- Bác sĩ ID=1 gọi `/bac-si/2` → `403` "Bạn không có quyền xem lịch khám của bác sĩ khác"
+- Bệnh nhân gọi `/bac-si/1` → `403` "Bệnh nhân không có quyền xem danh sách lịch khám của bác sĩ"
 
 ---
 

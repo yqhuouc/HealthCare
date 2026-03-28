@@ -336,7 +336,8 @@ createDatLichSchema:
 
 1. Bấm vào 1 lịch hẹn → `/doctor/appointments/:id` → `DoctorAppointmentDetailPage.jsx`
 2. API: `GET /api/dat-lich/:id` (cookie HttpOnly)
-3. Backend trả chi tiết đầy đủ: bác sĩ, bệnh nhân, hình thức thanh toán, đơn thuốc + chi tiết thuốc
+3. Backend: **Ownership check** — bác sĩ chỉ xem được lịch do chính mình khám. Bệnh nhân chỉ xem được lịch của chính mình. Admin xem được tất cả.
+4. Nếu bệnh nhân chưa thanh toán thuốc (`trangThaiThanhToan < 2`), phần `donThuoc` sẽ bị ẩn và thay bằng thông báo yêu cầu thanh toán.
 
 ### 11.3 Cập nhật trạng thái lịch hẹn
 API: `PUT /api/dat-lich/:id/trang-thai` — Cập nhật trạng thái khám (0->1->2->3)

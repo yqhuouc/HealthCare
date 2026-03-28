@@ -124,7 +124,9 @@ const getAll = async ({ trangThai, ngayDat, page = 1, limit = 10 }) => {
 };
 
 /**
- * Lấy chi tiết 1 lịch hẹn qua ID
+ * Lấy chi tiết 1 lịch hẹn qua ID.
+ * Kiểm tra Ownership: Bệnh nhân chỉ xem được lịch của mình,
+ * Bác sĩ chỉ xem được lịch do mình khám, Admin xem được tất cả.
  */
 const getById = async (id, requestUser) => {
   const datLich = await prisma.datLich.findUnique({
@@ -133,22 +135,38 @@ const getById = async (id, requestUser) => {
   });
   if (!datLich) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
+  // Kiểm tra quyền sở hữu
+  if (requestUser?.vaiTro === "benh_nhan") {
+    if (!requestUser.benhNhan || datLich.benhNhanId !== requestUser.benhNhan.id) {
+      throw new AppError("Bạn không có quyền xem lịch hẹn này", 403);
+    }
+  }
+  if (requestUser?.vaiTro === "bac_si") {
+    if (!requestUser.bacSi || datLich.bacSiId !== requestUser.bacSi.id) {
+      throw new AppError("Bạn không có quyền xem lịch hẹn này", 403);
+    }
+  }
+
   return redactSensitiveData(datLich, requestUser);
 };
 
 /**
  * Lấy danh sách lịch hẹn của 1 Bệnh nhân cụ thể.
- * Có kiểm tra Ownership: Bệnh nhân chỉ được xem lịch của chính mình.
+ * Ownership: Bệnh nhân chỉ xem được lịch của chính mình.
+ * Bác sĩ không được dùng API này để "rình" lịch sử bệnh nhân.
+ * Chỉ Admin mới được xem lịch của bất kỳ bệnh nhân nào.
  */
 const getByBenhNhan = async (benhNhanId, requestUser) => {
+  // Bệnh nhân: chỉ xem lịch của chính mình
   if (requestUser.vaiTro === "benh_nhan") {
-    const benhNhan = await prisma.benhNhan.findUnique({
-      where: { id: BigInt(benhNhanId) },
-    });
-    // Chặn nếu bệnh nhân này định "xem lén" ID bệnh nhân khác
-    if (!benhNhan || benhNhan.taiKhoanId !== requestUser.id) {
-      throw new AppError("Bạn không có quyền xem lịch hẹn này", 403);
+    if (!requestUser.benhNhan || BigInt(benhNhanId) !== requestUser.benhNhan.id) {
+      throw new AppError("Bạn không có quyền xem lịch hẹn của bệnh nhân khác", 403);
     }
+  }
+
+  // Bác sĩ: không được xem toàn bộ lịch sử của bệnh nhân (bảo mật y tế)
+  if (requestUser.vaiTro === "bac_si") {
+    throw new AppError("Bác sĩ không có quyền xem toàn bộ lịch sử khám của bệnh nhân", 403);
   }
 
   const results = await prisma.datLich.findMany({
@@ -162,16 +180,21 @@ const getByBenhNhan = async (benhNhanId, requestUser) => {
 
 /**
  * Lấy lịch hẹn của 1 Bác sĩ cụ thể.
- * Có kiểm tra Ownership: Bác sĩ chỉ xem được danh sách bệnh nhân đặt mình.
+ * Ownership: Bác sĩ chỉ xem được danh sách lịch khám do chính mình phụ trách.
+ * Bệnh nhân không được dùng API này.
+ * Chỉ Admin mới được xem lịch của bất kỳ bác sĩ nào.
  */
 const getByBacSi = async (bacSiId, requestUser) => {
+  // Bác sĩ: chỉ xem lịch của chính mình
   if (requestUser.vaiTro === "bac_si") {
-    const bacSi = await prisma.bacSi.findUnique({
-      where: { id: BigInt(bacSiId) },
-    });
-    if (!bacSi || bacSi.taiKhoanId !== requestUser.id) {
-      throw new AppError("Bạn không có quyền xem lịch hẹn này", 403);
+    if (!requestUser.bacSi || BigInt(bacSiId) !== requestUser.bacSi.id) {
+      throw new AppError("Bạn không có quyền xem lịch khám của bác sĩ khác", 403);
     }
+  }
+
+  // Bệnh nhân: không được xem danh sách lịch của bác sĩ
+  if (requestUser.vaiTro === "benh_nhan") {
+    throw new AppError("Bệnh nhân không có quyền xem danh sách lịch khám của bác sĩ", 403);
   }
 
   return prisma.datLich.findMany({
