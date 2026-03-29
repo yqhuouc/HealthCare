@@ -1007,6 +1007,7 @@ POST {{base_url}}/dat-lich
 - Bác sĩ không có lịch làm việc ngày đó / khung giờ đó không nằm trong ca → `400`
 - Ca làm việc đã đầy (`soBenhNhanHienTai` >= `soBenhNhanToiDa`) → `400`
 - Trùng lịch (slot đã có người đặt) → `409`
+- **Bảo mật**: Bệnh nhân dùng Token của mình nhưng truyền `benhNhanId` của người khác → `403` "Bạn không có quyền đặt lịch khám cho bệnh nhân khác"
 
 ---
 
@@ -1186,6 +1187,10 @@ PUT {{base_url}}/dat-lich/2/trang-thai
 
 > Nếu chuyển sang hủy, sức chứa `soBenhNhanHienTai` của ca sẽ giảm 1.
 
+**Kiểm thử bảo mật Data Ownership:**
+- **Bác sĩ**: Chỉ được đổi trạng thái (`1`, `2`, `3`) cho lịch hẹn do chính mình phụ trách. Nếu lấy ID lịch hẹn của bác sĩ khác và gửi Request → `403` "Bạn không có quyền cập nhật trạng thái lịch hẹn của bác sĩ khác"
+- **Admin**: Đổi trạng thái lịch của bất kỳ bác sĩ nào cũng thành công.
+
 ---
 
 ### 8.12 Xóa lịch hẹn
@@ -1199,7 +1204,8 @@ DELETE {{base_url}}/dat-lich/2
 **Kiểm thử lỗi**:
 - Xóa lịch đã xác nhận (trangThai=1) → `400` "Không thể xóa lịch hẹn đã xác nhận hoặc đã khám"
 - Xóa lịch đã khám (trangThai=2) → `400` "Không thể xóa lịch hẹn đã xác nhận hoặc đã khám"
-- Bệnh nhân A xóa lịch của bệnh nhân B → `403` "Bạn không có quyền xóa lịch hẹn này"
+- **Bệnh nhân bảo mật**: Bệnh nhân A xóa lịch của bệnh nhân B → `403` "Bạn không có quyền can thiệp vào lịch hẹn này"
+- **Bác sĩ bảo mật**: Bác sĩ A lạm quyền mở Postman xóa lịch của bác sĩ B → `403` "Bạn không có quyền xóa lịch khám của bệnh nhân thuộc bác sĩ khác"
 
 ---
 

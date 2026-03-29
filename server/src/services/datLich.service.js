@@ -246,7 +246,14 @@ const getByBacSi = async (bacSiId, requestUser) => {
  * Đặt lịch mới (Quy trình lõi).
  * Bao gồm tính toán thời gian, kiểm tra công suất ca trực và ghi nhận qua Transaction.
  */
-const create = async (data) => {
+const create = async (data, requestUser = null) => {
+  // Phân quyền (Data Ownership): Bệnh nhân chỉ được gửi lịch dưới tên mình
+  if (requestUser?.vaiTro === "benh_nhan") {
+    if (BigInt(data.benhNhanId) !== requestUser.benhNhan?.id) {
+      throw new AppError("Bạn không có quyền đặt lịch khám cho bệnh nhân khác", 403);
+    }
+  }
+
   // 1. Xác thực thông tin liên đới
   const bacSi = await prisma.bacSi.findUnique({
     where: { id: BigInt(data.bacSiId) },
@@ -368,12 +375,17 @@ const create = async (data) => {
  * Cập nhật trạng thái tổng thể của lịch hẹn.
  * Tự động hoàn trả slot cho ca làm việc nếu lịch bị Hủy (Trạng thái 3).
  */
-const updateTrangThai = async (id, trangThai) => {
+const updateTrangThai = async (id, trangThai, requestUser = null) => {
   const existing = await prisma.datLich.findUnique({
     where: { id: BigInt(id) },
   });
 
   if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
+
+  // Phân quyền (Data Ownership): Bác sĩ chỉ được cập nhật trạng thái lịch của chính mình
+  if (requestUser?.vaiTro === "bac_si" && existing.bacSiId !== requestUser.bacSi?.id) {
+    throw new AppError("Bạn không có quyền cập nhật trạng thái lịch hẹn của bác sĩ khác", 403);
+  }
 
   const oldTrangThai = existing.trangThai;
   const newTrangThai = Number(trangThai);
@@ -441,6 +453,11 @@ const remove = async (id, requestUser) => {
     if (!benhNhan || existing.benhNhanId !== benhNhan.id) {
       throw new AppError("Bạn không có quyền can thiệp vào lịch hẹn này", 403);
     }
+  }
+
+  // Phân quyền (Data Ownership): Bác sĩ không được xóa càn lịch của người khác
+  if (requestUser.vaiTro === "bac_si" && existing.bacSiId !== requestUser.bacSi?.id) {
+    throw new AppError("Bạn không có quyền xóa lịch khám của bệnh nhân thuộc bác sĩ khác", 403);
   }
 
   if (existing.trangThai === 1 || existing.trangThai === 2) {

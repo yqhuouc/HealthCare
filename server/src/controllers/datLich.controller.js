@@ -38,13 +38,13 @@ const getByBacSi = asyncHandler(async (req, res) => {
 
 // POST /api/dat-lich — tạo lịch mới
 const create = asyncHandler(async (req, res) => {
-  const datLich = await datLichService.create(req.body);
+  const datLich = await datLichService.create(req.body, req.user);
   res.status(201).json({ success: true, message: "Đặt lịch thành công", data: datLich });
 });
 
 // PUT /api/dat-lich/:id/trang-thai — đổi trạng thái (admin, bác sĩ)
 const updateTrangThai = asyncHandler(async (req, res) => {
-  const datLich = await datLichService.updateTrangThai(req.params.id, req.body.trangThai);
+  const datLich = await datLichService.updateTrangThai(req.params.id, req.body.trangThai, req.user);
   res.json({ success: true, message: "Cập nhật trạng thái thành công", data: datLich });
 });
 
