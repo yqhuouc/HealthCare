@@ -7,7 +7,7 @@ const donThuocService = require("../services/donThuoc.service");
 
 // GET /api/don-thuoc — danh sách + pagination (admin, bác sĩ)
 const getAll = asyncHandler(async (req, res) => {
-  const result = await donThuocService.getAll(req.query);
+  const result = await donThuocService.getAll(req.query, req.user);
   res.json({ success: true, data: result.donThuocs, pagination: result.pagination });
 });
 

@@ -15,17 +15,30 @@ const defaultInclude = {
   chiTietDonThuoc: true,
 };
 
-const getAll = async ({ page = 1, limit = 10 }) => {
+const getAll = async ({ page = 1, limit = 10 }, user = null) => {
   const skip = (Number(page) - 1) * Number(limit);
+
+  // Khởi tạo điều kiện lọc (Data Ownership)
+  let where = {};
+
+  if (user?.vaiTro === "bac_si") {
+    // Bác sĩ chỉ xem đơn thuốc do chính mình kê
+    where = { datLich: { bacSiId: user.bacSi?.id } };
+  } else if (user?.vaiTro === "benh_nhan") {
+    // Bệnh nhân chỉ xem đơn thuốc của chính mình
+    where = { datLich: { benhNhanId: user.benhNhan?.id } };
+  }
+  // Admin mặc định where = {} (Lấy tất cả)
 
   const [donThuocs, total] = await Promise.all([
     prisma.donThuoc.findMany({
+      where,
       include: defaultInclude,
       skip,
       take: Number(limit),
       orderBy: { ngayTao: "desc" },
     }),
-    prisma.donThuoc.count(),
+    prisma.donThuoc.count({ where }),
   ]);
 
   return {

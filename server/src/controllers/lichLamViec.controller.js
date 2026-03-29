@@ -35,19 +35,19 @@ const getLichLamViec = asyncHandler(async (req, res) => {
 
 // POST /api/lich-lam-viec — tạo lịch (admin, bác sĩ)
 const createLichLamViec = asyncHandler(async (req, res) => {
-  const lich = await lichLamViecService.createLichLamViec(req.body);
+  const lich = await lichLamViecService.createLichLamViec(req.body, req.user);
   res.status(201).json({ success: true, message: "Tạo lịch làm việc thành công", data: lich });
 });
 
 // PUT /api/lich-lam-viec/:id — cập nhật (admin, bác sĩ)
 const updateLichLamViec = asyncHandler(async (req, res) => {
-  const lich = await lichLamViecService.updateLichLamViec(req.params.id, req.body);
+  const lich = await lichLamViecService.updateLichLamViec(req.params.id, req.body, req.user);
   res.json({ success: true, message: "Cập nhật lịch làm việc thành công", data: lich });
 });
 
 // DELETE /api/lich-lam-viec/:id — xóa (admin, bác sĩ)
 const deleteLichLamViec = asyncHandler(async (req, res) => {
-  await lichLamViecService.deleteLichLamViec(req.params.id);
+  await lichLamViecService.deleteLichLamViec(req.params.id, req.user);
   res.json({ success: true, message: "Xóa lịch làm việc thành công" });
 });
 

@@ -126,7 +126,14 @@ const getLichLamViec = async ({ bacSiId, ngayLamViec }) => {
  * Tạo Lịch Làm Việc (Khi bác sĩ đăng ký đi làm vào ngày/khung nào đó).
  * Quy tắc: [1 Bác Sĩ] + [1 Ngày] + [1 Khung Giờ] = Phải là Duy Nhất, không đè lặp.
  */
-const createLichLamViec = async (data) => {
+const createLichLamViec = async (data, requestUser = null) => {
+  // Phân quyền (Data Ownership): Bác sĩ chỉ tạo được lịch cho mình
+  if (requestUser?.vaiTro === "bac_si") {
+    if (BigInt(data.bacSiId) !== requestUser.bacSi?.id) {
+      throw new AppError("Bạn không có quyền đăng ký lịch làm việc cho bác sĩ khác", 403);
+    }
+  }
+
   // Lấy thông tin Bác Sĩ + Thông số "Tốc độ khám 1 bệnh nhân" của chuyên môn
   const bacSi = await prisma.bacSi.findUnique({
     where: { id: BigInt(data.bacSiId) },
@@ -188,12 +195,17 @@ const createLichLamViec = async (data) => {
  * Ví dụ: Bác sĩ đột xuất bận, họ có thể tắt cờ sanSang (Trạng thái = Cửa đóng chống nhận hẹn thêm),
  *        hoặc tinh chỉnh nâng sốBenhNhanToiDa lên để tiếp thêm bệnh nhân (Cấp thẻ vàng VIP).
  */
-const updateLichLamViec = async (id, data) => {
+const updateLichLamViec = async (id, data, requestUser = null) => {
   const existing = await prisma.lichLamViecBacSi.findUnique({
     where: { id: BigInt(id) },
   });
   if (!existing)
     throw new AppError("Lịch làm việc không được tìm thấy trên hệ thống.", 404);
+
+  // Phân quyền (Data Ownership): Bác sĩ chỉ được sửa lịch của mình
+  if (requestUser?.vaiTro === "bac_si" && existing.bacSiId !== requestUser.bacSi?.id) {
+    throw new AppError("Bạn không có quyền chỉnh sửa lịch làm việc của bác sĩ khác", 403);
+  }
 
   // undefined: Bỏ qua trường không truyền lên. Chỉ update đúng field nào có gửi giá trị.
   return prisma.lichLamViecBacSi.update({
@@ -215,11 +227,16 @@ const updateLichLamViec = async (id, data) => {
  * Rất nguy hiểm vì liên đới đến Bệnh nhân: Phải check chặn đứng việc xóa Nếu ca khám này
  * ĐÃ CHỨA ÍT NHẤT 1 BỆNH NHÂN ĐANG GỬI LỊCH CHỜ Khám hoặc Xác nhận.
  */
-const deleteLichLamViec = async (id) => {
+const deleteLichLamViec = async (id, requestUser = null) => {
   const existing = await prisma.lichLamViecBacSi.findUnique({
     where: { id: BigInt(id) },
   });
   if (!existing) throw new AppError("Lịch trống trơn hoặc không tồn tại.", 404);
+
+  // Phân quyền (Data Ownership): Bác sĩ chỉ được hủy lịch của mình
+  if (requestUser?.vaiTro === "bac_si" && existing.bacSiId !== requestUser.bacSi?.id) {
+    throw new AppError("Bạn không có quyền hủy lịch làm việc của bác sĩ khác", 403);
+  }
 
   // notIn: [3] -> Tìm các lịch không thuộc dạng bị Hủy. (Tức Là Đang Chờ/Xác nhận/Đã Khám)
   const datLichCount = await prisma.datLich.count({

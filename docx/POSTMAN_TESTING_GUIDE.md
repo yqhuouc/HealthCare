@@ -1292,6 +1292,7 @@ POST {{base_url}}/lich-lam-viec
 - Gửi lại cùng dữ liệu → `409` "Bác sĩ đã có lịch làm việc vào khung giờ này"
 - bacSiId không tồn tại → `404` "Không tìm thấy bác sĩ"
 - khungGioId không tồn tại → `404` "Không tìm thấy khung giờ"
+- Bác sĩ A đăng ký gửi lịch cho Bác sĩ B → `403` "Bạn không có quyền đăng ký lịch làm việc cho bác sĩ khác"
 
 ---
 
@@ -1303,7 +1304,7 @@ GET {{base_url}}/lich-lam-viec?bacSiId=1&ngayLamViec=2026-03-25
 
 ---
 
-### 9.6 Cập nhật trạng thái sẵn sàng
+### 9.6 Cập nhật trạng thái sẵn sàng (Admin/BS)
 
 ```
 PUT {{base_url}}/lich-lam-viec/1
@@ -1318,7 +1319,10 @@ PUT {{base_url}}/lich-lam-viec/1
 }
 ```
 
-> Đặt `sanSang: 0` → bác sĩ không nhận bệnh nhân ở khung giờ này.
+> Đặt `sanSang: 0` → bác sĩ tạm thời không nhận bệnh nhân ở khung giờ này.
+
+**Kiểm thử lỗi**:
+- Bác sĩ A gửi ID lịch của Bác sĩ B (phá hoại) → `403` "Bạn không có quyền chỉnh sửa lịch làm việc của bác sĩ khác"
 
 ---
 
@@ -1334,13 +1338,17 @@ GET {{base_url}}/dat-lich/slot-trong?bacSiId=1&ngayDat=2026-03-25
 
 ---
 
-### 9.8 Xóa lịch làm việc
+### 9.8 Xóa lịch làm việc (Admin/BS)
 
 ```
 DELETE {{base_url}}/lich-lam-viec/1
 ```
 
-**Headers**: Authorization: Bearer {{admin_token}}
+**Headers**: Authorization: Bearer {{doctor_token}}
+
+**Kiểm thử lỗi**:
+- Ca đang có người đặt rồi → `400` "Từ chối hủy Ca: Đang có (X) bệnh nhân hẹn khám..."
+- Bác sĩ A xóa càn lịch của Bác sĩ B → `403` "Bạn không có quyền hủy lịch làm việc của bác sĩ khác" 
 
 ---
 
