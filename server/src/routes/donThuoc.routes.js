@@ -6,7 +6,7 @@ const router = express.Router();
 const donThuocController = require("../controllers/donThuoc.controller");
 const { authenticate, authorize } = require("../middlewares/auth.middleware");
 const { validate } = require("../middlewares/validate.middleware");
-const { createDonThuocSchema } = require("../validations/donThuoc.validation");
+const { createDonThuocSchema, updateDonThuocSchema } = require("../validations/donThuoc.validation");
 
 // GET /api/don-thuoc - Lấy tất cả đơn thuốc (admin, bác sĩ)
 router.get("/", authenticate, authorize("admin", "bac_si"), donThuocController.getAll);
@@ -16,6 +16,9 @@ router.get("/:id", authenticate, donThuocController.getById);
 
 // POST /api/don-thuoc - Tạo đơn thuốc (bác sĩ)
 router.post("/", authenticate, authorize("bac_si"), validate(createDonThuocSchema), donThuocController.create);
+
+// PUT /api/don-thuoc/:id - Cập nhật đơn thuốc (bác sĩ, admin)
+router.put("/:id", authenticate, authorize("bac_si", "admin"), validate(updateDonThuocSchema), donThuocController.update);
 
 // DELETE /api/don-thuoc/:id - Xóa đơn thuốc (admin)
 router.delete("/:id", authenticate, authorize("admin"), donThuocController.remove);

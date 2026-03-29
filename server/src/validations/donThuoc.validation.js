@@ -23,4 +23,11 @@ const createDonThuocSchema = z.object({
   chiTietDonThuoc: z.array(chiTietThuocSchema).optional(),
 });
 
-module.exports = { createDonThuocSchema };
+// Schema cho API cập nhật (không yêu cầu datLichId)
+const updateDonThuocSchema = z.object({
+  chanDoan: z.string().optional(),
+  ghiChu: z.string().optional(),
+  chiTietDonThuoc: z.array(chiTietThuocSchema).optional(),
+});
+
+module.exports = { createDonThuocSchema, updateDonThuocSchema };

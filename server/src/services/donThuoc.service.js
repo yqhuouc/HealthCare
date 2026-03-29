@@ -61,6 +61,19 @@ const getById = async (id, user = null) => {
   });
   if (!donThuoc) throw new AppError("Không tìm thấy đơn thuốc", 404);
 
+  // Bảo vệ quyền riêng tư (Data Ownership)
+  if (user?.vaiTro === "benh_nhan") {
+    if (!user.benhNhan || donThuoc.datLich?.benhNhan?.id !== user.benhNhan.id) {
+      throw new AppError("Bạn không có quyền xem đơn thuốc này", 403);
+    }
+  }
+
+  if (user?.vaiTro === "bac_si") {
+    if (!user.bacSi || donThuoc.datLich?.bacSi?.id !== user.bacSi.id) {
+      throw new AppError("Bạn không có quyền xem đơn thuốc do bác sĩ khác kê", 403);
+    }
+  }
+
   // Nếu người gọi là bệnh nhân → kiểm tra thanh toán
   if (user && user.vaiTro === "benh_nhan") {
     const trangThaiTT = donThuoc.datLich?.trangThaiThanhToan ?? 0;
@@ -128,6 +141,64 @@ const create = async (data) => {
   });
 };
 
+const update = async (id, data, requestUser) => {
+  const existing = await prisma.donThuoc.findUnique({
+    where: { id: BigInt(id) },
+    include: { datLich: true },
+  });
+  if (!existing) throw new AppError("Không tìm thấy đơn thuốc", 404);
+
+  // Chỉ bác sĩ kê đơn (hoặc Admin) mới được quyền sửa
+  if (requestUser?.vaiTro === "bac_si") {
+    if (!requestUser.bacSi || existing.datLich?.bacSiId !== requestUser.bacSi.id) {
+      throw new AppError("Bạn không có quyền chỉnh sửa đơn thuốc do bác sĩ khác kê", 403);
+    }
+  } else if (requestUser?.vaiTro === "benh_nhan") {
+    throw new AppError("Bệnh nhân không có quyền chỉnh sửa đơn thuốc", 403);
+  }
+
+  // Chặn sửa nếu trạng thái thanh toán là 2 (Đã thanh toán xong)
+  if (existing.datLich?.trangThaiThanhToan === 2 && requestUser?.vaiTro !== "admin") {
+     throw new AppError("Đơn thuốc này đã được bệnh nhân thanh toán, không thể chỉnh sửa thêm", 400);
+  }
+
+  // Tính lại tổng tiền
+  const tongTien =
+    data.chiTietDonThuoc?.reduce((sum, item) => {
+      const lineTotal = (item.soLuong || 0) * (item.donGia || 0);
+      return sum + lineTotal;
+    }, 0) || 0;
+
+  return prisma.$transaction(async (tx) => {
+    // 1. Xóa toàn bộ chiTietDonThuoc cũ
+    await tx.chiTietDonThuoc.deleteMany({
+      where: { donThuocId: BigInt(id) },
+    });
+
+    // 2. Cập nhật donThuoc và tạo lại chiTiet mới
+    return tx.donThuoc.update({
+      where: { id: BigInt(id) },
+      data: {
+        chanDoan: data.chanDoan !== undefined ? data.chanDoan : existing.chanDoan,
+        ghiChu: data.ghiChu !== undefined ? data.ghiChu : existing.ghiChu,
+        tongTien: data.chiTietDonThuoc ? tongTien : existing.tongTien,
+        chiTietDonThuoc: data.chiTietDonThuoc?.length
+          ? {
+              create: data.chiTietDonThuoc.map((ct) => ({
+                tenThuoc: ct.tenThuoc,
+                soLuong: ct.soLuong || null,
+                donGia: ct.donGia || 0,
+                lieuDung: ct.lieuDung || null,
+                ghiChu: ct.ghiChu || null,
+              })),
+            }
+          : undefined,
+      },
+      include: defaultInclude,
+    });
+  });
+};
+
 const remove = async (id) => {
   const existing = await prisma.donThuoc.findUnique({
     where: { id: BigInt(id) },
@@ -137,4 +208,4 @@ const remove = async (id) => {
   await prisma.donThuoc.delete({ where: { id: BigInt(id) } });
 };
 
-module.exports = { getAll, getById, create, remove };
+module.exports = { getAll, getById, create, update, remove };

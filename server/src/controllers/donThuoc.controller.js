@@ -24,10 +24,16 @@ const create = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, message: "Tạo đơn thuốc thành công", data: donThuoc });
 });
 
+// PUT /api/don-thuoc/:id — cập nhật đơn thuốc (bác sĩ)
+const update = asyncHandler(async (req, res) => {
+  const donThuoc = await donThuocService.update(req.params.id, req.body, req.user);
+  res.json({ success: true, message: "Cập nhật đơn thuốc thành công", data: donThuoc });
+});
+
 // DELETE /api/don-thuoc/:id — xóa (admin)
 const remove = asyncHandler(async (req, res) => {
   await donThuocService.remove(req.params.id);
   res.json({ success: true, message: "Xóa đơn thuốc thành công" });
 });
 
-module.exports = { getAll, getById, create, remove };
+module.exports = { getAll, getById, create, update, remove };

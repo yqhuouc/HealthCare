@@ -1493,17 +1493,44 @@ Sau khi Admin cập nhật `PUT /api/dat-lich/:id/thanh-toan` với `{ "trangTha
 ```
 
 > **Lưu ý:** Admin và Bác sĩ luôn xem được toàn bộ chi tiết thuốc bất kể trạng thái thanh toán.
+> **Security:** Bệnh nhân và Bác sĩ chỉ xem được đơn thuốc của chính mình / do chính mình kê. Cố tình nhập ID của người khác sẽ bị lỗi `403`.
 
 ---
 
+### 10.5 Cập nhật đơn thuốc (Bác sĩ/Admin)
 
-### 10.5 Xóa đơn thuốc (Admin)
-
+```text
+PUT {{base_url}}/don-thuoc/1
 ```
+
+**Headers**: Authorization: Cookie `accessToken` tự động gửi
+
+> **Logic:** Hành động này sẽ thay đổi chẩn đoán, ghi chú và **xóa toàn bộ** danh sách thuốc cũ, thay bằng danh sách mới truyền lên (giống cập nhật giỏ hàng).
+
+**Body** (JSON):
+```json
+{
+  "chanDoan": "Viêm họng cấp (Đã cập nhật)",
+  "ghiChu": "Khách hàng dặn dị ứng với Paracetamol, đã đổi thuốc",
+  "chiTietDonThuoc": [
+    { "tenThuoc": "Amoxicillin 500mg", "soLuong": 30, "donGia": 15000, "lieuDung": "1 viên/ngày" }
+  ]
+}
+```
+
+**Kiểm thử lỗi**:
+- Bệnh nhân đã thanh toán xong (`trangThaiThanhToan == 2`) → `400` "Đơn thuốc này đã được bệnh nhân thanh toán, không thể chỉnh sửa thêm" (Trừ phi dùng quyền Admin).
+- Bác sĩ khác sửa đơn → `403` "Bạn không có quyền chỉnh sửa đơn thuốc do bác sĩ khác kê".
+
+---
+
+### 10.6 Xóa đơn thuốc (Admin)
+
+```text
 DELETE {{base_url}}/don-thuoc/1
 ```
 
-**Headers**: Authorization: Bearer {{admin_token}}
+**Headers**: Authorization: Cookie `accessToken` tự động (của Admin)
 
 > ChiTietDonThuoc sẽ tự xóa nhờ `onDelete: Cascade` trong schema.
 
