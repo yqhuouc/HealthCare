@@ -12,4 +12,7 @@ router.get("/tong-quan", authenticate, authorize("admin"), thongKeController.ton
 // GET /api/thong-ke/lich-hen - Thống kê lịch hẹn (admin)
 router.get("/lich-hen", authenticate, authorize("admin"), thongKeController.thongKeLichHen);
 
+// GET /api/thong-ke/doanh-thu - Thống kê doanh thu theo tháng (admin)
+router.get("/doanh-thu", authenticate, authorize("admin"), thongKeController.thongKeDoanhThu);
+
 module.exports = router;

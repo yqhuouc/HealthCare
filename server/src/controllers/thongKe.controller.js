@@ -17,4 +17,10 @@ const thongKeLichHen = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
-module.exports = { tongQuan, thongKeLichHen };
+// GET /api/thong-ke/doanh-thu?nam=2026 — thống kê doanh thu theo 12 tháng
+const thongKeDoanhThu = asyncHandler(async (req, res) => {
+  const data = await thongKeService.thongKeDoanhThuTheoThang(req.query.nam);
+  res.json({ success: true, data });
+});
+
+module.exports = { tongQuan, thongKeLichHen, thongKeDoanhThu };

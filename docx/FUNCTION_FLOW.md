@@ -375,6 +375,7 @@ API: `PUT /api/dat-lich/:id/thanh-toan` — Cập nhật trạng thái thanh to�
 > **Backend tự động tính `tongTien`** dựa trên `soLuong * donGia` của từng loại thuốc.
 5. Backend flow:
    - Kiểm tra lịch hẹn tồn tại + trangThai phải = 2 → nếu không throw `400`
+   - **Ownership check**: Kiểm tra `datLich.bacSiId` trùng khớp với `req.user.bacSi.id` nhằm chống kê đơn ẩn danh chéo → nếu sai throw `403`
    - Kiểm tra chưa có đơn thuốc cho lịch này → nếu đã có throw `409`
    - Nếu có `chiTietDonThuoc` → Prisma nested create: tạo `DonThuoc` + `ChiTietDonThuoc` cùng lúc
    - Nếu không có `chiTietDonThuoc` → tạo `DonThuoc` đơn lẻ
@@ -410,7 +411,8 @@ API: `PUT /api/dat-lich/:id/thanh-toan` — Cập nhật trạng thái thanh to�
 2. API: `GET /api/thong-ke/tong-quan` (authorize: admin)
 3. Backend trả:
    - Tổng bệnh nhân, bác sĩ, lịch hẹn, chuyên khoa
-   - Tổng doanh thu (tổng giaKham của lịch hẹn trangThai = 2)
+   - Tổng doanh thu khám (`giaKham`) từ lịch hẹn trangThaiThanhToan >= 1
+   - Tổng doanh thu thuốc (`tongTien`) từ lịch hẹn trangThaiThanhToan = 2
    - Phân bố lịch hẹn theo trạng thái (bao nhiêu chờ, bao nhiêu xác nhận, ...)
 
 ### 12.2 Thống kê lịch hẹn
@@ -420,6 +422,13 @@ API: `PUT /api/dat-lich/:id/thanh-toan` — Cập nhật trạng thái thanh to�
 3. Backend trả:
    - Lịch hẹn theo ngày (group by ngayDat)
    - Top 10 bác sĩ có nhiều lịch hẹn nhất (kèm tên bác sĩ)
+
+### 12.3 Thống kê doanh thu theo tháng
+
+1. Admin vào tab Doanh thu → `AdminRevenuePage.jsx`
+2. API: `GET /api/thong-ke/doanh-thu?nam=2026` (authorize: admin)
+3. Backend trả:
+   - Mảng 12 tháng chứa 2 dữ liệu: `doanhThuKham` và `doanhThuThuoc`.
 
 ### 12.3 Quản lý chuyên khoa
 

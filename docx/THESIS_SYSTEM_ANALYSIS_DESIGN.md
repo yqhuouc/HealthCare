@@ -758,6 +758,14 @@ Tất cả API đều có prefix `/api` và trả về JSON thống nhất:
 | GET | `/:datLichId` | Xem đơn thuốc theo lịch hẹn | JWT |
 | POST | `/` | Tạo đơn thuốc | Bác sĩ |
 
+#### Thống kê (`/api/thong-ke`)
+
+| Method | Endpoint | Mô tả | Auth |
+|--------|----------|-------|------|
+| GET | `/tong-quan` | Thống kê số lượng (BN, BS), doanh thu 2 loại phí, tỉ lệ | Admin |
+| GET | `/lich-hen` | Thống kê lịch hẹn theo ngày, top bác sĩ | Admin |
+| GET | `/doanh-thu` | Thống kê doanh thu theo 12 tháng | Admin |
+
 ---
 
 ## 12. Thiết kế bảo mật
