@@ -20,7 +20,7 @@ const getById = asyncHandler(async (req, res) => {
 
 // POST /api/don-thuoc — tạo đơn (bác sĩ)
 const create = asyncHandler(async (req, res) => {
-  const donThuoc = await donThuocService.create(req.body);
+  const donThuoc = await donThuocService.create(req.body, req.user);
   res.status(201).json({ success: true, message: "Tạo đơn thuốc thành công", data: donThuoc });
 });
 

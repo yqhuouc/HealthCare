@@ -1429,6 +1429,7 @@ POST {{base_url}}/don-thuoc
 - Lịch hẹn chưa khám (trangThai != 2) → `400` "Chỉ tạo đơn thuốc cho lịch hẹn đã khám xong (trạng thái = 2)"
 - Đã có đơn thuốc cho lịch này → `409` "Lịch hẹn này đã có đơn thuốc"
 - Dùng `patient_token` → `403` "Bạn không có quyền thực hiện hành động này"
+- **Bảo mật Data Ownership**: Bác sĩ A truyền `datLichId` của Bác sĩ B → `403` "Bạn không có quyền kê đơn thuốc cho lịch khám của bác sĩ khác"
 - datLichId không tồn tại → `404` "Không tìm thấy lịch hẹn"
 
 ---

@@ -107,11 +107,16 @@ const getById = async (id, user = null) => {
 };
 
 // Chỉ khi datLich.trangThai === 2; mỗi lịch một đơn
-const create = async (data) => {
+const create = async (data, requestUser = null) => {
   const datLich = await prisma.datLich.findUnique({
     where: { id: BigInt(data.datLichId) },
   });
   if (!datLich) throw new AppError("Không tìm thấy lịch hẹn", 404);
+
+  // Phân quyền (Data Ownership): Bác sĩ chỉ được kê đơn cho lịch khám của chính mình
+  if (requestUser?.vaiTro === "bac_si" && datLich.bacSiId !== requestUser.bacSi?.id) {
+    throw new AppError("Bạn không có quyền kê đơn thuốc cho lịch khám của bác sĩ khác", 403);
+  }
 
   if (datLich.trangThai !== 2) {
     throw new AppError(
