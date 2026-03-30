@@ -226,4 +226,47 @@ const capNhatHoSo = async (userId, data) => {
   return updated;
 };
 
-module.exports = { register, login, refreshAccessToken, logout, getMe, doiMatKhau, capNhatHoSo };
+// Admin tạo tài khoản bác sĩ: transaction tạo taiKhoan (bac_si) + bacSi; email trùng → 409
+const createDoctor = async ({ email, matKhau, tenBacSi, chuyenKhoaId, hocViChucDanh, moTaNgan, moTaChiTiet, giaKham }) => {
+  const existingAccount = await prisma.taiKhoan.findUnique({ where: { email } });
+  if (existingAccount) {
+    throw new AppError("Email đã được sử dụng", 409);
+  }
+
+  const hashedPassword = await bcrypt.hash(matKhau, 10);
+
+  const result = await prisma.$transaction(async (tx) => {
+    const taiKhoan = await tx.taiKhoan.create({
+      data: {
+        email,
+        matKhau: hashedPassword,
+        vaiTro: "bac_si",
+        trangThaiTaiKhoan: 1,
+      },
+    });
+
+    const bacSi = await tx.bacSi.create({
+      data: {
+        tenBacSi,
+        hocViChucDanh: hocViChucDanh || null,
+        moTaNgan: moTaNgan || null,
+        moTaChiTiet: moTaChiTiet || null,
+        giaKham: giaKham || null,
+        chuyenKhoaId: BigInt(chuyenKhoaId),
+        taiKhoanId: taiKhoan.id,
+      },
+    });
+
+    return { taiKhoan, bacSi };
+  });
+
+  return {
+    id: result.taiKhoan.id,
+    email: result.taiKhoan.email,
+    vaiTro: result.taiKhoan.vaiTro,
+    tenBacSi: result.bacSi.tenBacSi,
+    chuyenKhoaId: result.bacSi.chuyenKhoaId,
+  };
+};
+
+module.exports = { register, login, refreshAccessToken, logout, getMe, doiMatKhau, capNhatHoSo, createDoctor };

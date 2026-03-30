@@ -20,7 +20,7 @@
 10. [Test Đơn thuốc](#10-test-đơn-thuốc)
 11. [Test FAQ](#11-test-faq)
 12. [Test Hình thức thanh toán](#12-test-hình-thức-thanh-toán)
-13. [Test Thống kê](#13-test-thống-kê)
+13. [Lịch sử & Thống kê / Dashboard](#13-thống-kê--dashboard-dành-cho-admin)
 14. [Kiểm thử lỗi & Edge cases](#14-kiểm-thử-lỗi--edge-cases)
 15. [Checklist kiểm thử](#15-checklist-kiểm-thử)
 
@@ -1663,9 +1663,11 @@ DELETE {{base_url}}/hinh-thuc-thanh-toan/4
 
 ---
 
-## 13. Test Thống kê
+## 13. Thống Kê / Dashboard (Dành cho Admin)
 
-### 13.1 Dashboard tổng quan (Admin)
+> **Yêu cầu**: Phải luôn đăng nhập bằng tài khoản Admin để có `admin_token`.
+
+### 13.1 Xem Tổng quan hệ thống (Dashboard Cards & Pie Chart)
 
 ```
 GET {{base_url}}/thong-ke/tong-quan
@@ -1673,31 +1675,10 @@ GET {{base_url}}/thong-ke/tong-quan
 
 **Headers**: Authorization: Bearer {{admin_token}}
 
-**Kết quả mong đợi** (Status: `200 OK`):
-```json
-{
-  "success": true,
-  "data": {
-    "tongBenhNhan": 2,
-    "tongBacSi": 8,
-    "tongLichHen": 3,
-    "tongChuyenKhoa": 8,
-    "doanhThu": "1000000",
-    "lichHenTheoTrangThai": [
-      { "trangThai": 0, "soLuong": 1 },
-      { "trangThai": 1, "soLuong": 0 },
-      { "trangThai": 2, "soLuong": 1 },
-      { "trangThai": 3, "soLuong": 1 }
-    ]
-  }
-}
-```
+**Kết quả mong đợi:**
+Trả về tổng số bệnh nhân, bác sĩ, lịch hẹn, doanh thu khám (những lịch có `trangThaiThanhToan >= 1`), doanh thu thuốc (những lịch có `trangThaiThanhToan == 2`) và phân bổ trạng thái lịch hẹn dạng phần trăm để vẽ Pie Chart.
 
-> `doanhThu` = tổng `giaKham` của tất cả lịch hẹn có trangThai = 2 (đã khám).
-
----
-
-### 13.2 Thống kê lịch hẹn theo khoảng thời gian (Admin)
+### 13.2 Xu hướng Đặt Lịch & Top Bác sĩ
 
 ```
 GET {{base_url}}/thong-ke/lich-hen?tuNgay=2026-03-01&denNgay=2026-03-31
@@ -1705,23 +1686,42 @@ GET {{base_url}}/thong-ke/lich-hen?tuNgay=2026-03-01&denNgay=2026-03-31
 
 **Headers**: Authorization: Bearer {{admin_token}}
 
-**Kết quả mong đợi**:
+> **Lưu ý**: Có thể truyền hoặc không truyền `tuNgay` và `denNgay`. Nếu không truyền sẽ lấy toàn bộ.
+
+**Kết quả mong đợi:**
+Trả về 2 mảng:
+1. `lichHenTheoNgay`: Số lượng lịch khám gom nhóm theo từng ngày để vẽ Biểu đồ đường (Line Chart).
+2. `lichHenTheoBacSi`: Top các bác sĩ có lịch hẹn nhiều nhất để vẽ Bar Chart.
+
+### 13.3 Doanh Thu Hàng Tháng (Biểu đồ Tồn Tài Chính)
+
+```
+GET {{base_url}}/thong-ke/doanh-thu?nam=2026
+```
+
+**Headers**: Authorization: Bearer {{admin_token}}
+
+> **Lưu ý**: Nếu tham số `nam` không được truyền, hệ thống sẽ tự động dùng năm hiện tại.
+
+**Kết quả mong đợi:**
+Cung cấp số liệu tài chính của 12 tháng phân tách 2 loại tiền để vẽ Stacked Bar Chart.
 ```json
 {
   "success": true,
   "data": {
-    "lichHenTheoNgay": [
-      { "ngay": "2026-03-25T00:00:00.000Z", "soLuong": 2 }
-    ],
-    "lichHenTheoBacSi": [
-      { "bacSiId": 1, "tenBacSi": "Nguyễn Văn An", "soLuong": 1 },
-      { "bacSiId": 2, "tenBacSi": "Trần Thị Bình", "soLuong": 1 }
+    "nam": 2026,
+    "thongKeThang": [
+      {
+        "thang": 1,
+        "doanhThuKham": 400000,
+        "doanhThuThuoc": 120500,
+        "tongDoanhThu": 520500
+      },
+      ...
     ]
   }
 }
 ```
-
-> Top 10 bác sĩ có nhiều lịch hẹn nhất trong khoảng thời gian chỉ định.
 
 ---
 
@@ -1780,71 +1780,7 @@ GET {{base_url}}/thong-ke/lich-hen?tuNgay=2026-03-01&denNgay=2026-03-31
 | Xóa lịch đã xác nhận | DELETE dat-lich/1 (trangThai=1) | 400 |
 | ID không tồn tại | GET bac-si/99999 | 404 |
 
----
-
-## 15. Thống Kê / Dashboard (Dành cho Admin)
-
-> **Yêu cầu**: Phải luôn đăng nhập bằng tài khoản Admin để có `admin_token`.
-
-### 15.1 Xem Tổng quan hệ thống (Dashboard Cards & Pie Chart)
-
-```
-GET {{base_url}}/thong-ke/tong-quan
-```
-
-**Headers**: Authorization: Bearer {{admin_token}}
-
-**Kết quả mong đợi:**
-Trả về tổng số bệnh nhân, bác sĩ, lịch hẹn, doanh thu khám (những lịch có `trangThaiThanhToan >= 1`), doanh thu thuốc (những lịch có `trangThaiThanhToan == 2`) và phân bổ trạng thái lịch hẹn dạng phần trăm để vẽ Pie Chart.
-
-### 15.2 Xu hướng Đặt Lịch & Top Bác sĩ
-
-```
-GET {{base_url}}/thong-ke/lich-hen?tuNgay=2026-03-01&denNgay=2026-03-31
-```
-
-**Headers**: Authorization: Bearer {{admin_token}}
-
-> **Lưu ý**: Có thể truyền hoặc không truyền `tuNgay` và `denNgay`. Nếu không truyền sẽ lấy toàn bộ.
-
-**Kết quả mong đợi:**
-Trả về 2 mảng:
-1. `lichHenTheoNgay`: Số lượng lịch khám gom nhóm theo từng ngày để vẽ Biểu đồ đường (Line Chart).
-2. `lichHenTheoBacSi`: Top các bác sĩ có lịch hẹn nhiều nhất để vẽ Bar Chart.
-
-### 15.3 Doanh Thu Hàng Tháng (Biểu đồ Tồn Tài Chính)
-
-```
-GET {{base_url}}/thong-ke/doanh-thu?nam=2026
-```
-
-**Headers**: Authorization: Bearer {{admin_token}}
-
-> **Lưu ý**: Nếu tham số `nam` không được truyền, hệ thống sẽ tự động dùng năm hiện tại.
-
-**Kết quả mong đợi:**
-Cung cấp số liệu tài chính của 12 tháng phân tách 2 loại tiền để vẽ Stacked Bar Chart.
-```json
-{
-  "success": true,
-  "data": {
-    "nam": 2026,
-    "thongKeThang": [
-      {
-        "thang": 1,
-        "doanhThuKham": 400000,
-        "doanhThuThuoc": 120500,
-        "tongDoanhThu": 520500
-      },
-      ...
-    ]
-  }
-}
-```
-
----
-
-## 16. Checklist kiểm thử
+## 15. Checklist kiểm thử
 
 Dùng checklist này để đánh dấu các API đã test qua:
 

@@ -32,6 +32,7 @@ Ghi chú câu hỏi — trả lời khi đọc / làm backend. **Mỗi mục có
 | [qa-exp-004](#qa-exp-004) | Vì sao `next(err)` tới được `errorHandler`? |
 | [qa-exp-005](#qa-exp-005) | Ghi nhớ nhanh (Express / lỗi) |
 | [qa-exp-006](#qa-exp-006) | `req.cookies.accessToken` — vì sao cần `cookieParser()` trong `app.js`? |
+| [qa-exp-007](#qa-exp-007) | Vì sao nên dùng `validate(schema)` thay vì `if...else` thủ công? |
 
 <a id="toc-auth"></a>
 
@@ -48,6 +49,7 @@ Ghi chú câu hỏi — trả lời khi đọc / làm backend. **Mỗi mục có
 | [qa-auth-005](#qa-auth-005) | Đổi mật khẩu: sao biết đúng user? `userId` từ token / `req.user` |
 | [qa-auth-006](#qa-auth-006) | `clearCookie` path `"/"` vs `"/api/auth"` khác gì? |
 | [qa-auth-007](#qa-auth-007) | Vì sao không có bảng `Admin`? Làm sao biết user là admin? |
+| [qa-auth-008](#qa-auth-008) | Phân biệt `bcrypt.hash` (Mật khẩu) và `hashToken` (SHA-256 cho Refresh Token) |
 
 <a id="toc-db"></a>
 
@@ -185,6 +187,47 @@ Trong `app.js`, `cookieParser()` được đặt **trước** `app.use("/api", r
 ```13:13:server/src/middlewares/auth.middleware.js
     const token = req.cookies.accessToken;
 ```
+
+[↑ Về mục lục EXP](#toc-exp)
+
+---
+
+<a id="qa-exp-007"></a>
+
+### EXP-007 — Vì sao nên dùng `validate(schema)` thay vì `if...else` thủ công?
+
+**Vấn đề:**
+Nếu không có `resolve/zod` và hàm middleware `validate`, Controller sẽ phải "gánh" toàn bộ logic kiểm duyệt dữ liệu (Manual Validation). 
+
+Ví dụ, API Đăng ký sẽ biến thành một hàm dài dòng chứa hàng tá lệnh `if...else`:
+
+```js
+const register = asyncHandler(async (req, res, next) => {
+  const { email, matKhau } = req.body;
+
+  // 1. Kiểm tra thủ công từng trường và regex
+  if (!email) return next(new AppError("Thiếu email", 400));
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return next(new AppError("Email sai định dạng", 400));
+  if (!matKhau) return next(new AppError("Thiếu mật khẩu", 400));
+  if (matKhau.length < 6) return next(new AppError("Mật khẩu quá ngắn", 400));
+  // ... hàng chục cái if nữa
+
+  // 2. Chạy logic chính
+  const result = await authService.register(req.body);
+  res.status(201).json(...);
+});
+```
+
+**Nhược điểm của cách cũ (`if...else`):**
+- **Spaghetti code**: Controller quá dài, khó đọc, lẫn lộn giữa kiểm tra đầu vào và logic nghiệp vụ.
+- **Khó bảo trì**: Phải copy-paste lại các dòng regex để check email/password ở các API khác (như API Đăng nhập, Đổi pass...).
+
+**Giải pháp với Zod + Middleware Factory:**
+Dùng `router.post("/register", validate(registerSchema), authController.register);`
+
+1. **Phân chia trách nhiệm rõ ràng**: Mọi logic kiểm tra gộp vào 1 file Schema (như `auth.validation.js`).
+2. **Controller "sạch sẽ"**: Chỉ tập trung xử lý đúng logic lõi (`authService`).
+3. **Chặn lỗi từ "cửa khẩu"**: Hàm `validate(schema)` sẽ lấy schema hứng chuỗi JSON do Client truyền lên để `.parse()`. Nếu Fail, hàm tự gom câu báo lỗi lại và ném mã `400 Bad Request` đá thẳng ra ngoài. Không một Request rác nào có cơ hội lọt sâu vào Database!
 
 [↑ Về mục lục EXP](#toc-exp)
 
@@ -407,6 +450,27 @@ Trong middleware `authorize(...roles)`, nó chỉ cho phép nếu:
 Ví dụ nếu route có `authorize("admin")` thì chỉ tài khoản có `vaiTro = "admin"` mới đi qua; ngược lại sẽ trả `403`.
 
 **Tham chiếu chính:** `server/prisma/schema.prisma`, `server/src/middlewares/auth.middleware.js`
+
+[↑ Về mục lục AUTH](#toc-auth)
+
+---
+
+<a id="qa-auth-008"></a>
+
+### AUTH-008 — Phân biệt `bcrypt.hash` (Mật khẩu) và `hashToken` (SHA-256 cho Refresh Token)
+
+Trong `auth.service.js`, hai kiểu hash này được dùng cho hai mục đích bảo mật khác nhau:
+
+**1) `bcrypt.hash(matKhau, 10)` — Bảo vệ Mật khẩu:**
+- **Đặc điểm:** Chậm (Key Stretching) và tự động có Salt.
+- **Lý do:** Mật khẩu do người dùng đặt thường ngắn/dễ đoán. `bcrypt` cố tình chạy chậm (~100ms) để ngăn hacker dùng siêu máy tính thử hàng tỷ mật khẩu mỗi giây (Brute-force).
+- **Luồng:** Nhận mật khẩu $\rightarrow$ `bcrypt.hash` $\rightarrow$ Lưu hash vào DB. Khi login dùng `bcrypt.compare`.
+
+**2) `hashToken(token)` với SHA-256 — Bảo vệ Refresh Token:**
+- **Đặc điểm:** Rất nhanh và không có salt mặc định.
+- **Lý do:** Refresh Token (JWT) là chuỗi ngẫu nhiên dài, cực kỳ khó đoán (độ phức tạp cao). Ta dùng SHA-256 để tạo một "dấu vân tay" (fingerprint) lưu vào DB. 
+- **Mục đích:** Nếu DB bị lộ, hacker chỉ thấy bản hash SHA-256, không thể dùng nó để giả danh người dùng (vì cần Token "sống" ban đầu). Dùng SHA-256 vì cần tốc độ xác thực nhanh khi người dùng gọi API.
+- **Luồng:** Tạo Refresh Token JWT $\rightarrow$ `hashToken(token)` $\rightarrow$ Lưu hash vào DB. Token gốc gửi cho Client qua HttpOnly Cookie.
 
 [↑ Về mục lục AUTH](#toc-auth)
 

@@ -44,4 +44,22 @@ const capNhatHoSoSchema = z.object({
   anhDaiDien: z.string().max(255).optional(),
 });
 
-module.exports = { registerSchema, loginSchema, doiMatKhauSchema, capNhatHoSoSchema };
+// POST /register-doctor — Admin tạo tài khoản bác sĩ
+const createDoctorSchema = z.object({
+  email: z.string().email("Email không hợp lệ"),
+  matKhau: z
+    .string()
+    .min(6, "Mật khẩu phải có ít nhất 6 ký tự")
+    .max(50, "Mật khẩu tối đa 50 ký tự"),
+  tenBacSi: z
+    .string()
+    .min(1, "Tên bác sĩ không được để trống")
+    .max(120, "Tên bác sĩ tối đa 120 ký tự"),
+  chuyenKhoaId: z.number({ message: "Chuyên khoa không hợp lệ" }).int().positive("Chuyên khoa không hợp lệ"),
+  hocViChucDanh: z.string().max(120, "Học vị / chức danh tối đa 120 ký tự").optional(),
+  moTaNgan: z.string().max(255, "Mô tả ngắn tối đa 255 ký tự").optional(),
+  moTaChiTiet: z.string().optional(),
+  giaKham: z.number().positive("Giá khám phải lớn hơn 0").optional(),
+});
+
+module.exports = { registerSchema, loginSchema, doiMatKhauSchema, capNhatHoSoSchema, createDoctorSchema };
