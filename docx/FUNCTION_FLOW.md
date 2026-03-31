@@ -462,7 +462,7 @@ API: `PUT /api/dat-lich/:id/thanh-toan` — Cập nhật trạng thái thanh to�
    - `GET /api/bac-si?page=1&limit=10` — kèm filter chuyenKhoaId, search
 2. Thêm bác sĩ: `/admin/doctors/add` → `AdminAddDoctorPage.jsx`
    - `POST /api/bac-si` (admin)
-   - Backend tự tạo `TaiKhoan` (vaiTro = bac_si) + `BacSi` trong transaction
+   - Bắt buộc nhập `email` và `matKhau`, backend tạo `TaiKhoan` (vaiTro = bac_si) + `BacSi` trong transaction
    - Body: `{ tenBacSi, hocViChucDanh, email, matKhau, chuyenKhoaId, giaKham, ... }`
 3. Sửa: `PUT /api/bac-si/:id` (admin)
 4. Xóa: `DELETE /api/bac-si/:id` (admin) — **không xóa được** nếu có lịch hẹn

@@ -68,20 +68,20 @@ const getById = async (id) => {
   return bacSi;
 };
 
-// Email trùng → 409; không email thì tạo email giả + mật khẩu mặc định nếu thiếu
+// Bắt buộc có email/matKhau và định danh vaiTro là bac_si. Nếu trùng email -> 409
 const create = async (data) => {
-  if (data.email) {
-    const exists = await prisma.taiKhoan.findUnique({
-      where: { email: data.email },
-    });
-    if (exists) throw new AppError("Email đã được sử dụng", 409);
-  }
+  const exists = await prisma.taiKhoan.findUnique({
+    where: { email: data.email },
+  });
+  if (exists) throw new AppError("Email đã được sử dụng", 409);
+
+  const hashedPassword = await bcrypt.hash(data.matKhau, 10);
 
   const result = await prisma.$transaction(async (tx) => {
     const taiKhoan = await tx.taiKhoan.create({
       data: {
-        email: data.email || `doctor_${Date.now()}@clinic.local`,
-        matKhau: await bcrypt.hash(data.matKhau || "doctor123", 10),
+        email: data.email,
+        matKhau: hashedPassword,
         vaiTro: "bac_si",
         trangThaiTaiKhoan: 1,
         gioiTinh: data.gioiTinh || null,
@@ -93,11 +93,11 @@ const create = async (data) => {
     const bacSi = await tx.bacSi.create({
       data: {
         tenBacSi: data.tenBacSi,
-        hocViChucDanh: data.hocViChucDanh,
-        moTaNgan: data.moTaNgan,
-        moTaChiTiet: data.moTaChiTiet,
+        hocViChucDanh: data.hocViChucDanh || null,
+        moTaNgan: data.moTaNgan || null,
+        moTaChiTiet: data.moTaChiTiet || null,
         giaKham: data.giaKham ? parseFloat(data.giaKham) : null,
-        chuyenKhoaId: data.chuyenKhoaId ? BigInt(data.chuyenKhoaId) : null,
+        chuyenKhoaId: BigInt(data.chuyenKhoaId),
         taiKhoanId: taiKhoan.id,
       },
     });

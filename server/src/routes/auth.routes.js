@@ -6,7 +6,7 @@ const router = express.Router();
 const authController = require("../controllers/auth.controller");
 const { authenticate, authorize } = require("../middlewares/auth.middleware");
 const { validate } = require("../middlewares/validate.middleware");
-const { registerSchema, loginSchema, doiMatKhauSchema, capNhatHoSoSchema, createDoctorSchema } = require("../validations/auth.validation");
+const { registerSchema, loginSchema, doiMatKhauSchema, capNhatHoSoSchema } = require("../validations/auth.validation");
 
 // POST /api/auth/register - Đăng ký (bệnh nhân)
 router.post("/register", validate(registerSchema), authController.register);
@@ -28,8 +28,5 @@ router.put("/doi-mat-khau", authenticate, validate(doiMatKhauSchema), authContro
 
 // PUT /api/auth/cap-nhat-ho-so - Cập nhật hồ sơ
 router.put("/cap-nhat-ho-so", authenticate, validate(capNhatHoSoSchema), authController.capNhatHoSo);
-
-// POST /api/auth/register-doctor - Admin tạo tài khoản bác sĩ
-router.post("/register-doctor", authenticate, authorize("admin"), validate(createDoctorSchema), authController.createDoctor);
 
 module.exports = router;

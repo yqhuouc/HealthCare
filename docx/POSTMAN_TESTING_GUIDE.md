@@ -804,11 +804,12 @@ POST {{base_url}}/bac-si
 ```
 
 > Backend sẽ tự tạo TaiKhoan (vaiTro = bac_si) + BacSi trong transaction.
-> Nếu không truyền email/matKhau, hệ thống tự generate email dạng `doctor_<timestamp>@clinic.local` và mật khẩu mặc định `doctor123`.
+> **Lưu ý quan trọng**: Phải truyền bắt buộc `email`, `matKhau` (tổi thiểu 6 ký tự) và `chuyenKhoaId`. (Không còn tự sinh tự động như trước).
 
 **Kiểm thử lỗi**:
 - Email trùng → `409` "Email đã được sử dụng"
 - Thiếu tên bác sĩ → `400` "Tên bác sĩ không được để trống"
+- Thiếu mật khẩu / email / chuyên khoa → `400` "Zod validation error"
 
 ---
 

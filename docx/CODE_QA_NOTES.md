@@ -48,8 +48,9 @@ Ghi chú câu hỏi — trả lời khi đọc / làm backend. **Mỗi mục có
 | [qa-auth-004](#qa-auth-004) | Login: `req.body` là gì? Logout / `me`: `req.user` lấy từ đâu? |
 | [qa-auth-005](#qa-auth-005) | Đổi mật khẩu: sao biết đúng user? `userId` từ token / `req.user` |
 | [qa-auth-006](#qa-auth-006) | `clearCookie` path `"/"` vs `"/api/auth"` khác gì? |
-| [qa-auth-007](#qa-auth-007) | Vì sao không có bảng `Admin`? Làm sao biết user là admin? |
+| [qa-auth-007](#qa-auth-007) | Vì sao không có bảng `Admin`? Làm sao biết user là admin khi đăng nhập? |
 | [qa-auth-008](#qa-auth-008) | Phân biệt `bcrypt.hash` (Mật khẩu) và `hashToken` (SHA-256 cho Refresh Token) |
+| [qa-auth-009](#qa-auth-009) | Tại sao đăng ký tài khoản mặc định là bệnh nhân? Admin tạo tài khoản bác sĩ như thế nào? |
 
 <a id="toc-db"></a>
 
@@ -420,36 +421,32 @@ Khi logout phải `clearCookie` **đúng cùng path** như lúc set; khác path 
 
 <a id="qa-auth-007"></a>
 
-### AUTH-007 — Vì sao không có bảng `Admin`? Làm sao biết user là admin?
+### AUTH-007 — Vì sao không có bảng `Admin`? Làm sao biết user là admin khi đăng nhập?
 
-Trong project của bạn, **admin không có bảng hồ sơ riêng** (không có model `Admin`), vì role admin được lưu trực tiếp trên bảng **`TaiKhoan`**.
+Hệ thống sử dụng kiến trúc **"Tài khoản tập trung" (Centralized Account)**. Dưới đây là 3 điểm mấu chốt:
 
-**1) Admin nằm ở đâu trong DB?**
+**1) Bảng `TaiKhoan` là bảng "Gốc"**
 
-Trong `schema.prisma`, model `TaiKhoan` có field `vaiTro`:
+- Mọi thông tin xác thực (email, mật khẩu) đều nằm chung ở model `TaiKhoan`. Bất kể là Admin, Bác sĩ hay Bệnh nhân, đều **phải có 1 dòng** trong bảng này thì mới đăng nhập được.
 
-- `"admin"` | `"bac_si"` | `"benh_nhan"`
+**2) Phân biệt bằng trường `vaiTro` (Role-based)**
 
-Và `TaiKhoan` có quan hệ tùy chọn:
+Trong `schema.prisma`, model `TaiKhoan` có field `vaiTro` (`"admin"`, `"bac_si"`, `"benh_nhan"`).
 
-- `bacSi BacSi?`
-- `benhNhan BenhNhan?`
+- **Với Bác sĩ / Bệnh nhân:** Họ cần thêm thông tin chuyên môn (bằng cấp, bệnh sử, ...) nên ta thiết kế thêm các bảng phụ riêng (`BacSi`, `BenhNhan`) và liên kết (quan hệ `1-1`) với `TaiKhoan` dựa trên cột `taiKhoanId`.
+- **Với Admin:** Admin thường chỉ cần Email/Password để định danh và quản lý hệ thống, không có thông tin chuyên môn khám chữa bệnh. Do đó **chỉ cần tồn tại ở bảng `TaiKhoan` (với `vaiTro = "admin"`) là đủ**, không cần sinh thêm một bảng `Admin` dư thừa.
 
-=> Với tài khoản admin: `vaiTro = "admin"` và **cả** `bacSi` lẫn `benhNhan` thường sẽ là `null`.
+**3) Cách backend nhận diện lúc Code (Service & Middleware)**
 
-**2) Backend biết user đang là admin như thế nào?**
+- **Lúc Login (`auth.service.js`):** Khi query lấy tài khoản, hệ thống sẽ gộp (include) cả `bacSi` và `benhNhan`. Nếu cả hai đều không tồn tại (`null`), hệ thống hiểu đó là Admin và mặc định biến tên hiển thị (`hoTen`) là `"Admin"`.
+  ```js
+  let hoTen = "Admin";
+  if (taiKhoan.benhNhan) hoTen = taiKhoan.benhNhan.hoTen;
+  if (taiKhoan.bacSi) hoTen = taiKhoan.bacSi.tenBacSi;
+  ```
+- **Lúc gọi API (`auth.middleware.js`):** Middleware `authenticate` decode JWT lấy ID rồi query DB, dán toàn bộ dữ liệu của `taiKhoan` vào `req.user`. Các route cần bảo vệ sử dụng cụm `authorize("admin")` sẽ lấy `req.user.vaiTro` ra kiểm tra, nếu là `"admin"` thì mới cho phép xử lý tiếp.
 
-Middleware `authenticate` lấy token từ cookie (`req.cookies.accessToken`), decode JWT, rồi `findUnique` tài khoản trong DB. Nó **chọn luôn** `vaiTro` và gán vào `req.user`:
-
-- `req.user.vaiTro` là `"admin"` khi tài khoản là admin.
-
-Trong middleware `authorize(...roles)`, nó chỉ cho phép nếu:
-
-- `roles.includes(req.user.vaiTro)`
-
-Ví dụ nếu route có `authorize("admin")` thì chỉ tài khoản có `vaiTro = "admin"` mới đi qua; ngược lại sẽ trả `403`.
-
-**Tham chiếu chính:** `server/prisma/schema.prisma`, `server/src/middlewares/auth.middleware.js`
+**Tham chiếu chính:** `server/src/services/auth.service.js`, `server/prisma/schema.prisma`, `server/src/middlewares/auth.middleware.js`
 
 [↑ Về mục lục AUTH](#toc-auth)
 
@@ -471,6 +468,22 @@ Trong `auth.service.js`, hai kiểu hash này được dùng cho hai mục đíc
 - **Lý do:** Refresh Token (JWT) là chuỗi ngẫu nhiên dài, cực kỳ khó đoán (độ phức tạp cao). Ta dùng SHA-256 để tạo một "dấu vân tay" (fingerprint) lưu vào DB. 
 - **Mục đích:** Nếu DB bị lộ, hacker chỉ thấy bản hash SHA-256, không thể dùng nó để giả danh người dùng (vì cần Token "sống" ban đầu). Dùng SHA-256 vì cần tốc độ xác thực nhanh khi người dùng gọi API.
 - **Luồng:** Tạo Refresh Token JWT $\rightarrow$ `hashToken(token)` $\rightarrow$ Lưu hash vào DB. Token gốc gửi cho Client qua HttpOnly Cookie.
+
+[↑ Về mục lục AUTH](#toc-auth)
+
+---
+
+<a id="qa-auth-009"></a>
+
+### AUTH-009 — Tại sao đăng ký tài khoản mặc định là bệnh nhân? Admin tạo tài khoản bác sĩ như thế nào?
+
+**1) Đăng ký công khai (`POST /api/auth/register`) mặc định là Bệnh nhân:**
+- Chức năng đăng ký trên ứng dụng chỉ cấp quyền hạn cơ bản nhất cho công chúng đến khám. Để ngăn ngừa lỗi leo thang đặc quyền (Privilege Escalation), hệ thống luôn chủ động hardcode `vaiTro: "benh_nhan"` ở server side (file `auth.service.js`), phớt lờ bất kỳ `vaiTro` nào mà client cố tình gửi lên.
+
+**2) Luồng khởi tạo tài khoản Bác sĩ của Admin:**
+- Với hệ thống backend được refactor kiến trúc theo module, thao tác tạo Bác sĩ mới (bao gồm cả tài khoản để bác sĩ đó login) được gom về **Module Bác Sĩ** (`POST /api/bac-si`) thay vì nằm lạc lõng tại module `Auth`.
+- Luồng này chỉ dành cho quản trị viên, nên phải đi qua vòng kiểm duyệt phân quyền: `authenticate` (xác thực token) và `authorize("admin")`.
+- Tại phần xử lý Core (`bacSi.service.js`), Prisma sẽ mở **Transaction** đồng bộ: Xóa bỏ việc tự sinh tài khoản mặc định nguy hiểm, API yêu cầu cung cấp song song thông tin người dùng (`email`, `matKhau`) kèm theo thông tin y tế (`chuyenKhoaId`...). Hệ thống sẽ tạo `TaiKhoan` gán `vaiTro: "bac_si"` (và dùng bcrypt hash password), sau đó móc nối `taiKhoanId` đó vào bảng `BacSi`. Quá trình này có tính nguyên tử: hỏng 1 khâu sẽ rollback toàn phần.
 
 [↑ Về mục lục AUTH](#toc-auth)
 

@@ -86,10 +86,4 @@ const capNhatHoSo = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Cập nhật hồ sơ thành công", data: result });
 });
 
-// POST /register-doctor — Admin tạo tài khoản bác sĩ
-const createDoctor = asyncHandler(async (req, res) => {
-  const result = await authService.createDoctor(req.body);
-  res.status(201).json({ success: true, message: "Tạo tài khoản bác sĩ thành công", data: result });
-});
-
-module.exports = { register, login, refresh, logout, getMe, doiMatKhau, capNhatHoSo, createDoctor };
+module.exports = { register, login, refresh, logout, getMe, doiMatKhau, capNhatHoSo };
