@@ -11,37 +11,69 @@
  * - Form đổi mật khẩu riêng biệt (mật khẩu cũ + mới + xác nhận)
  * - Email luôn disabled (không cho phép sửa)
  *
- * State:
- * - isEditing: boolean — đang ở chế độ xem hay chỉnh sửa
- * - formData: object chứa dữ liệu hiện tại của form
- * - snapshot: bản sao formData lúc bấm "Chỉnh sửa" — dùng để khôi phục khi "Hủy"
- *
- * Dữ liệu: Mock data cục bộ (initialUserData), sẽ thay bằng API
+ * Dữ liệu: API /auth/me, /auth/cap-nhat-ho-so, /auth/doi-mat-khau
  * ============================================================
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-
-/** Dữ liệu mẫu ban đầu — sẽ được thay bằng dữ liệu từ API user profile */
-const initialUserData = {
-  fullName: "Nguyễn Văn Test",
-  email: "test@email.com",
-  phone: "0912345678",
-  gender: "male",
-  dateOfBirth: "1995-06-15",
-  address: "Hà Nội, Việt Nam",
-};
+import { authService } from "../../services/authService";
+import useAuthStore from "../../stores/useAuthStore";
 
 const inputBase =
   "w-full px-4 py-3 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all disabled:opacity-60";
 const labelBase = "block text-sm font-semibold text-slate-700 mb-2";
 
 export default function PatientProfilePage() {
+  const { user, setUser } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState(initialUserData);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Lưu bản sao dữ liệu ban đầu để khôi phục khi nhấn "Hủy"
-  const [snapshot, setSnapshot] = useState(initialUserData);
+  // Dữ liệu form profile
+  const [formData, setFormData] = useState({
+    hoTen: "",
+    email: "",
+    soDienThoai: "",
+    gioiTinh: "",
+    ngaySinh: "",
+    diaChi: "",
+  });
+  const [snapshot, setSnapshot] = useState(formData);
+
+  // State đổi mật khẩu
+  const [passwordData, setPasswordData] = useState({
+    matKhauCu: "",
+    matKhauMoi: "",
+    xacNhanMatKhau: "",
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // Fetch profile khi mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await authService.getMe();
+        const data = res.data;
+        const hoTen = data.benhNhan?.hoTen || data.bacSi?.tenBacSi || "Admin";
+        const soDienThoai = data.benhNhan?.soDienThoai || "";
+        const profileData = {
+          hoTen,
+          email: data.email,
+          soDienThoai,
+          gioiTinh: data.gioiTinh || "",
+          ngaySinh: data.ngaySinh ? data.ngaySinh.split("T")[0] : "",
+          diaChi: data.diaChi || "",
+        };
+        setFormData(profileData);
+        setSnapshot(profileData);
+      } catch {
+        toast.error("Không thể tải thông tin hồ sơ.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -58,11 +90,64 @@ export default function PatientProfilePage() {
     setIsEditing(false);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    toast.success("Cập nhật thông tin thành công!");
-    setIsEditing(false);
+    setSaving(true);
+    try {
+      const res = await authService.capNhatHoSo({
+        gioiTinh: formData.gioiTinh || null,
+        ngaySinh: formData.ngaySinh || null,
+        diaChi: formData.diaChi || null,
+      });
+      toast.success("Cập nhật thông tin thành công!");
+      // Cập nhật store
+      setUser({ ...user, ...res.data });
+      setIsEditing(false);
+    } catch (err) {
+      toast.error(err.message || "Cập nhật thất bại.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const handleChangePassword = async () => {
+    if (!passwordData.matKhauCu || !passwordData.matKhauMoi) {
+      toast.error("Vui lòng nhập đầy đủ mật khẩu.");
+      return;
+    }
+    if (passwordData.matKhauMoi.length < 6) {
+      toast.error("Mật khẩu mới tối thiểu 6 ký tự.");
+      return;
+    }
+    if (passwordData.matKhauMoi !== passwordData.xacNhanMatKhau) {
+      toast.error("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await authService.doiMatKhau({
+        matKhauCu: passwordData.matKhauCu,
+        matKhauMoi: passwordData.matKhauMoi,
+      });
+      toast.success("Đổi mật khẩu thành công!");
+      setPasswordData({ matKhauCu: "", matKhauMoi: "", xacNhanMatKhau: "" });
+    } catch (err) {
+      toast.error(err.message || "Đổi mật khẩu thất bại.");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <section className="max-w-4xl mx-auto py-12 px-4 text-center">
+        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
+          progress_activity
+        </span>
+        <p className="mt-4 text-slate-500">Đang tải hồ sơ...</p>
+      </section>
+    );
+  }
 
   return (
     <section className="max-w-4xl mx-auto py-12 px-4">
@@ -83,7 +168,7 @@ export default function PatientProfilePage() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-800">
-              {formData.fullName}
+              {formData.hoTen}
             </h2>
             <p className="text-slate-500 text-sm mt-1">{formData.email}</p>
           </div>
@@ -94,16 +179,15 @@ export default function PatientProfilePage() {
         {/* Form chỉnh sửa thông tin */}
         <form onSubmit={handleSave}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Họ và tên */}
+            {/* Họ và tên — disabled (nằm ở bảng BenhNhan, không sửa từ đây) */}
             <div>
               <label className={labelBase}>Họ và tên</label>
               <input
                 type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
+                name="hoTen"
+                value={formData.hoTen}
+                disabled
+                className={`${inputBase} bg-slate-50`}
               />
             </div>
 
@@ -119,16 +203,15 @@ export default function PatientProfilePage() {
               />
             </div>
 
-            {/* Số điện thoại */}
+            {/* Số điện thoại — disabled (nằm ở bảng BenhNhan) */}
             <div>
               <label className={labelBase}>Số điện thoại</label>
               <input
                 type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
+                name="soDienThoai"
+                value={formData.soDienThoai}
+                disabled
+                className={`${inputBase} bg-slate-50`}
               />
             </div>
 
@@ -136,15 +219,16 @@ export default function PatientProfilePage() {
             <div>
               <label className={labelBase}>Giới tính</label>
               <select
-                name="gender"
-                value={formData.gender}
+                name="gioiTinh"
+                value={formData.gioiTinh}
                 onChange={handleChange}
                 disabled={!isEditing}
                 className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
               >
-                <option value="male">Nam</option>
-                <option value="female">Nữ</option>
-                <option value="other">Khác</option>
+                <option value="">Chưa cập nhật</option>
+                <option value="nam">Nam</option>
+                <option value="nu">Nữ</option>
+                <option value="khac">Khác</option>
               </select>
             </div>
 
@@ -153,8 +237,8 @@ export default function PatientProfilePage() {
               <label className={labelBase}>Ngày sinh</label>
               <input
                 type="date"
-                name="dateOfBirth"
-                value={formData.dateOfBirth}
+                name="ngaySinh"
+                value={formData.ngaySinh}
                 onChange={handleChange}
                 disabled={!isEditing}
                 className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
@@ -166,10 +250,11 @@ export default function PatientProfilePage() {
               <label className={labelBase}>Địa chỉ</label>
               <input
                 type="text"
-                name="address"
-                value={formData.address}
+                name="diaChi"
+                value={formData.diaChi}
                 onChange={handleChange}
                 disabled={!isEditing}
+                placeholder="Nhập địa chỉ..."
                 className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
               />
             </div>
@@ -196,9 +281,10 @@ export default function PatientProfilePage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary/90 transition"
+                  disabled={saving}
+                  className="px-6 py-2.5 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary/90 transition disabled:opacity-60"
                 >
-                  Lưu thay đổi
+                  {saving ? "Đang lưu..." : "Lưu thay đổi"}
                 </button>
               </>
             )}
@@ -216,6 +302,10 @@ export default function PatientProfilePage() {
             <input
               type="password"
               placeholder="Nhập mật khẩu hiện tại"
+              value={passwordData.matKhauCu}
+              onChange={(e) =>
+                setPasswordData((p) => ({ ...p, matKhauCu: e.target.value }))
+              }
               className={inputBase}
             />
           </div>
@@ -223,7 +313,11 @@ export default function PatientProfilePage() {
             <label className={labelBase}>Mật khẩu mới</label>
             <input
               type="password"
-              placeholder="Nhập mật khẩu mới"
+              placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+              value={passwordData.matKhauMoi}
+              onChange={(e) =>
+                setPasswordData((p) => ({ ...p, matKhauMoi: e.target.value }))
+              }
               className={inputBase}
             />
           </div>
@@ -232,6 +326,13 @@ export default function PatientProfilePage() {
             <input
               type="password"
               placeholder="Nhập lại mật khẩu mới"
+              value={passwordData.xacNhanMatKhau}
+              onChange={(e) =>
+                setPasswordData((p) => ({
+                  ...p,
+                  xacNhanMatKhau: e.target.value,
+                }))
+              }
               className={inputBase}
             />
           </div>
@@ -240,9 +341,11 @@ export default function PatientProfilePage() {
         <div className="flex justify-end mt-6">
           <button
             type="button"
-            className="px-6 py-2.5 rounded-lg border border-primary text-primary font-medium text-sm hover:bg-primary/5 transition"
+            onClick={handleChangePassword}
+            disabled={changingPassword}
+            className="px-6 py-2.5 rounded-lg border border-primary text-primary font-medium text-sm hover:bg-primary/5 transition disabled:opacity-60"
           >
-            Đổi mật khẩu
+            {changingPassword ? "Đang xử lý..." : "Đổi mật khẩu"}
           </button>
         </div>
       </div>

@@ -25,7 +25,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { authService } from "../../services/authService";
 import useAuthStore from "../../stores/useAuthStore";
 
 /** Đường dẫn ảnh nền cho panel trái */
@@ -39,7 +38,7 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const login = useAuthStore((state) => state.login);
 
   const {
     register,
@@ -47,16 +46,18 @@ function LoginPage() {
     formState: { errors },
   } = useForm();
 
-  // Xử lý đăng nhập: gọi API → lưu token vào store → chuyển hướng về trang chủ
+  // Xử lý đăng nhập: gọi API → server set cookie → redirect theo vai trò
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const res = await authService.login(data);
-      setAuth(res.user, res.token);
+      const user = await login({ email: data.email, password: data.password });
       toast.success("Đăng nhập thành công!");
-      navigate("/");
+      // Redirect theo vai trò từ server
+      if (user.vaiTro === "admin") navigate("/admin");
+      else if (user.vaiTro === "bac_si") navigate("/doctor/dashboard");
+      else navigate("/");
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+      toast.error(err.message || "Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }

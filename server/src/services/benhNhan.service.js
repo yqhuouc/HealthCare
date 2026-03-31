@@ -15,7 +15,15 @@ const getAll = async ({ search, page = 1, limit = 10 }) => {
     prisma.benhNhan.findMany({
       where,
       include: {
-        taiKhoan: { select: { id: true, email: true, anhDaiDien: true, trangThaiTaiKhoan: true, ngayTao: true } },
+        taiKhoan: {
+          select: {
+            id: true,
+            email: true,
+            anhDaiDien: true,
+            trangThaiTaiKhoan: true,
+            ngayTao: true,
+          },
+        },
       },
       skip,
       take: Number(limit),
@@ -26,7 +34,12 @@ const getAll = async ({ search, page = 1, limit = 10 }) => {
 
   return {
     benhNhans,
-    pagination: { total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / Number(limit)) },
+    pagination: {
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / Number(limit)),
+    },
   };
 };
 
@@ -35,7 +48,17 @@ const getById = async (id, requestUser) => {
   const benhNhan = await prisma.benhNhan.findUnique({
     where: { id: BigInt(id) },
     include: {
-      taiKhoan: { select: { id: true, email: true, anhDaiDien: true, gioiTinh: true, ngaySinh: true, diaChi: true, ngayTao: true } },
+      taiKhoan: {
+        select: {
+          id: true,
+          email: true,
+          anhDaiDien: true,
+          gioiTinh: true,
+          ngaySinh: true,
+          diaChi: true,
+          ngayTao: true,
+        },
+      },
     },
   });
 
@@ -44,7 +67,10 @@ const getById = async (id, requestUser) => {
   // Ownership check:
   // - benh_nhan chỉ xem được hồ sơ thuộc taiKhoanId của chính họ
   // - admin được phép xem tất cả (authorize ở route đã chặn các role khác)
-  if (requestUser?.vaiTro === "benh_nhan" && benhNhan.taiKhoanId !== requestUser.id) {
+  if (
+    requestUser?.vaiTro === "benh_nhan" &&
+    benhNhan.taiKhoanId !== requestUser.id
+  ) {
     throw new AppError("Bạn không có quyền xem hồ sơ này", 403);
   }
 
@@ -55,7 +81,9 @@ const getById = async (id, requestUser) => {
 // - admin: sửa mọi bệnh nhân
 // - benh_nhan: chỉ sửa bệnh nhân thuộc taiKhoan của chính mình
 const update = async (id, data, requestUser) => {
-  const existing = await prisma.benhNhan.findUnique({ where: { id: BigInt(id) } });
+  const existing = await prisma.benhNhan.findUnique({
+    where: { id: BigInt(id) },
+  });
   if (!existing) throw new AppError("Không tìm thấy bệnh nhân", 404);
 
   // Kiểm tra quyền:
@@ -63,24 +91,39 @@ const update = async (id, data, requestUser) => {
   // - benh_nhan: chỉ được phép nếu đúng bản ghi thuộc taiKhoanId của mình
   // - các role khác (vd bac_si): không được phép
   const isOwner = existing.taiKhoanId && existing.taiKhoanId === requestUser.id;
-  if (requestUser.vaiTro !== "admin" && !(requestUser.vaiTro === "benh_nhan" && isOwner)) {
+  if (
+    requestUser.vaiTro !== "admin" &&
+    !(requestUser.vaiTro === "benh_nhan" && isOwner)
+  ) {
     throw new AppError("Bạn không có quyền chỉnh sửa hồ sơ này", 403);
   }
 
   const result = await prisma.$transaction(async (tx) => {
     const benhNhan = await tx.benhNhan.update({
       where: { id: BigInt(id) },
-      data: { hoTen: data.hoTen, soDienThoai: data.soDienThoai, emailLienHe: data.emailLienHe },
+      data: {
+        hoTen: data.hoTen,
+        soDienThoai: data.soDienThoai,
+        emailLienHe: data.emailLienHe,
+      },
     });
 
-    if (existing.taiKhoanId && (data.gioiTinh !== undefined || data.ngaySinh !== undefined || data.diaChi !== undefined || data.anhDaiDien !== undefined)) {
+    if (
+      existing.taiKhoanId &&
+      (data.gioiTinh !== undefined ||
+        data.ngaySinh !== undefined ||
+        data.diaChi !== undefined ||
+        data.anhDaiDien !== undefined)
+    ) {
       await tx.taiKhoan.update({
         where: { id: existing.taiKhoanId },
         data: {
           gioiTinh: data.gioiTinh !== undefined ? data.gioiTinh : undefined,
-          ngaySinh: data.ngaySinh !== undefined ? new Date(data.ngaySinh) : undefined,
+          ngaySinh:
+            data.ngaySinh !== undefined ? new Date(data.ngaySinh) : undefined,
           diaChi: data.diaChi !== undefined ? data.diaChi : undefined,
-          anhDaiDien: data.anhDaiDien !== undefined ? data.anhDaiDien : undefined,
+          anhDaiDien:
+            data.anhDaiDien !== undefined ? data.anhDaiDien : undefined,
         },
       });
     }
@@ -93,12 +136,19 @@ const update = async (id, data, requestUser) => {
 
 // Không xóa nếu còn datLich; xóa benhNhan + taiKhoan liên kết
 const remove = async (id) => {
-  const existing = await prisma.benhNhan.findUnique({ where: { id: BigInt(id) } });
+  const existing = await prisma.benhNhan.findUnique({
+    where: { id: BigInt(id) },
+  });
   if (!existing) throw new AppError("Không tìm thấy bệnh nhân", 404);
 
-  const appointmentCount = await prisma.datLich.count({ where: { benhNhanId: BigInt(id) } });
+  const appointmentCount = await prisma.datLich.count({
+    where: { benhNhanId: BigInt(id) },
+  });
   if (appointmentCount > 0) {
-    throw new AppError(`Không thể xóa vì bệnh nhân có ${appointmentCount} lịch hẹn`, 400);
+    throw new AppError(
+      `Không thể xóa vì bệnh nhân có ${appointmentCount} lịch hẹn`,
+      400,
+    );
   }
 
   await prisma.$transaction(async (tx) => {

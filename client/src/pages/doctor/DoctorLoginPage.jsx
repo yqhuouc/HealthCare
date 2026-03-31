@@ -25,7 +25,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { authService } from "../../services/authService";
 import useAuthStore from "../../stores/useAuthStore";
 
 /** Tailwind class dùng chung cho input và label trong form */
@@ -40,7 +39,7 @@ function DoctorLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const login = useAuthStore((state) => state.login);
 
   const {
     register,
@@ -48,16 +47,20 @@ function DoctorLoginPage() {
     formState: { errors },
   } = useForm();
 
-  // Xử lý đăng nhập bác sĩ: gọi API → lưu token vào store → chuyển hướng đến dashboard
+  // Xử lý đăng nhập bác sĩ: gọi API → server set cookie → chuyển hướng đến dashboard
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const res = await authService.login(data);
-      setAuth(res.user, res.token);
+      const user = await login({ email: data.email, password: data.password });
+      if (user.vaiTro !== "bac_si" && user.vaiTro !== "admin") {
+        toast.error("Tài khoản này không phải là bác sĩ.");
+        await useAuthStore.getState().logout();
+        return;
+      }
       toast.success("Đăng nhập thành công!");
       navigate("/doctor/dashboard");
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+      toast.error(err.message || "Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }

@@ -57,15 +57,15 @@ function RegisterPage() {
     setLoading(true);
     try {
       await authService.register({
-        fullName: data.fullName,
+        hoTen: data.fullName,
         email: data.email,
-        phone: data.phone,
-        password: data.password,
+        soDienThoai: data.phone,
+        matKhau: data.password,
       });
       toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
       navigate("/login");
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại.");
+      toast.error(err.message || "Đăng ký thất bại. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }

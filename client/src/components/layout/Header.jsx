@@ -32,14 +32,18 @@ function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Đóng mobile menu mỗi khi chuyển trang
-  useEffect(() => {
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
+
+  // Đóng các menu popup/dropdown mỗi khi đường dẫn thay đổi (chuyển trang)
+  // Thực hiện trong lúc render (render phase) thay vì useEffect để tránh render dư thừa
+  if (location.pathname !== prevPathname) {
+    setPrevPathname(location.pathname);
     setMobileMenuOpen(false);
     setUserMenuOpen(false);
-  }, [location.pathname]);
+  }
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/");
   };
 
@@ -84,7 +88,7 @@ function Header() {
                     account_circle
                   </span>
                   <span className="max-w-[120px] truncate">
-                    {user?.fullName || "Tài khoản"}
+                    {user?.hoTen || user?.fullName || "Tài khoản"}
                   </span>
                   <span className="material-symbols-outlined text-lg">
                     expand_more
