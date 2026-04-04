@@ -9,7 +9,8 @@ const prisma = require("../utils/prisma");
 const config = require("../config");
 const { AppError } = require("../middlewares/error.middleware");
 
-const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
+const hashToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
 
 // Ký JWT access + refresh theo secret/expires trong config
 const generateTokens = (taiKhoanId) => {
@@ -25,8 +26,18 @@ const generateTokens = (taiKhoanId) => {
 };
 
 // Transaction: tạo taiKhoan (benh_nhan) + benhNhan; email trùng → 409
-const register = async ({ email, matKhau, hoTen, soDienThoai, gioiTinh, ngaySinh, diaChi }) => {
-  const existingAccount = await prisma.taiKhoan.findUnique({ where: { email } });
+const register = async ({
+  email,
+  matKhau,
+  hoTen,
+  soDienThoai,
+  gioiTinh,
+  ngaySinh,
+  diaChi,
+}) => {
+  const existingAccount = await prisma.taiKhoan.findUnique({
+    where: { email },
+  });
   if (existingAccount) {
     throw new AppError("Email đã được sử dụng", 409);
   }
@@ -199,31 +210,84 @@ const doiMatKhau = async (userId, { matKhauCu, matKhauMoi }) => {
   return { message: "Đổi mật khẩu thành công" };
 };
 
-// Cập nhật các trường trên bảng taiKhoan (giới tính, ngày sinh, địa chỉ, ảnh)
+// Cập nhật các trường trên bảng taiKhoan (giới tính, ngày sinh, địa chỉ, ảnh, email) và bảng liên kết (BenhNhan/BacSi)
 const capNhatHoSo = async (userId, data) => {
   const taiKhoan = await prisma.taiKhoan.findUnique({
     where: { id: BigInt(userId) },
+    include: { benhNhan: true, bacSi: true },
   });
 
   if (!taiKhoan) {
     throw new AppError("Không tìm thấy tài khoản", 404);
   }
 
-  const updated = await prisma.taiKhoan.update({
-    where: { id: BigInt(userId) },
-    data: {
-      gioiTinh: data.gioiTinh !== undefined ? data.gioiTinh : undefined,
-      ngaySinh: data.ngaySinh !== undefined ? new Date(data.ngaySinh) : undefined,
-      diaChi: data.diaChi !== undefined ? data.diaChi : undefined,
-      anhDaiDien: data.anhDaiDien !== undefined ? data.anhDaiDien : undefined,
-    },
-    select: {
-      id: true, email: true, vaiTro: true, gioiTinh: true,
-      ngaySinh: true, diaChi: true, anhDaiDien: true,
-    },
+  if (data.email && data.email !== taiKhoan.email) {
+    const existing = await prisma.taiKhoan.findUnique({
+      where: { email: data.email },
+    });
+    if (existing)
+      throw new AppError("Email đã được sử dụng bởi người khác", 409);
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedTaiKhoan = await tx.taiKhoan.update({
+      where: { id: BigInt(userId) },
+      data: {
+        email: data.email !== undefined ? data.email : undefined,
+        gioiTinh: data.gioiTinh !== undefined ? data.gioiTinh : undefined,
+        ngaySinh:
+          data.ngaySinh !== undefined ? new Date(data.ngaySinh) : undefined,
+        diaChi: data.diaChi !== undefined ? data.diaChi : undefined,
+        anhDaiDien: data.anhDaiDien !== undefined ? data.anhDaiDien : undefined,
+      },
+      select: {
+        id: true,
+        email: true,
+        vaiTro: true,
+        gioiTinh: true,
+        ngaySinh: true,
+        diaChi: true,
+        anhDaiDien: true,
+      },
+    });
+
+    if (taiKhoan.vaiTro === "benh_nhan" && taiKhoan.benhNhan) {
+      await tx.benhNhan.update({
+        where: { id: taiKhoan.benhNhan.id },
+        data: {
+          hoTen: data.hoTen !== undefined ? data.hoTen : undefined,
+          soDienThoai:
+            data.soDienThoai !== undefined ? data.soDienThoai : undefined,
+          emailLienHe: data.email !== undefined ? data.email : undefined,
+        },
+      });
+      updatedTaiKhoan.hoTen =
+        data.hoTen !== undefined ? data.hoTen : taiKhoan.benhNhan.hoTen;
+    } else if (taiKhoan.vaiTro === "bac_si" && taiKhoan.bacSi) {
+      await tx.bacSi.update({
+        where: { id: taiKhoan.bacSi.id },
+        data: {
+          tenBacSi: data.hoTen !== undefined ? data.hoTen : undefined,
+        },
+      });
+      updatedTaiKhoan.hoTen =
+        data.hoTen !== undefined ? data.hoTen : taiKhoan.bacSi.tenBacSi;
+    } else {
+      updatedTaiKhoan.hoTen = "Admin";
+    }
+
+    return updatedTaiKhoan;
   });
 
   return updated;
 };
 
-module.exports = { register, login, refreshAccessToken, logout, getMe, doiMatKhau, capNhatHoSo };
+module.exports = {
+  register,
+  login,
+  refreshAccessToken,
+  logout,
+  getMe,
+  doiMatKhau,
+  capNhatHoSo,
+};

@@ -13,6 +13,7 @@ const NAV_LINKS = [
 function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const userMenuRef = useRef(null);
@@ -43,8 +44,13 @@ function Header() {
   }
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/");
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate("/");
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -82,7 +88,7 @@ function Header() {
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-primary transition-colors"
+                  className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-primary transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-xl">
                     account_circle
@@ -97,7 +103,7 @@ function Header() {
 
                 {/* Dropdown menu tài khoản */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-lg shadow-lg border border-slate-100 py-2 z-50">
+                  <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-lg shadow-lg border border-slate-100 py-2 z-50 ">
                     <Link
                       to="/appointments"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition"
@@ -119,12 +125,24 @@ function Header() {
                     <div className="border-t border-slate-100 my-1" />
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition text-left"
+                      disabled={isLoggingOut}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <span className="material-symbols-outlined text-lg">
-                        logout
-                      </span>
-                      Đăng xuất
+                      {isLoggingOut ? (
+                        <>
+                          <span className="material-symbols-outlined text-lg animate-spin">
+                            progress_activity
+                          </span>
+                          Đang đăng xuất...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-lg">
+                            logout
+                          </span>
+                          Đăng xuất
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
@@ -192,9 +210,19 @@ function Header() {
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="mx-3 mt-2 border border-red-300 text-red-500 text-center px-5 py-2 rounded-lg text-sm font-medium"
+                    disabled={isLoggingOut}
+                    className="mx-3 mt-2 flex justify-center items-center gap-2 border border-red-300 text-red-500 text-center px-5 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Đăng xuất
+                    {isLoggingOut ? (
+                      <>
+                        <span className="material-symbols-outlined animate-spin text-sm">
+                          progress_activity
+                        </span>
+                        Đang xuất...
+                      </>
+                    ) : (
+                      "Đăng xuất"
+                    )}
                   </button>
                 </>
               ) : (

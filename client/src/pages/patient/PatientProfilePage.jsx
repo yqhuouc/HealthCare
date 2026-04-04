@@ -95,9 +95,12 @@ export default function PatientProfilePage() {
     setSaving(true);
     try {
       const res = await authService.capNhatHoSo({
-        gioiTinh: formData.gioiTinh || null,
-        ngaySinh: formData.ngaySinh || null,
-        diaChi: formData.diaChi || null,
+        hoTen: formData.hoTen,
+        soDienThoai: formData.soDienThoai,
+        email: formData.email,
+        gioiTinh: formData.gioiTinh ? Number(formData.gioiTinh) : undefined,
+        ngaySinh: formData.ngaySinh || undefined,
+        diaChi: formData.diaChi || undefined,
       });
       toast.success("Cập nhật thông tin thành công!");
       // Cập nhật store
@@ -179,39 +182,42 @@ export default function PatientProfilePage() {
         {/* Form chỉnh sửa thông tin */}
         <form onSubmit={handleSave}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Họ và tên — disabled (nằm ở bảng BenhNhan, không sửa từ đây) */}
+            {/* Họ và tên */}
             <div>
               <label className={labelBase}>Họ và tên</label>
               <input
                 type="text"
                 name="hoTen"
                 value={formData.hoTen}
-                disabled
-                className={`${inputBase} bg-slate-50`}
+                onChange={handleChange}
+                disabled={!isEditing}
+                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
               />
             </div>
 
-            {/* Email — luôn disabled */}
+            {/* Email */}
             <div>
               <label className={labelBase}>Email</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
-                disabled
-                className={`${inputBase} bg-slate-50`}
+                onChange={handleChange}
+                disabled={!isEditing}
+                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
               />
             </div>
 
-            {/* Số điện thoại — disabled (nằm ở bảng BenhNhan) */}
+            {/* Số điện thoại */}
             <div>
               <label className={labelBase}>Số điện thoại</label>
               <input
                 type="tel"
                 name="soDienThoai"
                 value={formData.soDienThoai}
-                disabled
-                className={`${inputBase} bg-slate-50`}
+                onChange={handleChange}
+                disabled={!isEditing}
+                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
               />
             </div>
 
@@ -226,9 +232,9 @@ export default function PatientProfilePage() {
                 className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
               >
                 <option value="">Chưa cập nhật</option>
-                <option value="nam">Nam</option>
-                <option value="nu">Nữ</option>
-                <option value="khac">Khác</option>
+                <option value="1">Nam</option>
+                <option value="2">Nữ</option>
+                <option value="3">Khác</option>
               </select>
             </div>
 

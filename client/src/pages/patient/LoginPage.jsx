@@ -7,7 +7,7 @@
  * Chức năng:
  * - Form đăng nhập với email + mật khẩu
  * - Validate bằng react-hook-form (email hợp lệ, password ≥ 6 ký tự)
- * - Gọi API authService.login() → lưu token vào Zustand store → chuyển hướng về "/"
+ * - Gọi API authService.login() → lưu thông tin user vào Zustand store → chuyển hướng theo vai trò (role)
  * - Toggle hiển thị/ẩn mật khẩu
  * - Checkbox "Ghi nhớ đăng nhập" + link "Quên mật khẩu"
  * - Link sang trang đăng ký (/register)

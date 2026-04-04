@@ -38,6 +38,9 @@ const doiMatKhauSchema = z.object({
 
 // PUT /cap-nhat-ho-so — chỉ các trường trên taiKhoan
 const capNhatHoSoSchema = z.object({
+  hoTen: z.string().min(1, "Họ tên không được để trống").max(120, "Họ tên tối đa 120 ký tự").optional(),
+  soDienThoai: z.string().max(20, "Số điện thoại tối đa 20 ký tự").optional(),
+  email: z.string().email("Email không hợp lệ").optional(),
   gioiTinh: z.number().int().min(1).max(3).optional(),
   ngaySinh: z.string().optional(),
   diaChi: z.string().max(255).optional(),
