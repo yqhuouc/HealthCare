@@ -10,6 +10,7 @@ Ghi chú câu hỏi — trả lời khi đọc / làm backend. **Mỗi mục có
 | AUTH | JWT, đăng nhập, refresh  | `qa-auth-...` |
 | DB   | Prisma, migration, query | `qa-db-...`  |
 | API  | REST, Postman, contract  | `qa-api-...` |
+| FE   | React, hooks, upload   | `qa-fe-...`  |
 | …    | Thêm cột khi cần        | `qa-xxx-...` |
 
 **Thêm mục mới:** copy khối [Template](#qa-template) ở cuối file, đổi `qa-exp-999` / tiêu đề / nội dung, rồi thêm **một dòng** vào mục lục bên dưới.
@@ -51,6 +52,7 @@ Ghi chú câu hỏi — trả lời khi đọc / làm backend. **Mỗi mục có
 | [qa-auth-007](#qa-auth-007) | Vì sao không có bảng `Admin`? Làm sao biết user là admin khi đăng nhập? |
 | [qa-auth-008](#qa-auth-008) | Phân biệt `bcrypt.hash` (Mật khẩu) và `hashToken` (SHA-256 cho Refresh Token) |
 | [qa-auth-009](#qa-auth-009) | Tại sao đăng ký tài khoản mặc định là bệnh nhân? Admin tạo tài khoản bác sĩ như thế nào? |
+| [qa-auth-010](#qa-auth-010) | Luồng upload ảnh avatar lên Cloudinary qua multer hoạt động như thế nào? |
 
 <a id="toc-db"></a>
 
@@ -61,6 +63,14 @@ Ghi chú câu hỏi — trả lời khi đọc / làm backend. **Mỗi mục có
 | [qa-db-001](#qa-db-001) | Vì sao xóa bản ghi rồi tạo mới thì `id` không quay lại số cũ? |
 | [qa-db-002](#qa-db-002) | Prisma `findMany`: `include`, `_count`, `orderBy`, `asc/desc` là gì? |
 | [qa-db-003](#qa-db-003) | Xử lý múi giờ: Tại sao `parseTime` lại dùng `+07:00` còn `formatTime` cộng 7? |
+
+<a id="toc-fe"></a>
+
+### FE — React & Giao diện
+
+| Id | Câu hỏi / chủ đề |
+|----|------------------|
+| [qa-fe-001](#qa-fe-001) | Upload file (Ảnh đại diện) bằng FormData hoạt động ra sao ở Frontend? |
 
 ---
 
@@ -489,6 +499,33 @@ Trong `auth.service.js`, hai kiểu hash này được dùng cho hai mục đíc
 
 ---
 
+<a id="qa-auth-010"></a>
+
+### AUTH-010 — Luồng upload ảnh avatar lên Cloudinary qua multer hoạt động như thế nào?
+
+Dòng code mẫu: `router.put("/cap-nhat-avatar", authenticate, multerUpload.single("avatar"), authController.capNhatAvatar);`
+
+**1. Tại sao lại khai báo `.single("avatar")`?**
+- Chữ `"avatar"` là **tên trường (Field Name)** chứa file ảnh cấu hình dưới Frontend khi gửi form (vd: `formData.append("avatar", fileAnh)`).
+- Nó báo cho Backend biết: *"Hãy tìm file đính kèm với key 'avatar' trong request body dạng multipart/form-data"*.
+- `single` biểu thị việc API này chỉ làm việc với 1 file trong mỗi request.
+
+**2. Việc đẩy file lên Cloud diễn ra ở đâu?**
+- Quá trình này diễn ra **ngầm** tại bước trung gian `multerUpload.single("avatar")`.
+- Thông qua file cấu hình `server/src/config/cloudinary.config.js`, hệ thống dùng `CloudinaryStorage`. Nó sẽ nhận file từ request, biến thành stream và tự động stream thẳng bản gốc lên bộ nhớ Cloudinary, sau đó đợi Cloudinary nạp xong.
+
+**3. Làm sao lấy link hiển thị ảnh trên Cloud gán vào Database?**
+- Khi Cloudinary lưu thành công, toàn bộ tài nguyên đó (bao gồm link `secure_url`) được gắn trả lại vào biến **`req.file.path`**.
+- Lúc này Request mới được nhả sang **Controller**. Tại đây (`auth.controller.js`), code lấy link bằng cấu trúc `const avatarUrl = req.file.path`.
+- Cuối cùng Controller ném chuỗi URL này vào **Service** (`auth.service.js` hàm `capNhatAvatar`), dùng Prisma Update trực tiếp `avatarUrl` này vào cột `anhDaiDien` của record `TaiKhoan`.
+
+**Tóm tắt luồng:**
+Frontend gửi ảnh $\rightarrow$ qua thẻ Auth kiểm tra đăng nhập $\rightarrow$ Middleware Multer tóm file $\rightarrow$ Đẩy lên Cloudinary $\rightarrow$ Nhận về Link ảnh (`req.file`) $\rightarrow$ Controller quét Link $\rightarrow$ Service UPDATE DB.
+
+[↑ Về mục lục AUTH](#toc-auth)
+
+---
+
 <a id="qa-db-001"></a>
 
 ### DB-001 — Vì sao xóa bản ghi rồi tạo mới thì `id` không quay lại số cũ?
@@ -580,6 +617,37 @@ Hệ thống lưu trữ giờ hành chính của bác sĩ (ví dụ: 07:00 - 11:
 - **So sánh:** Dùng `normalizeTime` để dẹp bỏ sự khác biệt về ngày tháng.
 
 [↑ Về mục lục DB](#toc-db)
+
+---
+
+<a id="qa-fe-001"></a>
+
+### FE-001 — Upload file (Ảnh đại diện) bằng FormData hoạt động ra sao ở Frontend?
+
+Dòng code mẫu: `PatientProfilePage.jsx` (hàm `handleAvatarChange`)
+
+**1. Bắt lấy file người dùng chọn**
+- Khi người dùng chọn file từ thẻ `<input type="file" />`, file đó sinh ra sự kiện (`event`) và được lưu trong mảng `e.target.files`.
+- Lệnh `const file = e.target.files[0];` giúp ta lấy file đầu tiên. Nếu người dùng mở cửa sổ chọn file nhưng cấu hình ấn "Cancel", thì `!file` sẽ `true` và dùng lệnh `return` để dừng sớm.
+
+**2. Đóng gói dữ liệu bằng FormData**
+- Upload file **không thể gộp** chung với JSON thường (`{ email, password }` v.v...) vì form gửi file có kích thước lớn và định dạng đặc thù là `multipart/form-data`.
+- Cần tạo một cái thùng chứa: `const formDataToUpload = new FormData()`.
+- Lệnh `.append("avatar", file)` sẽ thả file vào thùng và gắn nhãn tên là `"avatar"`.
+- Nhãn `"avatar"` này khớp 100% với keyword `multerUpload.single("avatar")` ở Backend để Backend có thể tóm được chính xác file.
+
+**3. Làm mới giao diện (Sau khi thành công)**
+- Sau khi chờ `await authService.capNhatAvatar` đẩy lên mây, ta lấy về kết quả chứa đường link dạng `res.anhDaiDien`.
+- `setFormData`: Để cập nhật hiển thị cái ảnh nằm giữa Form hồ sơ hiện tại.
+- `setUser`: Để cập nhật biến Global State. Giúp hình avatar đại diện nhỏ xíu nằm ở góc phải Menu trên cùng của màn hình thay đổi tức thì mà người dùng không cần phải F5 (refresh) thẻ trình duyệt tải lại trang.
+
+**4. Khối lệnh `finally` dọn dẹp**
+- Khối lệnh `finally` được ưu tiên chạy ngay cho dù hàm chạy vào thành công hay văng lỗi để dọn dẹp logic. Tại đây sẽ tắt cái vòng tròn icon xoay loading (`setIsUploadingAvatar(false)`).
+- Chú ý câu lệnh mẹo: `e.target.value = null;`. Việc này dọn dẹp sạch giá trị đã nhớ của thẻ `<input>`. Cực kỳ hữu dụng: ví dụ nếu người dùng tải file `anh.jpg` bị web từ chối báo lỗi dung lượng, người đó kéo nén file lại nhưng tải lên vẫn chung 1 tên `anh.jpg`. Thẻ input sẽ cảm nhận "Ủa giá trị null thành anh.jpg" thay vì điểu kiện cũ là "anh.jpg => anh.jpg" và nó sẽ tiếp tục kích hoạt được trigger `onChange` để làm việc bình thường thay vì bị "chết đơ".
+
+**Vòng lặp tổng lược:** Bắt file $\rightarrow$ Kiểm duyệt dung lượng $\rightarrow$ Đóng thùng `FormData` $\rightarrow$ Đợi API Response $\rightarrow$ Cập nhật 2 nơi UI State $\rightarrow$ Tắt hiệu ứng Loading / Clear thẻ `<input>`.
+
+[↑ Về mục lục FE](#toc-fe)
 
 ---
 

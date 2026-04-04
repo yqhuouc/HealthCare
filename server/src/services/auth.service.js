@@ -282,6 +282,16 @@ const capNhatHoSo = async (userId, data) => {
   return updated;
 };
 
+// Cập nhật ảnh đại diện mây
+const capNhatAvatar = async (userId, avatarUrl) => {
+  const taiKhoan = await prisma.taiKhoan.update({
+    where: { id: BigInt(userId) },
+    data: { anhDaiDien: avatarUrl },
+    select: { anhDaiDien: true },
+  });
+  return taiKhoan;
+};
+
 module.exports = {
   register,
   login,
@@ -290,4 +300,5 @@ module.exports = {
   getMe,
   doiMatKhau,
   capNhatHoSo,
+  capNhatAvatar,
 };

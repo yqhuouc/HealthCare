@@ -56,4 +56,13 @@ export const authService = {
    * Cập nhật hồ sơ cá nhân (giới tính, ngày sinh, địa chỉ, ảnh đại diện)
    */
   capNhatHoSo: (data) => api.put("/auth/cap-nhat-ho-so", data),
+
+  /**
+   * Cập nhật ảnh đại diện thông qua form data
+   */
+  capNhatAvatar: (formData) => api.put("/auth/cap-nhat-avatar", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  }),
 };

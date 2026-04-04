@@ -90,9 +90,13 @@ function Header() {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-primary transition-colors cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-xl">
-                    account_circle
-                  </span>
+                  {user?.anhDaiDien ? (
+                    <img src={user.anhDaiDien} alt="avatar" className="w-8 h-8 rounded-full object-cover border border-slate-200" />
+                  ) : (
+                    <span className="material-symbols-outlined text-xl">
+                      account_circle
+                    </span>
+                  )}
                   <span className="max-w-[120px] truncate">
                     {user?.hoTen || user?.fullName || "Tài khoản"}
                   </span>

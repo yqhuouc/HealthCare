@@ -1,11 +1,12 @@
 /**
- * Routes /api/auth — đăng ký, đăng nhập, refresh/logout, đổi mật khẩu, cập nhật hồ sơ.
+ * Routes /api/auth — đăng ký, đăng nhập, refresh/logout, đổi mật khẩu, cập nhật hồ sơ, cập nhật ảnh đại diện.
  */
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/auth.controller");
 const { authenticate, authorize } = require("../middlewares/auth.middleware");
 const { validate } = require("../middlewares/validate.middleware");
+const { multerUpload } = require("../config/cloudinary.config");
 const { registerSchema, loginSchema, doiMatKhauSchema, capNhatHoSoSchema } = require("../validations/auth.validation");
 
 // POST /api/auth/register - Đăng ký (bệnh nhân)
@@ -28,5 +29,8 @@ router.put("/doi-mat-khau", authenticate, validate(doiMatKhauSchema), authContro
 
 // PUT /api/auth/cap-nhat-ho-so - Cập nhật hồ sơ
 router.put("/cap-nhat-ho-so", authenticate, validate(capNhatHoSoSchema), authController.capNhatHoSo);
+
+// PUT /api/auth/cap-nhat-avatar - Tải ảnh đại diện (multipart/form-data qua Cloudinary)
+router.put("/cap-nhat-avatar", authenticate, multerUpload.single("avatar"), authController.capNhatAvatar);
 
 module.exports = router;

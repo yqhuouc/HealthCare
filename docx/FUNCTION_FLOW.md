@@ -214,6 +214,25 @@ capNhatHoSoSchema:
 
 ---
 
+## 7.2 Cập nhật ảnh đại diện (Avatar lên Cloudinary)
+
+### Luồng chi tiết
+
+1. Người dùng vào trang profile → bấm biểu tượng chọn ảnh đại diện.
+2. Frontend kiểm tra dung lượng ảnh (validate size < 5MB).
+3. Gói file vào cấu trúc `FormData` (multipart/form-data) và tự động gọi `PUT /api/auth/cap-nhat-avatar`.
+4. Backend flow:
+   - Middleware `authenticate` → xác thực token và trích xuất `req.user.id`.
+   - Chạy qua Middleware `multerUpload.single("avatar")` (Middleware này gắn với `CloudinaryStorage`).
+   - `Multer` đứng ra môi giới, nhận file đẩy thẳng lên kho lưu trữ **Cloudinary**.
+   - Sau khi lên mây thành công, Cloudinary trả lại URL truy cập công khai vào biến `req.file.path`.
+   - `authController.capNhatAvatar` sử dụng `req.file.path` và gọi Service `capNhatAvatar()`.
+   - Service dùng Prisma lưu lại URL này vào cột `anhDaiDien` trong bảng `TaiKhoan`.
+5. Trả về thông tin `{ success: true, anhDaiDien: "https://res.cloudinary.com/..." }`.
+6. Frontend nhận URL ảnh mới, cập nhật giá trị vào biến State và Global Store (Zustand), hiển thị ngay ảnh thay cho icon trống.
+
+---
+
 ## 8. Xem danh sách bác sĩ + chi tiết bác sĩ (Public)
 
 ### 8.1 Danh sách bác sĩ

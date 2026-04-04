@@ -28,6 +28,7 @@ export default function PatientProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // Dữ liệu form profile
   const [formData, setFormData] = useState({
@@ -113,6 +114,36 @@ export default function PatientProfilePage() {
     }
   };
 
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate size (vd: limit 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ảnh quá lớn, vui lòng chọn ảnh < 5MB");
+      return;
+    }
+
+    const formDataToUpload = new FormData();
+    formDataToUpload.append("avatar", file);
+
+    setIsUploadingAvatar(true);
+    try {
+      const res = await authService.capNhatAvatar(formDataToUpload);
+      // Cập nhật URL ảnh mới lên trạng thái formData
+      setFormData(prev => ({ ...prev, anhDaiDien: res.anhDaiDien }));
+      // Cập nhật global state user
+      setUser({ ...user, anhDaiDien: res.anhDaiDien });
+      toast.success("Tải ảnh đại diện thành công!");
+    } catch (err) {
+      toast.error(err.message || "Lỗi khi tải ảnh lên");
+    } finally {
+      setIsUploadingAvatar(false);
+      // Clear value input để có thể chọn lại cùng 1 file
+      e.target.value = null;
+    }
+  };
+
   const handleChangePassword = async () => {
     if (!passwordData.matKhauCu || !passwordData.matKhauMoi) {
       toast.error("Vui lòng nhập đầy đủ mật khẩu.");
@@ -164,11 +195,40 @@ export default function PatientProfilePage() {
       <div className="bg-white rounded-lg shadow p-8">
         {/* Avatar + tên + email */}
         <div className="flex items-center gap-5 mb-6">
-          <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-primary text-5xl">
-              person
-            </span>
-          </div>
+          <label className="relative cursor-pointer group rounded-full">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+              disabled={isUploadingAvatar}
+            />
+            {user?.anhDaiDien || formData.anhDaiDien ? (
+              <img
+                src={user?.anhDaiDien || formData.anhDaiDien}
+                alt="Avatar"
+                className="w-24 h-24 rounded-full object-cover border-4 border-primary/20"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-primary text-5xl">
+                  person
+                </span>
+              </div>
+            )}
+            
+            {/* Dark overlay khi hover hoặc đang upload */}
+            <div className={`absolute inset-0 rounded-full flex flex-col items-center justify-center transition-all bg-black/50 text-white ${isUploadingAvatar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+              {isUploadingAvatar ? (
+                <span className="material-symbols-outlined animate-spin text-2xl">progress_activity</span>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-2xl">photo_camera</span>
+                  <span className="text-[10px] font-medium mt-1 uppercase">Đổi ảnh</span>
+                </>
+              )}
+            </div>
+          </label>
           <div>
             <h2 className="text-xl font-bold text-slate-800">
               {formData.hoTen}

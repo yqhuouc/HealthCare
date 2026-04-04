@@ -5,6 +5,7 @@
 const { asyncHandler } = require("../middlewares/error.middleware");
 const authService = require("../services/auth.service");
 const config = require("../config");
+const { AppError } = require("../middlewares/error.middleware");
 
 // Thuộc tính chung cho cookie (clearCookie cũng dùng; không set maxAge khi xóa)
 const COOKIE_BASE = {
@@ -86,4 +87,14 @@ const capNhatHoSo = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Cập nhật hồ sơ thành công", data: result });
 });
 
-module.exports = { register, login, refresh, logout, getMe, doiMatKhau, capNhatHoSo };
+// PUT /cap-nhat-avatar — tải ảnh lên đám mây
+const capNhatAvatar = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new AppError("Không tìm thấy file ảnh", 400);
+  }
+  const avatarUrl = req.file.path; // do multer-storage-cloudinary gán vào
+  const result = await authService.capNhatAvatar(req.user.id, avatarUrl);
+  res.json({ success: true, message: "Cập nhật ảnh đại diện thành công", anhDaiDien: result.anhDaiDien });
+});
+
+module.exports = { register, login, refresh, logout, getMe, doiMatKhau, capNhatHoSo, capNhatAvatar };

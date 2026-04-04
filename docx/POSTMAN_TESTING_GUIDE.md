@@ -592,7 +592,35 @@ PUT {{base_url}}/auth/cap-nhat-ho-so
 
 ---
 
-### 4.10 Đăng xuất
+### 4.10 Tải ảnh đại diện lên mây (Upload Avatar)
+
+```
+PUT {{base_url}}/auth/cap-nhat-avatar
+```
+
+**Headers**:
+- Cookie `accessToken` được Postman tự động gửi.
+> **Lưu ý:** KHÔNG cần điền thủ công `Content-Type: multipart/form-data`, cứ để trống Headers, Postman sẽ tự động sinh mã ngăn cách File.
+
+**Body** (Phải chọn cấu hình **form-data** thay vì raw JSON):
+| Key | Type | Value |
+|-----|------|-------|
+| `avatar` | **File** | (Bấm "Select Files" và chọn một cái ảnh từ máy tính của bạn) |
+
+> **Mẹo kỹ thuật trên Postman**: Mặc định ô Key ghi chữ (Text). Rê chuột vào ô Key sau khi gõ chữ `avatar`, bạn xẽ thấy menu thả xuống hiện lên, chọn **File** thay vì Text.
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "message": "Cập nhật ảnh đại diện thành công",
+  "anhDaiDien": "https://res.cloudinary.com/helthcare/image/upload/v1775287368/clinic-avatars/abcde123.jpg"
+}
+```
+
+---
+
+### 4.11 Đăng xuất
 
 ```
 POST {{base_url}}/auth/logout
@@ -1785,7 +1813,7 @@ Cung cấp số liệu tài chính của 12 tháng phân tách 2 loại tiền �
 
 Dùng checklist này để đánh dấu các API đã test qua:
 
-### Authentication (7 endpoints)
+### Authentication (8 endpoints)
 - [ ] Health check `GET /api/health`
 - [ ] Đăng ký thành công `POST /api/auth/register`
 - [ ] Đăng ký lỗi (email trùng, thiếu field, mật khẩu yếu)
@@ -1798,6 +1826,7 @@ Dùng checklist này để đánh dấu các API đã test qua:
 - [ ] Đổi mật khẩu `PUT /api/auth/doi-mat-khau`
 - [ ] Đổi mật khẩu lỗi (sai mật khẩu cũ)
 - [ ] Cập nhật hồ sơ `PUT /api/auth/cap-nhat-ho-so`
+- [ ] Tải ảnh đại diện qua Cloudinary `PUT /api/auth/cap-nhat-avatar` (dùng form-data)
 - [ ] Đăng xuất `POST /api/auth/logout`
 - [ ] Lỗi không có token / token sai / token hết hạn
 
