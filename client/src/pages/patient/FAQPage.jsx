@@ -9,23 +9,47 @@
  * - Chỉ cho phép mở 1 câu hỏi cùng lúc (single-open accordion)
  * - Phần liên hệ hỗ trợ ở cuối trang với hotline và email
  *
- * State:
- * - openIndex: chỉ số (index) của câu hỏi đang mở, null = tất cả đóng
- *
- * Dữ liệu: FAQ_DATA từ mockAppointments.js
+ * Dữ liệu: API /api/cau-hoi-thuong-gap
  * ============================================================
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FAQ_DATA } from "../../data/mockAppointments";
+import { faqService } from "../../services/faqService";
 
 export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState(null);
+  const [faqList, setFaqList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFaqs = async () => {
+      try {
+        const res = await faqService.getAll();
+        setFaqList(res.data || []);
+      } catch {
+        /* lỗi hiện qua toast interceptor */
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFaqs();
+  }, []);
 
   /** Toggle mở/đóng câu hỏi: click cùng index → đóng, click khác → mở cái mới */
   const toggle = (index) => {
     setOpenIndex(openIndex === index ? null : index);
   };
+
+  if (loading) {
+    return (
+      <section className="max-w-4xl mx-auto py-20 text-center">
+        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
+          progress_activity
+        </span>
+        <p className="mt-4 text-slate-500">Đang tải câu hỏi thường gặp...</p>
+      </section>
+    );
+  }
 
   return (
     <section className="max-w-4xl mx-auto py-12 px-4">
@@ -41,41 +65,52 @@ export default function FAQPage() {
       </div>
 
       {/* Danh sách câu hỏi dạng accordion */}
-      <div className="space-y-3">
-        {FAQ_DATA.map((item, index) => {
-          const isOpen = openIndex === index;
+      {faqList.length === 0 ? (
+        <div className="text-center py-16">
+          <span className="material-symbols-outlined text-6xl text-slate-300 block mb-4">
+            quiz
+          </span>
+          <p className="text-slate-500 text-lg">
+            Chưa có câu hỏi thường gặp nào.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {faqList.map((item, index) => {
+            const isOpen = openIndex === index;
 
-          return (
-            <div
-              key={index}
-              className="bg-white rounded-lg border border-slate-100 overflow-hidden"
-            >
-              {/* Câu hỏi */}
-              <button
-                type="button"
-                onClick={() => toggle(index)}
-                className="w-full flex items-center justify-between p-6 text-left hover:bg-slate-50/50 transition"
+            return (
+              <div
+                key={item.id || index}
+                className="bg-white rounded-lg border border-slate-100 overflow-hidden"
               >
-                <span className="font-semibold text-slate-800 pr-4">
-                  {item.question}
-                </span>
-                <span className="material-symbols-outlined text-slate-400 shrink-0 transition-transform duration-200"
-                  style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                {/* Câu hỏi */}
+                <button
+                  type="button"
+                  onClick={() => toggle(index)}
+                  className="w-full flex items-center justify-between p-6 text-left hover:bg-slate-50/50 transition"
                 >
-                  expand_more
-                </span>
-              </button>
+                  <span className="font-semibold text-slate-800 pr-4">
+                    {item.cauHoi}
+                  </span>
+                  <span className="material-symbols-outlined text-slate-400 shrink-0 transition-transform duration-200"
+                    style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                  >
+                    expand_more
+                  </span>
+                </button>
 
-              {/* Câu trả lời — chỉ hiển thị khi mục đang mở */}
-              {isOpen && (
-                <div className="px-6 pb-6 text-slate-600 text-sm leading-relaxed">
-                  {item.answer}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                {/* Câu trả lời — chỉ hiển thị khi mục đang mở */}
+                {isOpen && (
+                  <div className="px-6 pb-6 text-slate-600 text-sm leading-relaxed">
+                    {item.traLoi}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Khối liên hệ hỗ trợ */}
       <div className="bg-primary/5 border border-primary/10 rounded-lg p-8 text-center mt-12">

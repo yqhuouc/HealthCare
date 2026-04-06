@@ -2,7 +2,7 @@
  * Controller chuyên khoa: map HTTP → chuyenKhoa.service, trả JSON thống nhất.
  * Lỗi từ service → asyncHandler → errorHandler.
  */
-const { asyncHandler } = require("../middlewares/error.middleware");
+const { asyncHandler, AppError } = require("../middlewares/error.middleware");
 const chuyenKhoaService = require("../services/chuyenKhoa.service");
 
 // GET /api/chuyen-khoa — danh sách (public)
@@ -35,4 +35,14 @@ const remove = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Xóa chuyên khoa thành công" });
 });
 
-module.exports = { getAll, getById, create, update, remove };
+// PUT /api/chuyen-khoa/:id/upload-anh — tải ảnh (multipart/form-data qua Cloudinary)
+const uploadAnh = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new AppError("Vui lòng chọn một file ảnh để tải lên", 400);
+  }
+  const imageUrl = req.file.path; // do multer-storage-cloudinary gán vào
+  const chuyenKhoa = await chuyenKhoaService.uploadAnh(req.params.id, imageUrl);
+  res.json({ success: true, message: "Cập nhật ảnh chuyên khoa thành công", data: chuyenKhoa });
+});
+
+module.exports = { getAll, getById, create, update, remove, uploadAnh };

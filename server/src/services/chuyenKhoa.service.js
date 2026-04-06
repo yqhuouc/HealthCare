@@ -65,4 +65,14 @@ const remove = async (id) => {
   await prisma.chuyenKhoa.delete({ where: { id: BigInt(id) } });
 };
 
-module.exports = { getAll, getById, create, update, remove };
+const uploadAnh = async (id, fileUrl) => {
+  const existing = await prisma.chuyenKhoa.findUnique({ where: { id: BigInt(id) } });
+  if (!existing) throw new AppError("Không tìm thấy chuyên khoa", 404);
+
+  return prisma.chuyenKhoa.update({
+    where: { id: BigInt(id) },
+    data: { anhChuyenKhoa: fileUrl },
+  });
+};
+
+module.exports = { getAll, getById, create, update, remove, uploadAnh };

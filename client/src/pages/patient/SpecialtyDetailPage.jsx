@@ -7,22 +7,19 @@
  * Chức năng:
  * - Hiển thị thông tin chi tiết của 1 chuyên khoa cụ thể
  * - Banner hero với hình nền, badge, mô tả
- * - Giới thiệu chuyên khoa + trang thiết bị (nếu có)
+ * - Giới thiệu chuyên khoa
  * - Sidebar cam kết chất lượng + nút CTA đặt lịch
- * - Danh sách bác sĩ thuộc chuyên khoa (lọc theo specialtyId)
- * - Xử lý trường hợp không tìm thấy (404 fallback)
+ * - Danh sách bác sĩ thuộc chuyên khoa
  *
- * Params:
- * - id (URL param): ID của chuyên khoa, dùng useParams() để lấy
- *
- * Dữ liệu: SPECIALTIES, DOCTORS từ mockDoctors.js
+ * Dữ liệu: API /api/chuyen-khoa/:id
  * ============================================================
  */
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { SPECIALTIES, DOCTORS } from "../../data/mockDoctors";
+import { specialtyService } from "../../services/specialtyService";
 
 /** Hàm format giá tiền sang dạng VND: 150000 → "150.000đ" */
-const formatPrice = (price) => price.toLocaleString("vi-VN") + "đ";
+const formatPrice = (price) => Number(price).toLocaleString("vi-VN") + "đ";
 
 /** Danh sách cam kết hiển thị ở sidebar */
 const COMMITMENTS = [
@@ -34,10 +31,33 @@ const COMMITMENTS = [
 
 export default function SpecialtyDetailPage() {
   const { id } = useParams();
-  const specialty = SPECIALTIES.find((s) => s.id === Number(id));
+  const [specialty, setSpecialty] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Lấy danh sách bác sĩ thuộc chuyên khoa này
-  const doctors = DOCTORS.filter((d) => d.specialtyId === Number(id));
+  useEffect(() => {
+    const fetchSpecialty = async () => {
+      try {
+        const res = await specialtyService.getById(id);
+        setSpecialty(res.data);
+      } catch {
+        setSpecialty(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSpecialty();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto py-20 text-center">
+        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
+          progress_activity
+        </span>
+        <p className="mt-4 text-slate-500">Đang tải thông tin chuyên khoa...</p>
+      </div>
+    );
+  }
 
   if (!specialty) {
     return (
@@ -62,6 +82,9 @@ export default function SpecialtyDetailPage() {
     );
   }
 
+  const doctors = specialty.bacSiList || [];
+  const bannerImage = specialty.anhChuyenKhoa || "/images/specialty-bg.jpg";
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Breadcrumb */}
@@ -74,7 +97,7 @@ export default function SpecialtyDetailPage() {
           Chuyên khoa
         </Link>
         <span className="material-symbols-outlined text-sm">chevron_right</span>
-        <span className="text-slate-900 font-medium">{specialty.name}</span>
+        <span className="text-slate-900 font-medium">{specialty.tenChuyenKhoa}</span>
       </nav>
 
       {/* Hero banner với hình nền + overlay */}
@@ -82,31 +105,31 @@ export default function SpecialtyDetailPage() {
         <div
           className="h-80 w-full bg-cover bg-center"
           style={{
-            backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.2)), url('${specialty.image}')`,
+            backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.2)), url('${bannerImage}')`,
           }}
         />
         <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-12 text-white max-w-2xl">
           <span className="bg-primary px-3 py-1 rounded-full text-xs font-bold w-fit mb-4">
-            CHUYÊN KHOA MŨI NHỌN
+            CHUYÊN KHOA
           </span>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {specialty.name}
+            {specialty.tenChuyenKhoa}
           </h2>
-          <p className="text-slate-100 text-lg leading-relaxed mb-6">
-            {specialty.description}
+          <p className="text-slate-100 text-lg leading-relaxed mb-6 line-clamp-3">
+            {specialty.moTaChuyenKhoa || "Chuyên khoa chất lượng cao với đội ngũ bác sĩ giàu kinh nghiệm."}
           </p>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg">
               <span className="material-symbols-outlined text-primary">
-                verified
+                schedule
               </span>
-              <span className="text-sm">Tiêu chuẩn quốc tế</span>
+              <span className="text-sm">Khám {specialty.thoiLuongKham || 30} phút/ca</span>
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg">
               <span className="material-symbols-outlined text-primary">
-                biotech
+                groups
               </span>
-              <span className="text-sm">Máy móc hiện đại</span>
+              <span className="text-sm">{doctors.length} bác sĩ</span>
             </div>
           </div>
         </div>
@@ -124,31 +147,9 @@ export default function SpecialtyDetailPage() {
               Giới thiệu chuyên khoa
             </h3>
             <p className="text-slate-600 leading-relaxed">
-              {specialty.detailDescription}
+              {specialty.moTaChuyenKhoa || "Thông tin chi tiết về chuyên khoa sẽ được cập nhật sớm."}
             </p>
           </div>
-
-          {/* Trang thiết bị */}
-          {specialty.equipment && specialty.equipment.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {specialty.equipment.map((equip, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white p-6 rounded-xl border border-slate-100 flex gap-4"
-                >
-                  <div className="bg-primary/10 p-3 rounded-lg h-fit text-primary">
-                    <span className="material-symbols-outlined">
-                      {equip.icon}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="font-bold mb-1">{equip.name}</h4>
-                    <p className="text-sm text-slate-500">{equip.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Sidebar: cam kết + CTA đặt lịch */}
@@ -207,39 +208,33 @@ export default function SpecialtyDetailPage() {
               >
                 <div className="p-6">
                   <div className="flex gap-4 items-start mb-4">
-                    <img
-                      src={doctor.image}
-                      alt={doctor.name}
-                      className="w-20 h-20 rounded-lg object-cover"
-                    />
+                    <div className="w-20 h-20 rounded-lg bg-primary/5 flex items-center justify-center overflow-hidden shrink-0">
+                      <span className="material-symbols-outlined text-4xl text-primary/40">person</span>
+                    </div>
                     <div>
                       <h4 className="font-bold text-lg text-slate-900">
-                        {doctor.name}
+                        {doctor.tenBacSi}
                       </h4>
                       <p className="text-sm text-primary font-medium mb-1">
-                        {doctor.specialty}
+                        {specialty.tenChuyenKhoa}
                       </p>
-                      <div className="flex items-center gap-1 text-sm">
-                        <span className="material-symbols-outlined text-amber-400 text-base">
-                          star
-                        </span>
-                        <span className="font-semibold text-slate-700">
-                          {doctor.rating}
-                        </span>
-                        <span className="text-slate-400 text-xs ml-1">
-                          ({doctor.totalReviews} đánh giá)
-                        </span>
-                      </div>
+                      {doctor.hocViChucDanh && (
+                        <p className="text-sm text-slate-500">
+                          {doctor.hocViChucDanh}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {/* Giá khám */}
-                  <div className="flex items-center justify-between py-3 border-t border-slate-100">
-                    <span className="text-sm text-slate-500">Giá khám:</span>
-                    <span className="font-bold text-primary">
-                      {formatPrice(doctor.price)}
-                    </span>
-                  </div>
+                  {doctor.giaKham && (
+                    <div className="flex items-center justify-between py-3 border-t border-slate-100">
+                      <span className="text-sm text-slate-500">Giá khám:</span>
+                      <span className="font-bold text-primary">
+                        {formatPrice(doctor.giaKham)}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Nút hành động */}
                   <div className="grid grid-cols-2 gap-3 mt-4">

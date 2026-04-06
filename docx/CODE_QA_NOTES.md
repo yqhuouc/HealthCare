@@ -71,6 +71,8 @@ Ghi chú câu hỏi — trả lời khi đọc / làm backend. **Mỗi mục có
 | Id | Câu hỏi / chủ đề |
 |----|------------------|
 | [qa-fe-001](#qa-fe-001) | Upload file (Ảnh đại diện) bằng FormData hoạt động ra sao ở Frontend? |
+| [qa-fe-002](#qa-fe-002) | Logic mở/đóng (Accordion) trong trang FAQ hoạt động như thế nào? |
+| [qa-fe-003](#qa-fe-003) | Tại sao cần gọi `getMe()` khi đã có Zustand lưu thông tin người dùng rồi? |
 
 ---
 
@@ -646,6 +648,80 @@ Dòng code mẫu: `PatientProfilePage.jsx` (hàm `handleAvatarChange`)
 - Chú ý câu lệnh mẹo: `e.target.value = null;`. Việc này dọn dẹp sạch giá trị đã nhớ của thẻ `<input>`. Cực kỳ hữu dụng: ví dụ nếu người dùng tải file `anh.jpg` bị web từ chối báo lỗi dung lượng, người đó kéo nén file lại nhưng tải lên vẫn chung 1 tên `anh.jpg`. Thẻ input sẽ cảm nhận "Ủa giá trị null thành anh.jpg" thay vì điểu kiện cũ là "anh.jpg => anh.jpg" và nó sẽ tiếp tục kích hoạt được trigger `onChange` để làm việc bình thường thay vì bị "chết đơ".
 
 **Vòng lặp tổng lược:** Bắt file $\rightarrow$ Kiểm duyệt dung lượng $\rightarrow$ Đóng thùng `FormData` $\rightarrow$ Đợi API Response $\rightarrow$ Cập nhật 2 nơi UI State $\rightarrow$ Tắt hiệu ứng Loading / Clear thẻ `<input>`.
+
+[↑ Về mục lục FE](#toc-fe)
+
+---
+
+<a id="qa-fe-002"></a>
+
+### FE-002 — Logic mở/đóng (Accordion) trong trang FAQ hoạt động như thế nào?
+
+Dòng code mẫu: `FAQPage.jsx` (hàm `toggle` và thẻ render)
+
+**1. Khởi tạo State lưu trữ trạng thái**
+```js
+const [openIndex, setOpenIndex] = useState(null);
+```
+- Biến `openIndex` lưu lại **vị trí (index)** của câu hỏi đang được mở trong danh sách `FAQ_DATA.map`.
+- Giá trị khởi tạo là `null` mang ý nghĩa: lúc mới tải trang, không có câu nào được mở (tất cả đều thu lại).
+
+**2. Hàm điều khiển Toggle (Bật/Tắt)**
+```js
+const toggle = (index) => {
+  setOpenIndex(openIndex === index ? null : index);
+};
+```
+- Khi người dùng click vào một câu hỏi (ví dụ câu số 2, `index = 2`):
+  - **Trường hợp click mở cái mới:** Nếu câu đó chưa được mở (`openIndex !== 2`), hàm sẽ set giá trị `openIndex` thành 2, làm câu 2 mở ra. Kèm theo đó, nếu trước đó đang mở câu 1 thì nó sẽ tự động bị đóng lại, vì biến state `openIndex` lúc này chỉ còn nhớ đúng số 2 chứ không phải số 1 nữa. Đây là bản chất của cơ chế "Single-open accordion" (chỉ mở 1 thẻ cùng lúc).
+  - **Trường hợp click đóng cái đang mở:** Nếu câu 2 đang mở sẵn (`openIndex === 2`) mà người dùng lại click vào chính nó một lần nữa, phép so sánh `openIndex === index` sẽ trả về `true`. Do đó hàm set biến về lại giá trị `null`, giúp toàn bộ danh sách quy về trạng thái đóng rỗng.
+
+**3. Khâu hiển thị UI (Render)**
+```js
+const isOpen = openIndex === index;
+// ...
+{isOpen && (
+  <div className="px-6 pb-6 text-slate-600 text-sm leading-relaxed">
+    {item.answer}
+  </div>
+)}
+```
+- Biến `isOpen` nằm trong vòng lặp `map`, nó sẽ chạy kiểm tra từng phần tử. Chỉ phần tử nào có `index` trùng với `openIndex` thì `isOpen` của phần tử đó mới có giá trị `true`.
+- Khối `isOpen && (...)` là kĩ thuật Rendering có điều kiện (Short-circuit) của React: Chỉ vẽ phần mã HTML chứa câu trả lời (`item.answer`) ra giao diện nếu điều kiện đằng trước là `true`.
+
+[↑ Về mục lục FE](#toc-fe)
+
+---
+
+<a id="qa-fe-003"></a>
+
+### FE-003 — Tại sao cần gọi `getMe()` khi đã có Zustand lưu thông tin người dùng rồi?
+
+Đây là câu hỏi cực kỳ quan trọng về cách hoạt động của State Management (Zustand) kết hợp với Cơ chế xác thực (Token/Cookie).
+
+**1. "Trí nhớ ngắn hạn" của Zustand**
+- Zustand lưu thông tin trên **RAM (Bộ nhớ tạm)** của trình duyệt. 
+- **Đặc điểm:** Khi người dùng nhấn **F5 (Refresh)** hoặc tắt trình duyệt đi rồi mở lại, toàn bộ "trí nhớ" của Zustand sẽ bị xóa sạch (quy về giá trị khởi tạo là `null`). 
+- Nếu không có cơ chế khôi phục, người dùng sẽ bị đá ra trang Login liên tục mỗi khi tải lại trang, dù họ chưa hề đăng xuất.
+
+**2. "Vé thông hành" trong Cookie**
+- Khi đăng nhập thành công, Server không chỉ trả về thông tin cho Zustand mà còn gửi một **"Token"** dán vào **Cookie** của trình duyệt.
+- Khác với Zustand, Cookie được lưu dưới **ổ cứng (Persistent Storage)**. Nó "sống sót" được qua hành động F5, thậm chí tắt máy bật lại vẫn còn (nếu chưa hết hạn).
+
+**3. Vai trò "Cứu hộ" của hàm `getMe()`**
+- Khi Frontend bắt đầu khởi động (sau khi F5), nó kiểm tra thấy Zustand đang trống rỗng.
+- Ngay lập tức, một hiệu ứng (thường là `useEffect` trong `App.jsx`) sẽ kích hoạt gọi API `getMe()`.
+- Nhờ chiếc Token vẫn còn trong Cookie, Server sẽ xác thực được danh tính người dùng và trả về thông tin đầy đủ.
+- Frontend nhận được thông tin này và **"nhồi" lại vào Zustand**. 
+- Kết quả: Người dùng thấy mình vẫn đang đăng nhập một cách mượt mà.
+
+**4. Vòng đời tổng quát:**
+- **Đăng nhập:** Nhận thông tin $\rightarrow$ Lưu Zustand (xài tạm) + Lưu Cookie (xài lâu).
+- **F5 trang:** Zustand mất thông tin $\rightarrow$ Cookie vẫn còn.
+- **Tự động cứu hộ:** Gọi `getMe()` dùng Token từ Cookie $\rightarrow$ Lấy lại thông tin $\rightarrow$ Gán lại vào Zustand.
+- **Đăng xuất / Hết hạn:** Xóa sạch cả Zustand và Cookie $\rightarrow$ Kết thúc phiên làm việc.
+
+**Tóm lại:** Zustand là cái kho để xài nhanh (tránh gọi API nhiều lần), còn `getMe()` là "máy phát điện dự phòng" giúp khôi phục cái kho đó mỗi khi web bị reset.
 
 [↑ Về mục lục FE](#toc-fe)
 

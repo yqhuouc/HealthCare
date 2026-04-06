@@ -10,23 +10,52 @@
  * - Mỗi card hiển thị: icon, tên, mô tả, số bác sĩ
  * - Click "Xem chi tiết" → chuyển sang trang SpecialtyDetailPage
  *
- * State:
- * - searchQuery: chuỗi tìm kiếm người dùng nhập vào ô search
- *
- * Dữ liệu: SPECIALTIES từ mockDoctors.js (sẽ thay bằng API)
+ * Dữ liệu: API /api/chuyen-khoa
  * ============================================================
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { SPECIALTIES } from "../../data/mockDoctors";
+import { specialtyService } from "../../services/specialtyService";
+
+/** Icon mặc định cho chuyên khoa */
+const SPECIALTY_ICONS = [
+  "stethoscope", "child_care", "pregnant_woman", "face",
+  "hearing", "dentistry", "psychology", "cardiology",
+];
 
 export default function SpecialtyListPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [specialties, setSpecialties] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSpecialties = async () => {
+      try {
+        const res = await specialtyService.getAll();
+        setSpecialties(res.data || []);
+      } catch {
+        /* lỗi hiện qua toast interceptor */
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSpecialties();
+  }, []);
 
   // Lọc chuyên khoa theo tên (không phân biệt hoa thường)
-  const filteredSpecialties = SPECIALTIES.filter((s) =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredSpecialties = specialties.filter((s) =>
+    s.tenChuyenKhoa.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <section className="flex-1 flex items-center justify-center py-20">
+        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
+          progress_activity
+        </span>
+      </section>
+    );
+  }
 
   return (
     <section className="flex-1 flex flex-col items-center">
@@ -73,7 +102,7 @@ export default function SpecialtyListPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-            {filteredSpecialties.map((specialty) => (
+            {filteredSpecialties.map((specialty, index) => (
               <div
                 key={specialty.id}
                 className="group bg-white p-6 rounded-lg border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
@@ -81,16 +110,16 @@ export default function SpecialtyListPage() {
                 {/* Icon chuyên khoa — đổi màu khi hover */}
                 <div className="w-14 h-14 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-5 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                   <span className="material-symbols-outlined text-3xl">
-                    {specialty.icon}
+                    {SPECIALTY_ICONS[index % SPECIALTY_ICONS.length]}
                   </span>
                 </div>
 
                 <h3 className="text-xl font-bold text-slate-900 mb-2">
-                  {specialty.name}
+                  {specialty.tenChuyenKhoa}
                 </h3>
 
-                <p className="text-slate-600 text-sm leading-relaxed mb-4">
-                  {specialty.description}
+                <p className="text-slate-600 text-sm leading-relaxed mb-4 line-clamp-2">
+                  {specialty.moTaChuyenKhoa || "Chuyên khoa chất lượng cao."}
                 </p>
 
                 {/* Số lượng bác sĩ */}
@@ -99,7 +128,7 @@ export default function SpecialtyListPage() {
                     groups
                   </span>
                   <span className="text-sm font-semibold text-slate-700">
-                    {specialty.doctorCount} bác sĩ chuyên khoa
+                    {specialty._count?.bacSiList || 0} bác sĩ chuyên khoa
                   </span>
                 </div>
 

@@ -1,27 +1,23 @@
 /**
- * Doctor Service - Lấy danh sách bác sĩ, chi tiết bác sĩ, lịch trống
- * TODO: Kết nối với API backend thật (GET /api/doctors, /api/doctors/:id)
+ * Doctor Service — Gọi API bác sĩ tới backend.
+ *
+ * Endpoints:
+ *   GET /api/bac-si              — Danh sách (filter, phân trang)
+ *   GET /api/bac-si/:id          — Chi tiết bác sĩ
  */
-import { DOCTORS } from "../data/mockDoctors";
+import api from "./api";
 
 export const doctorService = {
-  /** Lấy danh sách tất cả bác sĩ, hỗ trợ filter theo chuyên khoa */
-  getAll: async (filters = {}) => {
-    // TODO: return api.get("/doctors", { params: filters });
-    let result = [...DOCTORS];
-    if (filters.specialtyId) {
-      result = result.filter((d) => d.specialtyId === filters.specialtyId);
-    }
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      result = result.filter((d) => d.name.toLowerCase().includes(q));
-    }
-    return result;
-  },
+  /**
+   * Lấy danh sách bác sĩ, hỗ trợ filter + phân trang.
+   * @param {Object} params - { chuyenKhoaId, search, page, limit }
+   * @returns {{ data: { bacSiList, pagination } }}
+   */
+  getAll: (params = {}) => api.get("/bac-si", { params }),
 
-  /** Lấy chi tiết một bác sĩ theo ID */
-  getById: async (id) => {
-    // TODO: return api.get(`/doctors/${id}`);
-    return DOCTORS.find((d) => d.id === Number(id)) || null;
-  },
+  /**
+   * Lấy chi tiết 1 bác sĩ (kèm chuyenKhoa + taiKhoan).
+   * @param {number|string} id
+   */
+  getById: (id) => api.get(`/bac-si/${id}`),
 };

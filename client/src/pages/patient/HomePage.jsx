@@ -1,81 +1,59 @@
+/**
+ * ============================================================
+ * TRANG: Trang chủ (Home)
+ * Đường dẫn: /
+ * ============================================================
+ *
+ * Chức năng:
+ * - Hero section với tiêu đề, mô tả, CTA
+ * - Section chuyên khoa phổ biến (fetch API /api/chuyen-khoa)
+ * - Section bác sĩ nổi bật (fetch API /api/bac-si?limit=4)
+ *
+ * Dữ liệu: API /api/chuyen-khoa, /api/bac-si
+ * ============================================================
+ */
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { specialtyService } from "../../services/specialtyService";
+import { doctorService } from "../../services/doctorService";
 
-/* ============================================================
-   DỮ LIỆU TĨNH — sẽ thay bằng API khi kết nối backend
-   ============================================================ */
+/** Hàm format giá tiền sang dạng VND: 150000 → "150.000đ" */
+const formatPrice = (price) => Number(price).toLocaleString("vi-VN") + "đ";
 
-/** Danh sách chuyên khoa hiển thị trên trang chủ */
-const SPECIALTIES = [
-  {
-    icon: "favorite",
-    name: "Nội khoa",
-    description: "Khám tổng quát nội tạng và các bệnh lý nội khoa cơ bản.",
-  },
-  {
-    icon: "child_care",
-    name: "Nhi khoa",
-    description: "Chăm sóc sức khỏe toàn diện và tiêm chủng cho trẻ em.",
-  },
-  {
-    icon: "pregnant_woman",
-    name: "Sản phụ khoa",
-    description: "Sức khỏe phụ nữ, khám thai sản và tư vấn tiền hôn nhân.",
-  },
-  {
-    icon: "face",
-    name: "Da liễu",
-    description: "Điều trị các bệnh lý về da và tư vấn chăm sóc da thẩm mỹ.",
-  },
-  {
-    icon: "hearing",
-    name: "Tai Mũi Họng",
-    description: "Khám và điều trị các bệnh lý tai, mũi và họng chuyên sâu.",
-  },
-  {
-    icon: "dentistry",
-    name: "Răng Hàm Mặt",
-    description: "Chăm sóc răng miệng, nhổ răng và phục hình răng thẩm mỹ.",
-  },
+/** Icon mặc định cho chuyên khoa nếu không có ảnh */
+const SPECIALTY_ICONS = [
+  "favorite", "child_care", "pregnant_woman", "face",
+  "hearing", "dentistry", "psychology", "cardiology",
 ];
-
-/** Danh sách bác sĩ nổi bật hiển thị trên trang chủ */
-const FEATURED_DOCTORS = [
-  {
-    name: "BS. Nguyễn Văn A",
-    specialty: "Chuyên khoa Nội",
-    experience: "15 năm kinh nghiệm",
-    image: "/images/doctor-1.jpg",
-  },
-  {
-    name: "BS. Trần Thị B",
-    specialty: "Chuyên khoa Sản",
-    experience: "10 năm kinh nghiệm",
-    image: "/images/doctor-2.jpg",
-  },
-  {
-    name: "BS. Lê Hoàng C",
-    specialty: "Nhi khoa",
-    experience: "12 năm kinh nghiệm",
-    image: "/images/doctor-3.jpg",
-  },
-  {
-    name: "BS. Phạm Minh D",
-    specialty: "Da liễu",
-    experience: "8 năm kinh nghiệm",
-    image: "/images/doctor-4.jpg",
-  },
-];
-
-/* ============================================================
-   TRANG CHỦ — Gồm 3 section: Hero, Chuyên khoa, Bác sĩ
-   ============================================================ */
 
 function HomePage() {
+  const [specialties, setSpecialties] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [specRes, docRes] = await Promise.all([
+          specialtyService.getAll(),
+          doctorService.getAll({ limit: 4 }),
+        ]);
+        setSpecialties(specRes.data || []);
+        setDoctors(docRes.data || []);
+      } catch {
+        /* Lỗi sẽ hiện toast qua interceptor */
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   return (
     <div>
       <HeroSection />
-      <SpecialtiesSection />
-      <FeaturedDoctorsSection />
+      <SpecialtiesSection specialties={specialties} loading={loading} />
+      <FeaturedDoctorsSection doctors={doctors} loading={loading} />
     </div>
   );
 }
@@ -141,20 +119,23 @@ function HeroSection() {
 
 /* ------------------------------------------------------------
    Specialty Card — Card hiển thị 1 chuyên khoa
-   Props: icon (Material Symbols), name, description
    ------------------------------------------------------------ */
 
-function SpecialtyCard({ icon, name, description }) {
+function SpecialtyCard({ specialty, index }) {
+  const icon = SPECIALTY_ICONS[index % SPECIALTY_ICONS.length];
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow group border border-slate-100">
       {/* Icon chuyên khoa — đổi màu khi hover */}
       <div className="w-12 h-12 bg-primary/10 text-primary rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
         <span className="material-symbols-outlined text-3xl">{icon}</span>
       </div>
-      <h4 className="text-xl font-bold mb-2">{name}</h4>
-      <p className="text-slate-500 text-sm mb-4">{description}</p>
+      <h4 className="text-xl font-bold mb-2">{specialty.tenChuyenKhoa}</h4>
+      <p className="text-slate-500 text-sm mb-4 line-clamp-2">
+        {specialty.moTaChuyenKhoa || "Chuyên khoa chất lượng cao."}
+      </p>
       <Link
-        to="/specialties"
+        to={`/specialties/${specialty.id}`}
         className="text-primary font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all"
       >
         Xem chi tiết{" "}
@@ -168,7 +149,7 @@ function SpecialtyCard({ icon, name, description }) {
    Specialties Section — Lưới 3 cột hiển thị các chuyên khoa
    ------------------------------------------------------------ */
 
-function SpecialtiesSection() {
+function SpecialtiesSection({ specialties, loading }) {
   return (
     <section className="py-16 bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -180,12 +161,17 @@ function SpecialtiesSection() {
           <div className="h-1.5 w-20 bg-primary mt-4 rounded-full"></div>
         </div>
 
-        {/* Grid chuyên khoa: 1 cột mobile → 2 cột tablet → 3 cột desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {SPECIALTIES.map((spec) => (
-            <SpecialtyCard key={spec.name} {...spec} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-12">
+            <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {specialties.slice(0, 6).map((spec, index) => (
+              <SpecialtyCard key={spec.id} specialty={spec} index={index} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -193,25 +179,38 @@ function SpecialtiesSection() {
 
 /* ------------------------------------------------------------
    Doctor Card — Card hiển thị 1 bác sĩ
-   Props: name, specialty, experience, image
    ------------------------------------------------------------ */
 
-function DoctorCard({ name, specialty, experience, image }) {
+function DoctorCard({ doctor }) {
+  const avatarUrl = doctor.taiKhoan?.anhDaiDien || "/images/doctor-placeholder.jpg";
+  const specialtyName = doctor.chuyenKhoa?.tenChuyenKhoa || "Chưa phân khoa";
+
   return (
     <div className="bg-white rounded-lg overflow-hidden border border-slate-100 shadow-sm hover:shadow-lg transition-all text-center p-6">
       {/* Avatar bác sĩ — hình tròn với viền */}
       <div className="relative w-32 h-32 mx-auto mb-4">
-        <img
-          alt={name}
-          className="w-full h-full object-cover rounded-full border-4 border-primary/20"
-          src={image}
-        />
+        <div className="w-full h-full rounded-full border-4 border-primary/20 bg-primary/5 flex items-center justify-center overflow-hidden">
+          {doctor.taiKhoan?.anhDaiDien ? (
+            <img
+              alt={doctor.tenBacSi}
+              className="w-full h-full object-cover"
+              src={avatarUrl}
+            />
+          ) : (
+            <span className="material-symbols-outlined text-5xl text-primary/40">person</span>
+          )}
+        </div>
       </div>
-      <h5 className="text-lg font-bold text-slate-900">{name}</h5>
-      <p className="text-primary text-sm font-medium mb-1">{specialty}</p>
-      <p className="text-slate-500 text-xs mb-4">{experience}</p>
+      <h5 className="text-lg font-bold text-slate-900">{doctor.tenBacSi}</h5>
+      <p className="text-primary text-sm font-medium mb-1">{specialtyName}</p>
+      {doctor.hocViChucDanh && (
+        <p className="text-slate-500 text-xs mb-3">{doctor.hocViChucDanh}</p>
+      )}
+      {doctor.giaKham && (
+        <p className="text-primary font-bold mb-3">{formatPrice(doctor.giaKham)}</p>
+      )}
       <Link
-        to="/doctors"
+        to={`/doctors/${doctor.id}`}
         className="block w-full py-2 bg-slate-50 hover:bg-primary hover:text-white text-primary rounded-lg text-sm font-bold transition-all border border-primary/10"
       >
         Xem chi tiết
@@ -224,7 +223,7 @@ function DoctorCard({ name, specialty, experience, image }) {
    Featured Doctors Section — Lưới 4 cột hiển thị bác sĩ nổi bật
    ------------------------------------------------------------ */
 
-function FeaturedDoctorsSection() {
+function FeaturedDoctorsSection({ doctors, loading }) {
   return (
     <section className="py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -244,12 +243,17 @@ function FeaturedDoctorsSection() {
           </Link>
         </div>
 
-        {/* Grid bác sĩ: 1 cột mobile → 2 cột tablet → 4 cột desktop */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {FEATURED_DOCTORS.map((doc) => (
-            <DoctorCard key={doc.name} {...doc} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-12">
+            <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {doctors.map((doc) => (
+              <DoctorCard key={doc.id} doctor={doc} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

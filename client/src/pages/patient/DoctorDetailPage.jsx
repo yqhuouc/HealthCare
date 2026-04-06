@@ -5,29 +5,53 @@
  * ============================================================
  *
  * Chức năng:
- * - Hiển thị hồ sơ chi tiết 1 bác sĩ (avatar, tên, chuyên khoa, KN, đánh giá, học vấn, giá)
+ * - Hiển thị hồ sơ chi tiết 1 bác sĩ (avatar, tên, chuyên khoa, học vị, giá)
  * - Breadcrumb điều hướng: Trang chủ > Bác sĩ > [Tên BS]
  * - Card thông tin chính + nút "Đặt lịch khám" → BookingPage
  * - Phần giới thiệu (mô tả) + sidebar thông tin tóm tắt
- * - Xử lý trường hợp không tìm thấy bác sĩ (404 fallback)
  *
- * Params:
- * - id (URL param): ID của bác sĩ, dùng useParams() để lấy
- *
- * Dữ liệu: DOCTORS từ mockDoctors.js
+ * Dữ liệu: API /api/bac-si/:id
  * ============================================================
  */
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { DOCTORS } from "../../data/mockDoctors";
+import { doctorService } from "../../services/doctorService";
 
 /** Hàm format giá tiền sang dạng VND: 150000 → "150.000đ" */
-const formatPrice = (price) => price.toLocaleString("vi-VN") + "đ";
+const formatPrice = (price) => Number(price).toLocaleString("vi-VN") + "đ";
 
 export default function DoctorDetailPage() {
   const { id } = useParams();
+  const [doctor, setDoctor] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Tìm bác sĩ theo id từ URL params
-  const doctor = DOCTORS.find((d) => d.id === Number(id));
+  useEffect(() => {
+    const fetchDoctor = async () => {
+      try {
+        const res = await doctorService.getById(id);
+        setDoctor(res.data);
+      } catch {
+        setDoctor(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDoctor();
+  }, [id]);
+
+  // Loading
+  if (loading) {
+    return (
+      <section className="py-12">
+        <div className="max-w-7xl mx-auto px-4 text-center py-20">
+          <span className="material-symbols-outlined text-5xl text-primary animate-spin">
+            progress_activity
+          </span>
+          <p className="mt-4 text-slate-500">Đang tải thông tin bác sĩ...</p>
+        </div>
+      </section>
+    );
+  }
 
   // Trường hợp không tìm thấy bác sĩ
   if (!doctor) {
@@ -57,6 +81,9 @@ export default function DoctorDetailPage() {
     );
   }
 
+  const specialtyName = doctor.chuyenKhoa?.tenChuyenKhoa || "Chưa phân khoa";
+  const avatarUrl = doctor.taiKhoan?.anhDaiDien;
+
   return (
     <section className="py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -74,53 +101,63 @@ export default function DoctorDetailPage() {
           <span className="material-symbols-outlined text-base">
             chevron_right
           </span>
-          <span className="text-slate-800 font-medium">{doctor.name}</span>
+          <span className="text-slate-800 font-medium">{doctor.tenBacSi}</span>
         </nav>
 
         {/* Card thông tin chính của bác sĩ */}
         <div className="bg-white p-8 rounded-lg shadow mb-10">
           <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-            <img
-              src={doctor.image}
-              alt={doctor.name}
-              className="w-40 h-40 rounded-full border-4 border-primary/20 object-cover shrink-0"
-            />
+            {/* Avatar */}
+            <div className="w-40 h-40 rounded-full border-4 border-primary/20 bg-primary/5 flex items-center justify-center overflow-hidden shrink-0">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={doctor.tenBacSi}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="material-symbols-outlined text-7xl text-primary/40">person</span>
+              )}
+            </div>
 
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-2xl font-bold text-slate-800">
-                {doctor.name}
+                {doctor.tenBacSi}
               </h1>
 
               <p className="text-primary font-medium mt-1">
-                {doctor.specialty}
+                {specialtyName}
               </p>
 
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-6 gap-y-2 mt-4 text-sm text-slate-600">
-                <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-base text-primary">
-                    work
+                {doctor.hocViChucDanh && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base text-primary">
+                      school
+                    </span>
+                    {doctor.hocViChucDanh}
                   </span>
-                  {doctor.experience} năm kinh nghiệm
-                </span>
-
-                <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-base text-amber-400">
-                    star
-                  </span>
-                  {doctor.rating} ({doctor.totalReviews} đánh giá)
-                </span>
+                )}
 
                 <span className="flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-base text-primary">
-                    school
+                    medical_services
                   </span>
-                  {doctor.education}
+                  {specialtyName}
                 </span>
               </div>
 
-              <p className="text-primary font-bold text-xl mt-4">
-                {formatPrice(doctor.price)}
-              </p>
+              {doctor.moTaNgan && (
+                <p className="text-slate-600 mt-4 text-sm leading-relaxed italic border-l-4 border-primary pl-4 md:text-left">
+                  {doctor.moTaNgan}
+                </p>
+              )}
+
+              {doctor.giaKham && (
+                <p className="text-primary font-bold text-xl mt-4">
+                  {formatPrice(doctor.giaKham)}
+                </p>
+              )}
 
               <Link
                 to={`/booking/${doctor.id}`}
@@ -144,8 +181,8 @@ export default function DoctorDetailPage() {
                 Giới thiệu
               </h2>
               <div className="h-1 w-12 bg-primary rounded-full mb-5" />
-              <p className="text-slate-600 leading-relaxed">
-                {doctor.description}
+              <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
+                {doctor.moTaChiTiet || "Thông tin chi tiết về bác sĩ sẽ được cập nhật sớm."}
               </p>
             </div>
           </div>
@@ -159,33 +196,21 @@ export default function DoctorDetailPage() {
               <div className="h-1 w-12 bg-primary rounded-full mb-5" />
 
               <ul className="space-y-4">
-                <li className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-primary mt-0.5">
-                    school
-                  </span>
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wide">
-                      Học vấn
-                    </p>
-                    <p className="text-slate-700 font-medium">
-                      {doctor.education}
-                    </p>
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-primary mt-0.5">
-                    work
-                  </span>
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wide">
-                      Kinh nghiệm
-                    </p>
-                    <p className="text-slate-700 font-medium">
-                      {doctor.experience} năm
-                    </p>
-                  </div>
-                </li>
+                {doctor.hocViChucDanh && (
+                  <li className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">
+                      school
+                    </span>
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">
+                        Học vấn
+                      </p>
+                      <p className="text-slate-700 font-medium">
+                        {doctor.hocViChucDanh}
+                      </p>
+                    </div>
+                  </li>
+                )}
 
                 <li className="flex items-start gap-3">
                   <span className="material-symbols-outlined text-primary mt-0.5">
@@ -196,24 +221,42 @@ export default function DoctorDetailPage() {
                       Chuyên khoa
                     </p>
                     <p className="text-slate-700 font-medium">
-                      {doctor.specialty}
+                      {specialtyName}
                     </p>
                   </div>
                 </li>
 
-                <li className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-primary mt-0.5">
-                    payments
-                  </span>
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wide">
-                      Phí khám
-                    </p>
-                    <p className="text-primary font-bold">
-                      {formatPrice(doctor.price)}
-                    </p>
-                  </div>
-                </li>
+                {doctor.giaKham && (
+                  <li className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">
+                      payments
+                    </span>
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">
+                        Phí khám
+                      </p>
+                      <p className="text-primary font-bold">
+                        {formatPrice(doctor.giaKham)}
+                      </p>
+                    </div>
+                  </li>
+                )}
+
+                {doctor.taiKhoan?.email && (
+                  <li className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">
+                      mail
+                    </span>
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">
+                        Email
+                      </p>
+                      <p className="text-slate-700 font-medium">
+                        {doctor.taiKhoan.email}
+                      </p>
+                    </div>
+                  </li>
+                )}
               </ul>
             </div>
           </div>
