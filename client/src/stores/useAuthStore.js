@@ -15,27 +15,32 @@ const useAuthStore = create((set) => ({
   isAuthenticated: false,
   isLoading: true, // true khi đang kiểm tra session lúc app khởi động
 
+  /** 
+   * Hàm helper rút trích thông tin hoTen/fullName dựa trên vaiTro
+   * Giúp đồng bộ dữ liệu ngay lập tức sau khi login mà không cần F5.
+   */
+  processUserData: (userData) => {
+    let hoTen = "Người dùng";
+    if (userData.vaiTro === "admin") hoTen = "Quản trị viên";
+    if (userData.benhNhan) hoTen = userData.benhNhan.hoTen;
+    if (userData.bacSi) hoTen = userData.bacSi.tenBacSi;
+
+    return {
+      ...userData,
+      hoTen: hoTen,
+      fullName: hoTen, // Tương thích với các component cũ dùng fullName
+    };
+  },
+
   /**
    * Kiểm tra session khi app mount.
    * Gọi GET /auth/me — nếu cookie hợp lệ sẽ trả user, không thì 401.
    */
   fetchUser: async () => {
+    const { processUserData } = useAuthStore.getState();
     try {
       const res = await authService.getMe();
-      const userData = res.data;
-
-      // Resolve hoTen dựa trên vaiTro
-      let hoTen = "Admin";
-      if (userData.benhNhan) hoTen = userData.benhNhan.hoTen;
-      if (userData.bacSi) hoTen = userData.bacSi.tenBacSi;
-
-      const user = {
-        ...userData,
-        hoTen,
-        // Giữ tương thích với code cũ dùng fullName
-        fullName: hoTen,
-      };
-
+      const user = processUserData(res.data);
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
       // Cookie hết hạn hoặc chưa đăng nhập — bình thường
@@ -49,11 +54,12 @@ const useAuthStore = create((set) => ({
    * @returns {object} user data từ server
    */
   login: async (credentials) => {
+    const { processUserData } = useAuthStore.getState();
     const res = await authService.login(credentials);
-    const user = {
-      ...res.data.user,
-      fullName: res.data.user.hoTen, // Tương thích code cũ
-    };
+    
+    // Xử lý dữ liệu thô từ server thành định dạng store cần
+    const user = processUserData(res.data.user);
+    
     set({ user, isAuthenticated: true });
     return user;
   },

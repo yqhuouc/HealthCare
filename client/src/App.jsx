@@ -19,6 +19,7 @@ import {
   notFoundRoute,
 } from "./router";
 import useAuthStore from "./stores/useAuthStore";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 function App() {
   const NotFoundComponent = notFoundRoute.component;
@@ -49,18 +50,22 @@ function App() {
           <Route key={route.path} path={route.path} element={<route.component />} />
         ))}
 
-        {/* ---- Doctor portal: sidebar layout (DoctorLayout + Outlet) ---- */}
-        <Route path="/doctor" element={<DoctorLayout />}>
-          {doctorRoutes.map((route) => (
-            <Route key={route.path} path={route.path} element={<route.component />} />
-          ))}
+        {/* ---- Doctor portal: sidebar layout (DoctorLayout + ProtectedRoute) ---- */}
+        <Route element={<ProtectedRoute allowedRoles={["bac_si", "admin"]} />}>
+          <Route path="/doctor" element={<DoctorLayout />}>
+            {doctorRoutes.map((route) => (
+              <Route key={route.path} path={route.path} element={<route.component />} />
+            ))}
+          </Route>
         </Route>
 
-        {/* ---- Admin portal: AdminLayout + Outlet ---- */}
-        <Route path="/admin" element={<AdminLayout />}>
-          {adminRoutes.map((route) => (
-            <Route key={route.path} path={route.path} element={<route.component />} />
-          ))}
+        {/* ---- Admin portal: AdminLayout + ProtectedRoute ---- */}
+        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            {adminRoutes.map((route) => (
+              <Route key={route.path} path={route.path} element={<route.component />} />
+            ))}
+          </Route>
         </Route>
 
         {/* ---- Bệnh nhân: Header + Footer layout ---- */}
@@ -75,10 +80,12 @@ function App() {
                     <Route key={route.path} path={route.path} element={<route.component />} />
                   ))}
 
-                  {/* TODO: bọc PrivateRoute khi có auth backend */}
-                  {privateRoutes.map((route) => (
-                    <Route key={route.path} path={route.path} element={<route.component />} />
-                  ))}
+                  {/* Bảo vệ các trang dành cho bệnh nhân đã đăng nhập */}
+                  <Route element={<ProtectedRoute allowedRoles={["benh_nhan"]} />}>
+                    {privateRoutes.map((route) => (
+                      <Route key={route.path} path={route.path} element={<route.component />} />
+                    ))}
+                  </Route>
 
                   <Route path={notFoundRoute.path} element={<NotFoundComponent />} />
                 </Routes>
