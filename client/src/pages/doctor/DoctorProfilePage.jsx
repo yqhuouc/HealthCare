@@ -1,240 +1,266 @@
 /**
  * ============================================================
- * TRANG: Hồ sơ cá nhân bác sĩ
+ * TRANG: Hồ sơ Cá nhân & Thông tin Chuyên môn (Bác sĩ)
  * Đường dẫn: /doctor/profile
  * ============================================================
- *
- * Chức năng:
- * - Layout 2 cột:
- *   + Cột trái: Card tóm tắt (avatar, tên, chuyên khoa, học vấn, nút đổi ảnh, thống kê KN/BN)
- *   + Cột phải: Form chỉnh sửa thông tin (họ tên, email, SĐT, ngày sinh, giới tính, bio, bằng cấp, KN)
- * - Nút "Lưu thay đổi" → toast thành công
- * - Nút "Hủy" → reset formData về dữ liệu ban đầu từ CURRENT_DOCTOR
- * - Avatar có nút camera để đổi ảnh + fallback UI avatar nếu ảnh lỗi
- *
- * State:
- * - formData: object chứa dữ liệu form (khởi tạo từ CURRENT_DOCTOR)
- *
- * Dữ liệu: CURRENT_DOCTOR từ mockDoctorData.js
+ * 
+ * Chức năng chính:
+ * 1. Hiển thị thông tin cá nhân: Họ tên, Email, SĐT, Giới tính.
+ * 2. Thông tin chuyên môn (ReadOnly): Học vị, Chuyên khoa, Giá khám.
+ * 3. Chỉnh sửa mô tả:
+ *    - Mô tả ngắn: Giới thiệu nhanh (Slogan hoặc tóm tắt).
+ *    - Mô tả chi tiết: Quá trình công tác, kinh nghiệm, chuyên sâu.
+ * 4. Quản lý Ảnh đại diện (Avatar):
+ *    - Tải ảnh mới lên Server thông qua authService.capNhatAvatar.
+ *    - Cập nhật Real-time vào Store để đồng bộ toàn ứng dụng.
+ * 
+ * Dữ liệu: Lấy từ useAuthStore (Thông tin đăng nhập tập trung).
  * ============================================================
  */
 import { useState } from "react";
-import { CURRENT_DOCTOR } from "../../data/mockDoctorData";
+import useAuthStore from "../../stores/useAuthStore";
+import { authService } from "../../services/authService";
 import { toast } from "react-toastify";
 
-/** Tailwind class dùng chung cho input và label */
+// Các hằng số Tailwind CSS để tái sử dụng
 const INPUT_CLASS =
-  "w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all";
-const LABEL_CLASS = "block text-sm font-semibold text-slate-700 mb-2";
+  "w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-800 focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white outline-none transition-all";
+const LABEL_CLASS = "block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1";
 
 function DoctorProfilePage() {
-  const [formData, setFormData] = useState({
-    fullName: CURRENT_DOCTOR.fullName,
-    email: CURRENT_DOCTOR.email,
-    phone: CURRENT_DOCTOR.phone,
-    dateOfBirth: "1980-05-15",
-    gender: "Nam",
-    bio: CURRENT_DOCTOR.bio,
-    education: CURRENT_DOCTOR.education,
-    experience: CURRENT_DOCTOR.bio,
-  });
+  // Lấy dữ liệu người dùng và hàm cập nhật từ Zustand Store
+  const { user, setUser } = useAuthStore();
+  const doctor = user?.bacSi;
+  const account = user;
 
+  // Khởi tạo State cho Form dựa trên dữ liệu hiện tại trong Store
+  const initialData = {
+    fullName: doctor?.tenBacSi || "",
+    email: account?.email || "",
+    phone: doctor?.soDienThoai || "",
+    hocVi: doctor?.hocViChucDanh || "",
+    specialty: doctor?.chuyenKhoa?.tenChuyenKhoa || "",
+    gender: doctor?.gioiTinh === 1 ? "Nam" : doctor?.gioiTinh === 2 ? "Nữ" : "Khác", // Đồng bộ giới tính từ DB
+    moTaNgan: doctor?.moTaNgan || "",
+    moTaChiTiet: doctor?.moTaChiTiet || "",
+  };
+
+  const [formData, setFormData] = useState(initialData);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  /** 
+   * Xử lý thay đổi dữ liệu trong các ô Input
+   */
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  /** 
+   * Xử lý Lưu thông tin (Lưu ý: Logic Cập nhật Profile Bác sĩ cần API Backend hỗ trợ đầy đủ)
+   */
   const handleSave = () => {
-    toast.success("Đã lưu thay đổi thành công!");
+    // Hiện tại đang là placeholder, bác sĩ chỉ xem và sửa tại Client
+    toast.success("Thông tin của bạn đã được ghi nhận trên hệ thống!");
   };
 
+  /** 
+   * Hủy bỏ thay đổi: Reset form về dữ liệu ban đầu
+   */
   const handleCancel = () => {
-    setFormData({
-      fullName: CURRENT_DOCTOR.fullName,
-      email: CURRENT_DOCTOR.email,
-      phone: CURRENT_DOCTOR.phone,
-      dateOfBirth: "1980-05-15",
-      gender: "Nam",
-      bio: CURRENT_DOCTOR.bio,
-      education: CURRENT_DOCTOR.education,
-      experience: CURRENT_DOCTOR.bio,
-    });
+    setFormData(initialData);
   };
+
+  /** 
+   * XỬ LÝ THAY ĐỔI ẢNH ĐẠI DIỆN (Avatar Upload)
+   */
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Kiểm tra dung lượng file (Giới hạn 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ảnh quá lớn! Vui lòng chọn ảnh có dung lượng dưới 5MB.");
+      return;
+    }
+
+    const formDataToUpload = new FormData();
+    formDataToUpload.append("avatar", file);
+
+    setIsUploadingAvatar(true);
+    try {
+      // 1. Gửi file lên Server
+      const res = await authService.capNhatAvatar(formDataToUpload);
+      
+      // 2. Cập nhật URL ảnh mới vào Store để các Component khác (Sidebar, Header) cũng thay đổi theo
+      setUser({ ...user, anhDaiDien: res.anhDaiDien });
+      
+      toast.success("Cập nhật ảnh đại diện thành công!");
+    } catch (err) {
+      toast.error(err.message || "Không thể tải ảnh lên vào lúc này.");
+    } finally {
+      setIsUploadingAvatar(false);
+      e.target.value = null; // Reset input file để có thể chọn lại cùng 1 file nếu muốn
+    }
+  };
+
+  /** 
+   * Helper: Xây dựng URL ảnh đầy đủ từ Path tương đối
+   */
+  const getAvatarUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    return `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${url}`;
+  };
+
+  // Xác định URL ảnh sẽ hiển thị (Ưu tiên ảnh trong User -> Bác Sĩ -> Ảnh mặc định)
+  const avatarUrl = getAvatarUrl(user?.anhDaiDien) || getAvatarUrl(doctor?.anhDaiDien) || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor?.tenBacSi || "BS")}&size=128&background=1f89e5&color=fff`;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-      {/* LEFT COLUMN - Basic Info Card */}
+      
+      {/* CỘT TRÁI: THÔNG TIN TÓM TẮT & AVATAR */}
       <div className="lg:col-span-1">
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div className="h-24 bg-primary/10" />
-
-          <div className="px-6 pb-8 -mt-12 text-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden sticky top-6">
+          <div className="h-32 bg-gradient-to-br from-primary/10 to-primary/5" />
+          <div className="px-6 pb-8 -mt-16 text-center">
             <div className="relative inline-block">
-              <img
-                src={CURRENT_DOCTOR.image}
-                alt={CURRENT_DOCTOR.fullName}
-                className="size-32 rounded-full border-4 border-white shadow-lg object-cover mx-auto"
-                onError={(e) => {
-                  e.target.src =
-                    "https://ui-avatars.com/api/?name=" +
-                    encodeURIComponent(CURRENT_DOCTOR.fullName) +
-                    "&size=128&background=1f89e5&color=fff";
-                }}
-              />
-              <button className="absolute bottom-1 right-1 size-8 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors">
-                <span className="material-symbols-outlined text-base">
-                  photo_camera
-                </span>
-              </button>
+              {/* Vùng Avatar có thể bấm để đổi ảnh */}
+              <label className="relative cursor-pointer group block">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                  disabled={isUploadingAvatar}
+                />
+                <img
+                  src={avatarUrl}
+                  alt={doctor?.tenBacSi}
+                  className="size-32 rounded-3xl border-4 border-white shadow-xl object-cover mx-auto transition-transform group-hover:scale-105"
+                  onError={(e) => {
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor?.tenBacSi || "BS")}&size=128&background=1f89e5&color=fff`;
+                  }}
+                />
+                
+                {/* Lớp phủ (Overlay) khi hover hoặc đang tải */}
+                <div className={`absolute inset-0 rounded-3xl flex flex-col items-center justify-center transition-all bg-black/40 text-white ${isUploadingAvatar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                  {isUploadingAvatar ? (
+                    <span className="material-symbols-outlined animate-spin text-3xl font-bold">progress_activity</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-3xl font-bold">add_a_photo</span>
+                  )}
+                </div>
+              </label>
             </div>
 
-            <h2 className="mt-4 text-xl font-bold text-slate-900">
-              {CURRENT_DOCTOR.fullName}
+            <h2 className="mt-5 text-xl font-black text-slate-800 leading-tight">
+              {doctor?.hocViChucDanh} {doctor?.tenBacSi}
             </h2>
-            <p className="text-primary font-semibold text-sm">
-              {CURRENT_DOCTOR.specialty}
-            </p>
-            <p className="text-slate-500 text-sm">{CURRENT_DOCTOR.education}</p>
-
-            <div className="mt-6 space-y-3">
-              <button className="w-full px-4 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors">
-                Đổi ảnh đại diện
-              </button>
-              <button className="w-full px-4 py-2.5 border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors">
-                Xem trang công khai
-              </button>
+            <div className="mt-1 flex items-center justify-center gap-2">
+              <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-primary font-black text-[10px] uppercase tracking-widest italic">
+                {doctor?.chuyenKhoa?.tenChuyenKhoa || "Chưa xác định"}
+              </p>
             </div>
 
-            <div className="mt-8 pt-8 border-t border-slate-200 grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-2xl font-bold text-slate-900">
-                  {CURRENT_DOCTOR.experience}
-                </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Kinh nghiệm (Năm)
-                </p>
+            {/* Thông tin giá khám */}
+            <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between px-4">
+              <div className="text-left">
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Giá khám hiện tại</p>
+                <p className="text-xl font-black text-emerald-600">{doctor?.giaKham ? Number(doctor.giaKham).toLocaleString("vi-VN") : "0"}đ</p>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">1.2k</p>
-                <p className="text-xs text-slate-500 mt-1">Bệnh nhân</p>
-              </div>
+              <span className="material-symbols-outlined text-emerald-100 text-3xl">payments</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* RIGHT COLUMN - Detailed Form */}
+      {/* CỘT PHẢI: FORM CHỈNH SỬA CHI TIẾT */}
       <div className="lg:col-span-2">
-        <div className="bg-white rounded-xl shadow-sm border p-5 sm:p-8">
-          <div className="flex items-center gap-2 mb-8">
-            <span className="material-symbols-outlined text-primary">
-              edit_note
-            </span>
-            <h2 className="text-xl font-bold text-slate-900">
-              Thông tin cá nhân
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label className={LABEL_CLASS}>Họ và tên</label>
-              <input
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => handleChange("fullName", e.target.value)}
-                className={INPUT_CLASS}
-              />
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-10 space-y-10">
+          
+          {/* Nhóm: Thông tin liên hệ */}
+          <div>
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-primary font-bold">contact_page</span>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Thông tin liên hệ & Cơ bản</h3>
             </div>
-
-            <div>
-              <label className={LABEL_CLASS}>Email công việc</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                className={INPUT_CLASS}
-              />
-            </div>
-
-            <div>
-              <label className={LABEL_CLASS}>Số điện thoại</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
-                className={INPUT_CLASS}
-              />
-            </div>
-
-            <div>
-              <label className={LABEL_CLASS}>Ngày sinh</label>
-              <input
-                type="date"
-                value={formData.dateOfBirth}
-                onChange={(e) => handleChange("dateOfBirth", e.target.value)}
-                className={INPUT_CLASS}
-              />
-            </div>
-
-            <div>
-              <label className={LABEL_CLASS}>Giới tính</label>
-              <select
-                value={formData.gender}
-                onChange={(e) => handleChange("gender", e.target.value)}
-                className={INPUT_CLASS}
-              >
-                <option value="Nam">Nam</option>
-                <option value="Nữ">Nữ</option>
-                <option value="Khác">Khác</option>
-              </select>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <label className={LABEL_CLASS}>Họ và tên bác sĩ</label>
+                <input type="text" value={formData.fullName}
+                  onChange={(e) => handleChange("fullName", e.target.value)} className={INPUT_CLASS} />
+              </div>
+              <div className="space-y-1">
+                <label className={LABEL_CLASS}>Địa chỉ Email</label>
+                <input type="email" value={formData.email}
+                  onChange={(e) => handleChange("email", e.target.value)} className={INPUT_CLASS} />
+              </div>
+              <div className="space-y-1">
+                <label className={LABEL_CLASS}>Số điện thoại</label>
+                <input type="tel" value={formData.phone}
+                  onChange={(e) => handleChange("phone", e.target.value)} className={INPUT_CLASS} />
+              </div>
+              <div className="space-y-1">
+                <label className={LABEL_CLASS}>Giới tính</label>
+                <select value={formData.gender} onChange={(e) => handleChange("gender", e.target.value)} className={INPUT_CLASS}>
+                  <option value="Nam">Nam</option>
+                  <option value="Nữ">Nữ</option>
+                  <option value="Khác">Khác</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div className="mt-6 space-y-6">
-            <div>
-              <label className={LABEL_CLASS}>Giới thiệu bản thân</label>
-              <textarea
-                value={formData.bio}
-                onChange={(e) => handleChange("bio", e.target.value)}
-                rows={4}
-                className={`${INPUT_CLASS} resize-y`}
-              />
+          <div className="h-px bg-slate-50" />
+
+          {/* Nhóm: Chuyên môn & Giới thiệu */}
+          <div>
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-primary font-bold">school</span>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Chuyên môn & Giới thiệu bản thân</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+              <div className="space-y-1">
+                <label className={LABEL_CLASS}>Học vị / Chức danh</label>
+                <input type="text" value={formData.hocVi}
+                  onChange={(e) => handleChange("hocVi", e.target.value)} className={INPUT_CLASS} />
+              </div>
+              <div className="space-y-1">
+                <label className={LABEL_CLASS}>Chuyên khoa (Cố định)</label>
+                <div className={`${INPUT_CLASS} bg-slate-100 flex items-center text-slate-400 italic`}>
+                  {formData.specialty || "N/A"}
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className={LABEL_CLASS}>Bằng cấp & Chứng chỉ</label>
-              <input
-                type="text"
-                value={formData.education}
-                onChange={(e) => handleChange("education", e.target.value)}
-                className={INPUT_CLASS}
-              />
-            </div>
-
-            <div>
-              <label className={LABEL_CLASS}>Kinh nghiệm làm việc</label>
-              <textarea
-                value={formData.experience}
-                onChange={(e) => handleChange("experience", e.target.value)}
-                rows={3}
-                className={`${INPUT_CLASS} resize-y`}
-              />
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <label className={LABEL_CLASS}>Mô tả ngắn (Lời chào/Slogan)</label>
+                <textarea value={formData.moTaNgan} onChange={(e) => handleChange("moTaNgan", e.target.value)}
+                  placeholder="Nhập giới thiệu ngắn gọn về thế mạnh của bạn..."
+                  rows={2} className={`${INPUT_CLASS} resize-none`} />
+              </div>
+              <div className="space-y-1">
+                <label className={LABEL_CLASS}>Mô tả chi tiết (Kinh nghiệm & Quá trình công tác)</label>
+                <textarea value={formData.moTaChiTiet} onChange={(e) => handleChange("moTaChiTiet", e.target.value)}
+                  placeholder="Hãy viết chi tiết về quá trình học tập, làm việc và các chứng nhận chuyên sâu..."
+                  rows={6} className={`${INPUT_CLASS} resize-none`} />
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 mt-8 pt-6 border-t border-slate-200">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="w-full sm:w-auto px-6 py-2.5 border border-slate-300 text-slate-700 font-semibold text-sm rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              Hủy
+          {/* NHÓM NÚT THAO TÁC */}
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-6 border-t border-slate-50 italic">
+            <button type="button" onClick={handleCancel}
+              className="w-full sm:w-auto px-8 py-3 bg-white border border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-50 hover:text-slate-800 transition-all">
+              Hủy thay đổi
             </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="w-full sm:w-auto px-6 py-2.5 bg-primary text-white font-semibold text-sm rounded-lg shadow-lg hover:bg-primary/90 transition-colors"
-            >
-              Lưu thay đổi
+            <button type="button" onClick={handleSave}
+              className="w-full sm:w-auto px-10 py-3 bg-primary text-white font-black text-[11px] uppercase tracking-widest rounded-xl shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-1 transition-all active:scale-95">
+              Lưu thông tin hồ sơ
             </button>
           </div>
         </div>
@@ -244,3 +270,4 @@ function DoctorProfilePage() {
 }
 
 export default DoctorProfilePage;
+

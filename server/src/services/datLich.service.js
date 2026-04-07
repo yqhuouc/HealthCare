@@ -103,7 +103,14 @@ const defaultInclude = {
       chuyenKhoa: { select: { tenChuyenKhoa: true, thoiLuongKham: true } },
     },
   },
-  benhNhan: { select: { id: true, hoTen: true, soDienThoai: true } },
+  benhNhan: {
+    select: {
+      id: true,
+      hoTen: true,
+      soDienThoai: true,
+      taiKhoan: { select: { anhDaiDien: true } },
+    },
+  },
   hinhThucThanhToan: true,
   lichLamViec: { include: { khungGio: true } },
   donThuoc: { include: { chiTietDonThuoc: true } },

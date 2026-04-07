@@ -27,4 +27,13 @@ export const appointmentService = {
 
   /** Xóa lịch hẹn (soft: chuyển trạng thái hủy hoặc hard delete) */
   remove: (id) => api.delete(`/dat-lich/${id}`),
+
+  // ===== DOCTOR PORTAL =====
+
+  /** Lấy tất cả lịch hẹn của một bác sĩ (Data Ownership) */
+  getByBacSi: (bacSiId) => api.get(`/dat-lich/bac-si/${bacSiId}`),
+
+  /** Cập nhật trạng thái lịch hẹn (0=Chờ, 1=Xác nhận, 2=Đã khám, 3=Hủy) */
+  updateTrangThai: (id, trangThai) =>
+    api.put(`/dat-lich/${id}/trang-thai`, { trangThai }),
 };

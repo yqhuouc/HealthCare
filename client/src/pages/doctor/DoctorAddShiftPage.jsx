@@ -1,61 +1,99 @@
 /**
  * ============================================================
- * TRANG: Thêm ca làm việc mới (Bác sĩ)
+ * TRANG: Đăng ký Ca làm việc mới (Bác sĩ)
  * Đường dẫn: /doctor/schedule/add
  * ============================================================
- *
- * Chức năng:
- * - Calendar full-size để chọn ngày làm việc (kèm leading/trailing days)
- * - Chọn khung giờ từ danh sách TIME_SLOTS (08:00-10:00, 10:00-12:00, ...)
- * - Textarea ghi chú tùy chọn
- * - Validate: phải chọn khung giờ trước khi lưu
- * - Nút "Lưu ca làm việc" → toast thành công → quay về /doctor/schedule
- * - Breadcrumb: Lịch làm việc / Thêm ca làm việc
- *
- * State:
- * - currentMonth / currentYear: tháng/năm hiển thị trên calendar
- * - selectedDate: ngày đã chọn (số ngày 1-31)
- * - selectedSlot: khung giờ đã chọn ("08:00 - 10:00", v.v.)
- * - notes: ghi chú tùy chọn
- *
- * Helper functions:
- * - getDaysInMonth(): số ngày trong tháng
- * - getFirstDayOfMonth(): ngày đầu tiên trong tuần (0=CN)
+ * 
+ * Chức năng chính:
+ * 1. Hiển thị Calendar để bác sĩ chọn ngày trực cụ thể.
+ * 2. Lấy danh sách Khung giờ (Shift slots) từ hệ thống qua API.
+ * 3. Cho phép bác sĩ chọn một khung giờ và lưu vào lịch làm việc cá nhân.
+ * 4. Ràng buộc dữ liệu: Yêu cầu chọn đầy đủ Ngày và Giờ mới cho phép Lưu.
+ * 
+ * Luồng hoạt động:
+ * - Mount: Gọi API getAllKhungGio() để render các button giờ.
+ * - User chọn ngày trên lịch → Lưu vào state `selectedDate`.
+ * - User chọn khung giờ → Lưu vào state `selectedSlotId`.
+ * - User bấm Lưu → Gọi API createLichLamViec() → Chuyển hướng về trang Lịch trình.
  * ============================================================
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { scheduleService } from "../../services/scheduleService";
+import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
 
-/** Tên viết tắt các ngày trong tuần */
+// Mảng định nghĩa tiêu đề các thứ trong tuần
 const DAYS_OF_WEEK = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-/** Các khung giờ làm việc có thể chọn */
-const TIME_SLOTS = [
-  "08:00 - 10:00",
-  "10:00 - 12:00",
-  "13:30 - 15:30",
-  "15:30 - 17:30",
-  "18:00 - 20:00",
-];
+/** 
+ * Hàm format giờ (HH:mm) đảm bảo tính nhất quán múi giờ VN
+ */
+function formatTime(timeInput) {
+  if (!timeInput) return "";
+  if (typeof timeInput === "string" && !timeInput.includes("T") && timeInput.includes(":")) {
+    return timeInput.substring(0, 5);
+  }
+  const d = new Date(timeInput);
+  if (isNaN(d.getTime())) return timeInput;
+  d.setFullYear(2024);
+  return d.toLocaleTimeString("vi-VN", {
+    hour: "2-digit", 
+    minute: "2-digit", 
+    hour12: false, 
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+}
 
+/** 
+ * Helper: Tính số ngày của tháng
+ */
 function getDaysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
 }
 
+/** 
+ * Helper: Tính thứ của ngày đầu tiên trong tháng
+ */
 function getFirstDayOfMonth(year, month) {
   return new Date(year, month, 1).getDay();
 }
 
 function DoctorAddShiftPage() {
   const navigate = useNavigate();
-  const now = new Date();
-  const [currentMonth, setCurrentMonth] = useState(now.getMonth());
-  const [currentYear, setCurrentYear] = useState(now.getFullYear());
-  const [selectedDate, setSelectedDate] = useState(now.getDate());
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [notes, setNotes] = useState("");
+  const { user } = useAuthStore();
+  const bacSiId = user?.bacSi?.id;
 
+  // Quản lý trạng thái Calendar
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Đưa về 0h để so sánh ngày dễ hơn
+
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [selectedDate, setSelectedDate] = useState(new Date().getDate());
+  
+  // Quản lý dữ liệu Khung giờ từ API
+  const [selectedSlotId, setSelectedSlotId] = useState(null);
+  const [khungGios, setKhungGios] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  /**
+   * Effect: Tải danh sách tất cả các khung giờ mà hệ thống hỗ trợ
+   */
+  useEffect(() => {
+    const fetchKhungGio = async () => {
+      try {
+        const res = await scheduleService.getAllKhungGio();
+        setKhungGios(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        console.error("Fetch khung gio error:", err);
+        toast.error("Không thể tải danh sách khung giờ từ máy chủ");
+      }
+    };
+    fetchKhungGio();
+  }, []);
+
+  // Tính toán các thông số để render Calendar UI
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
 
@@ -64,222 +102,256 @@ function DoctorAddShiftPage() {
     currentMonth === 0 ? 11 : currentMonth - 1
   );
 
+  // Chuyển tháng
   const prevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear((y) => y - 1);
-    } else {
-      setCurrentMonth((m) => m - 1);
+    // Không cho quay về tháng trước của hiện tại
+    if (currentYear < today.getFullYear() || (currentYear === today.getFullYear() && currentMonth <= today.getMonth())) {
+      return;
     }
+    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear((y) => y - 1); }
+    else setCurrentMonth((m) => m - 1);
   };
 
   const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear((y) => y + 1);
-    } else {
-      setCurrentMonth((m) => m + 1);
-    }
+    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear((y) => y + 1); }
+    else setCurrentMonth((m) => m + 1);
   };
 
-  const monthLabel = new Date(currentYear, currentMonth).toLocaleDateString(
-    "vi-VN",
-    { month: "long", year: "numeric" }
-  );
+  const monthLabel = new Date(currentYear, currentMonth).toLocaleDateString("vi-VN", {
+    month: "long", year: "numeric",
+  });
 
+  // Tạo các ô trống (ngày của tháng cũ/mới) để Calendar cân đối
   const trailingDays = [];
   const totalCells = firstDay + daysInMonth;
   const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
-  for (let i = 1; i <= remaining; i++) {
-    trailingDays.push(i);
-  }
+  for (let i = 1; i <= remaining; i++) trailingDays.push(i);
 
   const leadingDays = [];
-  for (let i = firstDay - 1; i >= 0; i--) {
-    leadingDays.push(prevDaysInMonth - i);
-  }
+  for (let i = firstDay - 1; i >= 0; i--) leadingDays.push(prevDaysInMonth - i);
 
-  const handleSave = () => {
-    if (!selectedSlot) {
-      toast.warn("Vui lòng chọn khung giờ làm việc.");
+  /** 
+   * Kiểm tra ngày có trong quá khứ không
+   */
+  const checkIsPastDay = (day) => {
+    const dateToCheck = new Date(currentYear, currentMonth, day);
+    return dateToCheck < today;
+  };
+
+  /** 
+   * Kiểm tra giờ có trong quá khứ không (cho ngày hiện tại)
+   */
+  const checkIsPastTime = (slotTime) => {
+    const now = new Date();
+    // Chỉ kiểm tra nếu ngày được chọn là hôm nay
+    if (currentYear === now.getFullYear() && currentMonth === now.getMonth() && selectedDate === now.getDate()) {
+      const [hours, minutes] = slotTime.split(":").map(Number);
+      const slotDate = new Date();
+      slotDate.setHours(hours, minutes, 0, 0);
+      return slotDate < now;
+    }
+    return false;
+  };
+
+  /** 
+   * Xử lý Lưu ca làm việc
+   */
+  const handleSave = async () => {
+    // 1. Kiểm tra đầu vào
+    if (!selectedSlotId) {
+      toast.warn("Bạn chưa chọn khung giờ làm việc.");
       return;
     }
-    toast.success(
-      `Đã thêm ca làm việc ngày ${selectedDate}/${currentMonth + 1}/${currentYear} — ${selectedSlot}`
-    );
-    navigate("/doctor/schedule");
+
+    if (!bacSiId) {
+      toast.error("Thông tin định danh bác sĩ không hợp lệ.");
+      return;
+    }
+
+    // 2. Chẩn bị chuỗi ngày theo định dạng chuẩn SQL (YYYY-MM-DD)
+    const month = String(currentMonth + 1).padStart(2, "0");
+    const day = String(selectedDate).padStart(2, "0");
+    const ngayLamViec = `${currentYear}-${month}-${day}`;
+
+    // 3. Gọi API tạo mới
+    setSubmitting(true);
+    try {
+      await scheduleService.createLichLamViec({
+        bacSiId: Number(bacSiId),
+        khungGioId: Number(selectedSlotId),
+        ngayLamViec,
+      });
+
+      toast.success(`Đã thêm thành công ca trực ngày ${day}/${month}/${currentYear}`);
+      navigate("/doctor/schedule"); // Quay về trang danh sách
+    } catch (err) {
+      const msg = err.response?.data?.message || "Lỗi khi đăng ký ca làm việc";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="w-full mx-auto max-w-4xl">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6 text-sm">
-        <Link
-          to="/doctor/schedule"
-          className="text-slate-500 hover:text-primary transition-colors"
-        >
-          Lịch làm việc
+    <div className="w-full mx-auto max-w-4xl space-y-6">
+      {/* THANH ĐIỀU HƯỚNG (Breadcrumb) */}
+      <nav className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
+        <Link to="/doctor/schedule" className="text-slate-400 hover:text-primary transition-colors">
+          Lịch trình
         </Link>
-        <span className="text-slate-300">/</span>
-        <span className="text-slate-900 font-medium">Thêm ca làm việc</span>
-      </div>
+        <span className="material-symbols-outlined text-[10px] text-slate-300">chevron_right</span>
+        <span className="text-primary">Đăng ký ca mới</span>
+      </nav>
 
-      {/* Page title */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900">
-          Thêm ca làm việc mới
-        </h2>
-        <p className="text-slate-500 text-sm mt-1">
-          Vui lòng nhập đầy đủ thông tin để khởi tạo ca trực mới của bạn trong
-          hệ thống.
+      {/* TIÊU ĐỀ TRANG */}
+      <div className="flex flex-col gap-1">
+        <h2 className="text-2xl font-black text-slate-800">Đăng ký ca làm việc</h2>
+        <p className="text-slate-500 text-sm font-medium italic">
+          Vui lòng chọn ngày và giờ phù hợp để hệ thống cập nhật lịch khám cho bệnh nhân.
         </p>
       </div>
 
-      {/* Main card */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-6 sm:p-8 space-y-8">
-          {/* Calendar Section */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
+        <div className="p-6 sm:p-10 space-y-10">
+          
+          {/* BƯỚC 1: CHỌN NGÀY (Phần Calendar) */}
           <section className="flex flex-col items-center">
-            <label className="block text-sm font-semibold text-slate-700 mb-4">
-              Chọn ngày làm việc
-            </label>
-            <div className="border border-slate-200 rounded-lg p-4 sm:p-8 w-full max-w-2xl">
-              {/* Month nav */}
-              <div className="flex items-center justify-between mb-4 px-2">
-                <button
-                  onClick={prevMonth}
-                  className="p-1 hover:bg-slate-100 rounded transition-colors"
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-xl text-xl">calendar_month</span>
+              <label className="text-sm font-black text-slate-700 uppercase tracking-tight">1. Chọn ngày làm việc</label>
+            </div>
+            
+            <div className="border border-slate-100 bg-slate-50/30 rounded-2xl p-4 sm:p-8 w-full max-w-2xl transition-all hover:bg-white hover:border-primary/20">
+              <div className="flex items-center justify-between mb-6 px-2">
+                <button 
+                  onClick={prevMonth} 
+                  disabled={currentYear === today.getFullYear() && currentMonth === today.getMonth()}
+                  className={`p-2 rounded-xl border border-transparent transition-all ${
+                    currentYear === today.getFullYear() && currentMonth === today.getMonth()
+                      ? "text-slate-200 cursor-not-allowed"
+                      : "hover:bg-white hover:border-slate-100 text-slate-400"
+                  }`}
                 >
-                  <span className="material-symbols-outlined text-lg">
-                    chevron_left
-                  </span>
+                  <span className="material-symbols-outlined text-xl font-bold">chevron_left</span>
                 </button>
-                <span className="text-sm font-bold capitalize">
-                  {monthLabel}
-                </span>
-                <button
-                  onClick={nextMonth}
-                  className="p-1 hover:bg-slate-100 rounded transition-colors"
-                >
-                  <span className="material-symbols-outlined text-lg">
-                    chevron_right
-                  </span>
+                <span className="text-sm font-black capitalize text-slate-800 tracking-wide">{monthLabel}</span>
+                <button onClick={nextMonth} className="p-2 hover:bg-white rounded-xl border border-transparent hover:border-slate-100 transition-all text-slate-400">
+                  <span className="material-symbols-outlined text-xl font-bold">chevron_right</span>
                 </button>
               </div>
 
-              {/* Days header */}
-              <div className="grid grid-cols-7 text-center gap-y-4">
-                {DAYS_OF_WEEK.map((day) => (
-                  <span
-                    key={day}
-                    className="text-xs sm:text-base font-bold text-slate-400 uppercase py-2"
-                  >
-                    {day}
-                  </span>
+              {/* Lưới ngày */}
+              <div className="grid grid-cols-7 text-center gap-y-3">
+                {DAYS_OF_WEEK.map((d) => (
+                  <span key={d} className="text-[10px] font-black text-slate-300 uppercase py-2 tracking-widest">{d}</span>
                 ))}
-
-                {/* Leading days (prev month) */}
                 {leadingDays.map((d) => (
-                  <button
-                    key={`prev-${d}`}
-                    disabled
-                    className="text-sm sm:text-base text-slate-300 cursor-not-allowed py-2 h-10 sm:h-12"
-                  >
-                    {d}
-                  </button>
+                  <button key={`prev-${d}`} disabled className="text-sm text-slate-200 cursor-not-allowed opacity-50 py-2 h-10 sm:h-12 font-medium">{d}</button>
                 ))}
-
-                {/* Current month days */}
-                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(
-                  (day) => (
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+                  const isPast = checkIsPastDay(day);
+                  return (
                     <button
                       key={day}
+                      disabled={isPast}
                       onClick={() => setSelectedDate(day)}
-                      className={`text-sm sm:text-base rounded-full py-2 h-10 sm:h-12 transition-colors ${
-                        day === selectedDate
-                          ? "bg-primary text-white font-bold"
-                          : "hover:bg-primary/10 hover:text-primary"
+                      className={`text-sm rounded-xl py-2 h-10 sm:h-12 transition-all font-bold ${
+                        isPast
+                          ? "text-slate-200 cursor-not-allowed opacity-40"
+                          : day === selectedDate 
+                            ? "bg-primary text-white shadow-lg shadow-primary/30 scale-110" 
+                            : "text-slate-600 hover:bg-white border border-transparent hover:border-primary/20 hover:text-primary"
                       }`}
                     >
                       {day}
                     </button>
-                  )
-                )}
-
-                {/* Trailing days (next month) */}
+                  );
+                })}
                 {trailingDays.map((d) => (
-                  <button
-                    key={`next-${d}`}
-                    disabled
-                    className="text-sm sm:text-base text-slate-300 cursor-not-allowed py-2 h-10 sm:h-12"
-                  >
-                    {d}
-                  </button>
+                  <button key={`next-${d}`} disabled className="text-sm text-slate-200 cursor-not-allowed opacity-50 py-2 h-10 sm:h-12 font-medium">{d}</button>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Time Slots */}
-          <section className="flex flex-col items-center">
-            <label className="block text-sm font-semibold text-slate-700 mb-4">
-              Chọn khung giờ làm việc
-            </label>
-            <div className="flex flex-wrap gap-3 justify-center">
-              {TIME_SLOTS.map((slot) => (
-                <button
-                  key={slot}
-                  onClick={() => setSelectedSlot(slot)}
-                  className={`px-4 sm:px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    selectedSlot === slot
-                      ? "border-2 border-primary text-primary bg-primary/5 font-bold"
-                      : "border border-slate-200 bg-white hover:border-primary hover:text-primary"
-                  }`}
-                >
-                  {slot}
-                </button>
-              ))}
-            </div>
-          </section>
+          <div className="h-px bg-slate-50 w-full" />
 
-          {/* Notes */}
-          <section className="max-w-2xl mx-auto w-full">
-            <label
-              htmlFor="shift-notes"
-              className="block text-sm font-semibold text-slate-700 mb-2"
-            >
-              Ghi chú (không bắt buộc)
-            </label>
-            <textarea
-              id="shift-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Thêm lưu ý cho ca trực này..."
-              rows={4}
-              className="w-full rounded-lg border-slate-200 bg-white text-sm focus:ring-primary focus:border-primary"
-            />
+          {/* BƯỚC 2: CHỌN GIỜ (Khung giờ từ API) */}
+          <section className="flex flex-col items-center">
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-amber-500 bg-amber-50 p-2 rounded-xl text-xl">schedule</span>
+              <label className="text-sm font-black text-slate-700 uppercase tracking-tight">2. Chọn khung giờ làm việc</label>
+            </div>
+
+            {khungGios.length === 0 ? (
+              <div className="flex flex-col items-center py-4">
+                <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+                <p className="text-slate-400 text-[11px] font-bold uppercase mt-2">Đang tải dữ liệu khung giờ...</p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-4 justify-center max-w-2xl px-4">
+                {khungGios.map((slot) => {
+                  const isPast = checkIsPastTime(slot.gioBatDau);
+                  return (
+                    <button
+                      key={slot.id}
+                      disabled={isPast}
+                      onClick={() => setSelectedSlotId(slot.id)}
+                      className={`px-5 py-3 rounded-xl text-sm font-bold transition-all border-2 ${
+                        isPast
+                          ? "bg-slate-100 border-slate-100 text-slate-300 cursor-not-allowed opacity-50"
+                          : selectedSlotId === slot.id
+                            ? "border-primary text-primary bg-primary/5 shadow-inner scale-105"
+                            : "border-slate-50 bg-slate-50/50 text-slate-500 hover:border-primary/20 hover:text-primary hover:bg-white"
+                      }`}
+                    >
+                      {formatTime(slot.gioBatDau)} — {formatTime(slot.gioKetThuc)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Cảnh báo nếu chưa chọn giờ */}
+            {!selectedSlotId && (
+              <p className="text-[10px] text-amber-500 font-bold uppercase mt-4 italic tracking-tighter">
+                * Vui lòng chọn một khung giờ để tiếp tục
+              </p>
+            )}
           </section>
         </div>
 
-        {/* Footer actions */}
-        <div className="bg-slate-50 px-6 sm:px-8 py-4 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 border-t border-slate-200">
+        {/* NÚT THAO TÁC (Footer actions) */}
+        <div className="bg-slate-50/50 px-6 sm:px-10 py-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 border-t border-slate-100">
           <button
             onClick={() => navigate("/doctor/schedule")}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-slate-300 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+            className="w-full sm:w-auto px-8 py-3 rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50 hover:text-slate-800 transition-all"
           >
-            Hủy
+            Hủy bỏ
           </button>
           <button
             onClick={handleSave}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-semibold shadow-md shadow-primary/20 transition-colors flex items-center justify-center gap-2"
+            disabled={submitting || !selectedSlotId}
+            className="w-full sm:w-auto px-8 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed"
           >
-            <span className="material-symbols-outlined text-sm">save</span>
-            Lưu ca làm việc
+            {submitting ? (
+              <span className="material-symbols-outlined text-lg animate-spin font-bold">progress_activity</span>
+            ) : (
+              <span className="material-symbols-outlined text-lg font-bold">save_as</span>
+            )}
+            {submitting ? "Đang xử lý..." : "Lưu ca làm việc"}
           </button>
         </div>
+      </div>
+      
+      {/* Lưu ý nhỏ cuối trang */}
+      <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium px-2 italic">
+        <span className="material-symbols-outlined text-xs">info</span>
+        Lưu ý: Bác sĩ chỉ nên đăng ký ca trực khi chắc chắn về thời gian làm việc để tránh ảnh hưởng đến bệnh nhân.
       </div>
     </div>
   );
 }
 
 export default DoctorAddShiftPage;
+

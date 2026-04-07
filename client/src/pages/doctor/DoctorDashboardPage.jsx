@@ -1,281 +1,362 @@
 /**
  * ============================================================
- * TRANG: Dashboard bác sĩ
+ * TRANG: Dashboard Bác sĩ (Tổng quan)
  * Đường dẫn: /doctor/dashboard
  * ============================================================
- *
- * Chức năng:
- * - Hiển thị 4 card thống kê nhanh: lịch khám hôm nay, đã hoàn thành, chờ xác nhận, tổng BN
- * - Bảng danh sách bệnh nhân hôm nay (lọc theo ngày TODAY)
- * - Mỗi dòng: giờ khám, tên BN, SĐT, lý do, trạng thái, nút hành động
- * - Nút "Xác nhận" cho lịch Pending → chuyển sang Confirmed
- * - Nút "Hoàn thành" cho lịch Confirmed → chuyển sang Completed
- * - Nút "Chi tiết" → chuyển sang DoctorAppointmentDetailPage
- * - Responsive: mobile hiển thị card, desktop hiển thị table
- *
- * State:
- * - appointments: mảng lịch hẹn hôm nay (có thể thay đổi trạng thái inline)
- *
- * Dữ liệu: DOCTOR_APPOINTMENTS, DASHBOARD_STATS, STATUS_CONFIG, APPOINTMENT_STATUS
- *           từ mockDoctorData.js
+ * 
+ * Chức năng chính:
+ * 1. Hiển thị các chỉ số thống kê nhanh (Lịch hôm nay, Hoàn thành, Chờ xác nhận, Tổng BN).
+ * 2. Liệt kê danh sách bệnh nhân có lịch hẹn trong ngày hôm nay.
+ * 3. Thao tác nhanh: Xác nhận hoặc Hoàn thành lịch hẹn trực tiếp từ bảng.
+ * 4. Đồng bộ dữ liệu realtime khi bác sĩ cập nhật trạng thái.
+ * 
+ * Biến môi trường: VITE_API_URL dùng để gọi API backend.
+ * State quản lý: appointments (danh sách), loading (trạng thái tải).
  * ============================================================
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  DOCTOR_APPOINTMENTS,
-  DASHBOARD_STATS,
-  STATUS_CONFIG,
-  APPOINTMENT_STATUS,
-} from "../../data/mockDoctorData";
+import { appointmentService } from "../../services/appointmentService";
+import useAuthStore from "../../stores/useAuthStore";
+import { toast } from "react-toastify";
 
-/** Ngày hiện tại dùng để lọc lịch hẹn — sẽ thay bằng Date.now() khi có backend */
-const TODAY = "2026-03-12";
+/** 
+ * Cấu hình hiển thị cho các trạng thái lịch hẹn
+ * Dùng để render Badge (nhãn) với màu sắc tương ứng.
+ */
+const STATUS_CONFIG = {
+  0: { label: "Chờ xác nhận", color: "bg-amber-100 text-amber-600" },
+  1: { label: "Đã xác nhận", color: "bg-blue-100 text-blue-600" },
+  2: { label: "Hoàn thành", color: "bg-emerald-100 text-emerald-600" },
+  3: { label: "Đã hủy", color: "bg-rose-100 text-rose-600" },
+};
 
-/** Cấu hình 4 card thống kê nhanh trên đầu trang */
-const STATS_CARDS = [
-  {
-    label: "Lịch khám hôm nay",
-    icon: "event_upcoming",
-    value: DASHBOARD_STATS.todayAppointments,
-    iconBg: "bg-primary/10",
-    iconColor: "text-primary",
-  },
-  {
-    label: "Lịch đã hoàn thành",
-    icon: "check_circle",
-    value: DASHBOARD_STATS.completedThisWeek,
-    iconBg: "bg-green-500/10",
-    iconColor: "text-green-600",
-  },
-  {
-    label: "Đang chờ xác nhận",
-    icon: "pending",
-    value: DASHBOARD_STATS.pendingAppointments,
-    iconBg: "bg-amber-500/10",
-    iconColor: "text-amber-600",
-  },
-  {
-    label: "Tổng bệnh nhân",
-    icon: "group",
-    value: DASHBOARD_STATS.totalPatients.toLocaleString("vi-VN"),
-    iconBg: "bg-purple-500/10",
-    iconColor: "text-purple-600",
-  },
-];
+/** 
+ * Hàm format giờ hiển thị từ chuỗi ISO hoặc định dạng HH:mm:ss của Backend.
+ * @param {string} timeInput - Chuỗi thời gian đầu vào
+ * @returns {string} - Định dạng HH:mm (VD: 08:30)
+ */
+function formatTime(timeInput) {
+  if (!timeInput) return "";
+  // Nếu là định dạng HH:mm:ss thuần (không có T của ISO)
+  if (typeof timeInput === "string" && !timeInput.includes("T") && timeInput.includes(":")) {
+    return timeInput.substring(0, 5);
+  }
+  const d = new Date(timeInput);
+  if (isNaN(d.getTime())) return timeInput;
+  d.setFullYear(2024); // Ép năm cố định để tránh lỗi lệch múi giờ lịch sử
+  return d.toLocaleTimeString("vi-VN", {
+    hour: "2-digit", 
+    minute: "2-digit", 
+    hour12: false, 
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+}
 
 function DoctorDashboardPage() {
-  const [appointments, setAppointments] = useState(
-    DOCTOR_APPOINTMENTS.filter((a) => a.date === TODAY)
-  );
+  // Lấy User hiện tại từ Auth Store (Zustand)
+  const { user } = useAuthStore();
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleConfirm = (id) => {
-    setAppointments((prev) =>
-      prev.map((a) =>
-        a.id === id ? { ...a, status: APPOINTMENT_STATUS.CONFIRMED } : a
-      )
-    );
+  // ID bác sĩ dùng để lọc dữ liệu từ API
+  const bacSiId = user?.bacSi?.id;
+
+  /**
+   * Effect: Tải toàn bộ danh sách lịch hẹn của Bác sĩ này
+   */
+  useEffect(() => {
+    if (!bacSiId) return;
+    const fetchData = async () => {
+      try {
+        const res = await appointmentService.getByBacSi(bacSiId);
+        setAppointments(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+        toast.error("Không thể tải dữ liệu dashboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [bacSiId]);
+
+  /** 
+   * Xử lý lọc dữ liệu ngay tại Client
+   */
+  // Lấy chuỗi ngày hôm nay theo định dạng YYYY-MM-DD (múi giờ VN)
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
+  
+  // Lọc lấy các lịch hẹn của hôm nay
+  const todayAppointments = appointments.filter((a) => {
+    const d = new Date(a.ngayDat);
+    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }) === todayStr;
+  });
+
+  /** 
+   * Tính toán các con số thống kê cho 4 Card ở đầu trang
+   */
+  const stats = [
+    {
+      label: "Lịch hôm nay", 
+      icon: "event_upcoming",
+      value: todayAppointments.filter((a) => a.trangThai !== 3).length, // Không tính lịch đã hủy
+      iconBg: "bg-primary/10", 
+      iconColor: "text-primary",
+    },
+    {
+      label: "Đã khám xong", 
+      icon: "check_circle",
+      value: todayAppointments.filter((a) => a.trangThai === 2).length,
+      iconBg: "bg-green-500/10", 
+      iconColor: "text-green-600",
+    },
+    {
+      label: "Chờ xác nhận", 
+      icon: "pending",
+      value: todayAppointments.filter((a) => a.trangThai === 0).length,
+      iconBg: "bg-amber-500/10", 
+      iconColor: "text-amber-600",
+    },
+    {
+      label: "Tổng bệnh nhân", 
+      icon: "group",
+      value: appointments.filter((a) => a.trangThai !== 3).length, // Tổng lịch (trừ hủy)
+      iconBg: "bg-purple-500/10", 
+      iconColor: "text-purple-600",
+    },
+  ];
+
+  /** 
+   * Hàm gọi API cập nhật trạng thái lịch hẹn (Xác nhận/Hoàn thành...)
+   * @param {number} id - ID lịch hẹn
+   * @param {number} newStatus - Trạng thái mới (0, 1, 2, 3)
+   */
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      await appointmentService.updateTrangThai(id, newStatus);
+      // Cập nhật lại state cục bộ để UI thay đổi ngay lập tức
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, trangThai: newStatus } : a))
+      );
+      const labels = { 1: "Đã xác nhận", 2: "Đã hoàn thành", 3: "Đã hủy" };
+      toast.success(labels[newStatus] || "Cập nhật thành công");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Lỗi cập nhật trạng thái");
+    }
   };
 
-  const handleComplete = (id) => {
-    setAppointments((prev) =>
-      prev.map((a) =>
-        a.id === id ? { ...a, status: APPOINTMENT_STATUS.COMPLETED } : a
-      )
-    );
-  };
-
+  /** 
+   * Lấy chữ cái đầu của tên để hiển thị Avatar mặc định nếu ko có ảnh
+   */
   const getInitials = (name) => {
+    if (!name) return "?";
     const parts = name.split(" ");
     return parts.length >= 2
       ? parts[parts.length - 2][0] + parts[parts.length - 1][0]
       : parts[0][0];
   };
 
-  const renderStatusBadge = (status) => {
-    const config = STATUS_CONFIG[status];
+  /** 
+   * Render nhãn trạng thái (Badge) + ký hiệu đã kê đơn
+   */
+  const renderStatusBadge = (appointment) => {
+    const { trangThai, donThuoc } = appointment;
+    const config = STATUS_CONFIG[trangThai];
     if (!config) return null;
     return (
-      <span
-        className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase ${config.color}`}
-      >
-        {config.label}
-      </span>
-    );
-  };
-
-  const renderActions = (appointment) => {
-    const { id, status } = appointment;
-    return (
-      <div className="flex items-center gap-2">
-        {status === APPOINTMENT_STATUS.PENDING && (
-          <button
-            onClick={() => handleConfirm(id)}
-            className="min-w-[100px] px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:opacity-90 transition-colors"
-          >
-            Xác nhận
-          </button>
+      <div className="flex flex-col items-start gap-1">
+        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase shadow-sm ${config.color}`}>
+          {config.label}
+        </span>
+        {donThuoc && (
+          <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-tighter">
+            <span className="material-symbols-outlined text-[10px]">pill</span>
+            Đã có đơn thuốc
+          </span>
         )}
-        {status === APPOINTMENT_STATUS.CONFIRMED && (
-          <button
-            onClick={() => handleComplete(id)}
-            className="min-w-[100px] px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:opacity-90 transition-colors"
-          >
-            Hoàn thành
-          </button>
-        )}
-        <Link
-          to={`/doctor/appointments/${id}`}
-          className="min-w-[80px] inline-block text-center px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors"
-        >
-          Chi tiết
-        </Link>
       </div>
     );
   };
 
+  /** 
+   * Render các nút thao tác tùy theo trạng thái lịch
+   */
+  const renderActions = (appointment) => {
+    const { id, trangThai } = appointment;
+    return (
+      <div className="flex items-center gap-2">
+        {/* Nút Xác nhận cho lịch đang "Chờ" */}
+        {trangThai === 0 && (
+          <button
+            onClick={() => handleUpdateStatus(id, 1)}
+            className="group size-8 flex items-center justify-center bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
+            title="Xác nhận lịch hẹn"
+          >
+            <span className="material-symbols-outlined text-lg font-bold">check</span>
+          </button>
+        )}
+        {/* Nút Hoàn thành cho lịch "Đã xác nhận" */}
+        {trangThai === 1 && (
+          <button
+            onClick={() => handleUpdateStatus(id, 2)}
+            className="group size-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-all shadow-sm shadow-emerald-600/20"
+            title="Đánh dấu hoàn thành"
+          >
+            <span className="material-symbols-outlined text-lg font-bold">verified</span>
+          </button>
+        )}
+        
+        {/* Link Thao tác chính: Kết quả hoặc Quản lý */}
+        {trangThai === 2 ? (
+          <Link
+            to={`/doctor/appointments/${id}`}
+            className="px-4 py-1.5 bg-primary/5 text-primary text-[10px] font-black uppercase rounded-lg border border-primary/20 hover:bg-primary hover:text-white transition-all tracking-wider"
+          >
+            Kết quả
+          </Link>
+        ) : (
+          <Link
+            to="/doctor/appointments"
+            className="px-4 py-1.5 bg-slate-100 text-slate-500 text-[10px] font-black uppercase rounded-lg border border-slate-200 hover:bg-slate-200 hover:text-slate-700 transition-all tracking-wider"
+          >
+            Quản lý
+          </Link>
+        )}
+      </div>
+    );
+  };
+
+  // Màn hình loading khi đang fetch dữ liệu
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Quick Stats */}
+      {/* 1. Phần Thống kê nhanh (Stats Cards) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        {STATS_CARDS.map((card) => (
+        {stats.map((card) => (
           <div
             key={card.label}
-            className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3 sm:gap-4"
+            className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3 sm:gap-4 transition-all hover:shadow-md"
           >
-            <div
-              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${card.iconBg}`}
-            >
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${card.iconBg}`}>
               <span className={`material-symbols-outlined text-xl sm:text-2xl ${card.iconColor}`}>
                 {card.icon}
               </span>
             </div>
             <div className="min-w-0">
-              <p className="text-xl sm:text-2xl font-bold text-slate-900">{card.value}</p>
-              <p className="text-xs sm:text-sm text-slate-500 truncate">{card.label}</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-900">{card.value}</p>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium truncate">{card.label}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+      {/* 2. Bảng Danh sách lịch khám hôm nay */}
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Danh sách bệnh nhân hôm nay
+            Bệnh nhân đặt câu hỏi & khám ngày hôm nay
           </h2>
-          <Link
-            to="/doctor/appointments"
-            className="text-sm text-primary font-semibold hover:underline"
-          >
-            Xem tất cả
+          <Link to="/doctor/appointments" className="text-sm text-primary font-bold hover:underline">
+            Xem toàn bộ
           </Link>
         </div>
 
-        {/* Mobile card view */}
-        <div className="block md:hidden divide-y divide-slate-100">
-          {appointments.map((appt) => (
-            <div key={appt.id} className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
-                    {getInitials(appt.patientName)}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{appt.patientName}</p>
-                    <p className="text-xs text-slate-500">{appt.patientAge} tuổi &middot; {appt.patientGender}</p>
-                  </div>
-                </div>
-                {renderStatusBadge(appt.status)}
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm text-primary">schedule</span>
-                  {appt.time}
-                </span>
-                <span>{appt.patientPhone}</span>
-              </div>
-              <p className="text-xs text-slate-500 truncate">{appt.reason}</p>
-              <div>{renderActions(appt)}</div>
+        {todayAppointments.length === 0 ? (
+          <div className="px-5 py-20 text-center flex flex-col items-center">
+            <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-4xl text-slate-300">event_busy</span>
             </div>
-          ))}
-        </div>
-
-        {/* Desktop table view */}
-        <div className="overflow-x-auto hidden md:block">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-6 py-3 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                  Giờ khám
-                </th>
-                <th className="px-6 py-3 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                  Bệnh nhân
-                </th>
-                <th className="px-6 py-3 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                  Số điện thoại
-                </th>
-                <th className="px-6 py-3 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                  Lý do khám
-                </th>
-                <th className="px-6 py-3 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                  Trạng thái
-                </th>
-                <th className="px-6 py-3 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {appointments.map((appt) => (
-                <tr
-                  key={appt.id}
-                  className="hover:bg-slate-50 transition-colors"
-                >
-                  <td className="px-6 py-4 text-sm text-primary font-semibold whitespace-nowrap">
-                    {appt.time}
-                  </td>
-                  <td className="px-6 py-4">
+            <p className="text-slate-500 font-medium">Hôm nay bạn chưa có lịch khám nào.</p>
+            <p className="text-slate-400 text-xs mt-1">Lịch hẹn mới sẽ được hiển thị tại đây.</p>
+          </div>
+        ) : (
+          <>
+            {/* Chế độ hiển thị Mobile (Card dọc) */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {todayAppointments.map((appt) => (
+                <div key={appt.id} className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
-                        {getInitials(appt.patientName)}
+                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
+                        {getInitials(appt.benhNhan?.hoTen)}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {appt.patientName}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {appt.patientAge} tuổi &middot; {appt.patientGender}
-                        </p>
+                        <p className="text-sm font-semibold text-slate-900">{appt.benhNhan?.hoTen || "—"}</p>
+                        <p className="text-xs text-slate-500">{appt.benhNhan?.soDienThoai}</p>
                       </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {appt.patientPhone}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600 max-w-[200px] truncate">
-                    {appt.reason}
-                  </td>
-                  <td className="px-6 py-4">
-                    {renderStatusBadge(appt.status)}
-                  </td>
-                  <td className="px-6 py-4">{renderActions(appt)}</td>
-                </tr>
+                    {renderStatusBadge(appt)}
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <span className="material-symbols-outlined text-sm text-primary">schedule</span>
+                    Giờ khám: <span className="font-bold">{formatTime(appt.gioBatDau)}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 truncate italic">Lý do: {appt.lyDoKham}</p>
+                  <div className="pt-1">{renderActions(appt)}</div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
 
-        {/* Pagination */}
-        <div className="px-4 sm:px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-          <p className="text-xs sm:text-sm text-slate-500">
-            Hiển thị {appointments.length} / {appointments.length} lịch hẹn
+            {/* Chế độ hiển thị Desktop (Bảng ngang) */}
+            <div className="overflow-x-auto hidden md:block">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50/80">
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Giờ khám</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Bệnh nhân</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Số điện thoại</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Lý do khám</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Trạng thái</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 italic md:not-italic">
+                  {todayAppointments.map((appt) => (
+                    <tr key={appt.id} className="hover:bg-slate-50 transition-colors group">
+                      <td className="px-6 py-4 text-sm text-primary font-bold whitespace-nowrap">
+                        {formatTime(appt.gioBatDau)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                            {getInitials(appt.benhNhan?.hoTen)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{appt.benhNhan?.hoTen || "—"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 font-medium whitespace-nowrap">
+                        {appt.benhNhan?.soDienThoai || "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-500 max-w-[200px] truncate italic">
+                        {appt.lyDoKham || "—"}
+                      </td>
+                      <td className="px-6 py-4">
+                        {renderStatusBadge(appt.trangThai)}
+                      </td>
+                      <td className="px-6 py-4">{renderActions(appt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* Footer bảng */}
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-tighter">
+            Hôm nay bạn có {todayAppointments.length} ca trực cần xử lý
           </p>
-          <div className="flex items-center gap-1">
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-semibold bg-primary text-white">
-              1
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -283,3 +364,4 @@ function DoctorDashboardPage() {
 }
 
 export default DoctorDashboardPage;
+

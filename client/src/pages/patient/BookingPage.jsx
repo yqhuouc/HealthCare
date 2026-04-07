@@ -291,7 +291,13 @@ export default function BookingPage() {
             ) : (
               <div className="grid grid-cols-4 gap-3">
                 {slots.map((slot, idx) => {
-                  const isBooked = slot.daDat || !slot.conTrong;
+                  const now = new Date();
+                  const [h, m] = slot.gioBatDau.split(":").map(Number);
+                  const slotDate = new Date(selectedDate);
+                  slotDate.setHours(h, m, 0, 0);
+
+                  const isPast = slotDate < now;
+                  const isBooked = slot.daDat || !slot.conTrong || isPast;
                   const isSelected = selectedSlot?.gioBatDau === slot.gioBatDau;
 
                   return (
@@ -301,14 +307,20 @@ export default function BookingPage() {
                       disabled={isBooked}
                       className={`py-3 rounded-lg border text-sm font-medium transition ${
                         isBooked
-                          ? "bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through"
+                          ? "bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed"
                           : isSelected
                           ? "bg-primary text-white border-primary cursor-pointer"
                           : "bg-white border-slate-200 text-slate-600 hover:border-primary hover:text-primary cursor-pointer"
                       }`}
                     >
-                      {slot.gioBatDau}
-                      {slot.isOvertime && <span className="text-xs ml-1 opacity-70">⏰</span>}
+                      <span className={isPast ? "line-through opacity-50" : ""}>{slot.gioBatDau}</span>
+                      {isPast ? (
+                        <span className="text-[10px] block mt-1 font-bold text-slate-400">Hết hạn</span>
+                      ) : isBooked ? (
+                        <span className="text-[10px] block mt-1 font-bold text-red-400">Đã đặt</span>
+                      ) : (
+                        <span className="text-[10px] block mt-1 font-bold text-emerald-500">Còn trống</span>
+                      )}
                     </button>
                   );
                 })}

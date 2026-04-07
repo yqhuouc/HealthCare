@@ -174,7 +174,11 @@ const getMe = async (userId) => {
       anhDaiDien: true,
       ngayTao: true,
       trangThaiTaiKhoan: true,
-      bacSi: true,
+      bacSi: {
+        include: {
+          chuyenKhoa: { select: { id: true, tenChuyenKhoa: true, thoiLuongKham: true } },
+        },
+      },
       benhNhan: true,
     },
   });
