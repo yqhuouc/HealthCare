@@ -2,6 +2,9 @@ import { useState } from "react";
 import { NavLink, useNavigate, Outlet, useLocation } from "react-router-dom";
 import useAuthStore from "../../stores/useAuthStore";
 
+/**
+ * Danh sách các mục điều hướng ở sidebar cho Bác sĩ
+ */
 const NAV_ITEMS = [
   { to: "/doctor/dashboard", icon: "dashboard", label: "Tổng quan" },
   { to: "/doctor/schedule", icon: "calendar_month", label: "Lịch làm việc" },
@@ -14,30 +17,46 @@ const NAV_ITEMS = [
   { to: "/doctor/profile", icon: "person", label: "Hồ sơ cá nhân" },
 ];
 
+/**
+ * Layout chính cho khu vực Bác sĩ (Doctor Portal)
+ * Bao gồm Sidebar, Header và vùng nội dung chính (Outlet)
+ */
 function DoctorLayout() {
+  // Quản lý trạng thái đóng/mở sidebar trên thiết bị di động
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Lấy thông tin người dùng và hàm đăng xuất từ store (Zustand)
   const { user, logout } = useAuthStore();
 
-  // Lấy thông tin bác sĩ từ auth store
+  // Lấy thông tin chi tiết bác sĩ từ đối tượng user
   const doctor = user?.bacSi;
   const doctorName = doctor
     ? `${doctor.hocViChucDanh || ""} ${doctor.tenBacSi}`.trim()
     : user?.fullName || "Bác sĩ";
+  
+  // Tên chuyên khoa của bác sĩ
   const specialty = doctor?.chuyenKhoa?.tenChuyenKhoa || "Chuyên khoa";
 
+  /**
+   * Hàm xử lý URL ảnh đại diện, kiểm tra xem là URL tuyệt đối hay tương đối
+   */
   const getAvatarUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
     return `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${url}`;
   };
 
+  // Xác định URL ảnh đại diện cuối cùng (ưu tiên ảnh user -> ảnh bác sĩ -> ảnh mặc định theo tên)
   const avatarUrl =
     getAvatarUrl(user?.anhDaiDien) ||
     getAvatarUrl(doctor?.anhDaiDien) ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(doctorName)}&size=128&background=1f89e5&color=fff`;
 
+  /**
+   * Cấu hình tiêu đề và mô tả cho từng trang dựa trên đường dẫn (URL)
+   */
   const PAGE_TITLES = {
     "/doctor/dashboard": {
       title: "Dashboard Bác sĩ",
@@ -70,11 +89,15 @@ function DoctorLayout() {
     },
   };
 
+  /**
+   * Xử lý đăng xuất: Gọi hàm logout từ store và điều hướng về trang login
+   */
   const handleLogout = () => {
     logout();
     navigate("/doctor/login");
   };
 
+  // Lấy đường dẫn cơ sở để xác định tiêu đề trang (ví dụ: /doctor/schedule/add -> /doctor/schedule)
   const basePath = "/" + location.pathname.split("/").slice(1, 3).join("/");
   const pageInfo = PAGE_TITLES[basePath] || {
     title: "Doctor Portal",
@@ -83,6 +106,7 @@ function DoctorLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
+      {/* Lớp phủ mờ khi mở sidebar trên Mobile */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-30 lg:hidden"
@@ -90,7 +114,7 @@ function DoctorLayout() {
         />
       )}
 
-      {/* Sidebar */}
+      {/* --- Sidebar Sidebar --- */}
       <aside
         className={`
           fixed lg:relative inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200
@@ -98,7 +122,7 @@ function DoctorLayout() {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
-        {/* Logo */}
+        {/* Phần Logo ứng dụng */}
         <div className="p-6 flex items-center gap-3">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20">
             <span className="material-symbols-outlined text-2xl">
@@ -115,7 +139,7 @@ function DoctorLayout() {
           </div>
         </div>
 
-        {/* Doctor info */}
+        {/* Thông tin bác sĩ tóm tắt ở sidebar */}
         <div className="px-4 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3 p-2">
             <div
@@ -133,7 +157,7 @@ function DoctorLayout() {
           </div>
         </div>
 
-        {/* Nav links */}
+        {/* Danh sách các link điều hướng */}
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {NAV_ITEMS.map(({ to, icon, label }) => (
             <NavLink
@@ -156,7 +180,7 @@ function DoctorLayout() {
           ))}
         </nav>
 
-        {/* Logout */}
+        {/* Nút Đăng xuất ở cuối sidebar */}
         <div className="p-4 border-t border-slate-100">
           <button
             onClick={handleLogout}
@@ -170,17 +194,19 @@ function DoctorLayout() {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* --- Khu vực nội dung chính --- */}
       <main className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* Header */}
+        {/* Header phía trên */}
         <header className="h-20 bg-white border-b border-slate-200 px-4 lg:px-8 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
+            {/* Nút mở menu cho Mobile */}
             <button
               className="lg:hidden p-2 -ml-2 text-slate-600 hover:text-slate-900"
               onClick={() => setSidebarOpen(true)}
             >
               <span className="material-symbols-outlined">menu</span>
             </button>
+            {/* Tiêu đề trang hiện tại */}
             <div className="min-w-0">
               <h2 className="text-lg sm:text-2xl font-black tracking-tight text-slate-900 truncate">
                 {pageInfo.title}
@@ -191,6 +217,7 @@ function DoctorLayout() {
             </div>
           </div>
 
+          {/* Thông tin bác sĩ ở góc phải Header (chỉ hiện trên màn hình lớn) */}
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-3">
               <div className="flex flex-col items-end">
@@ -205,7 +232,7 @@ function DoctorLayout() {
           </div>
         </header>
 
-        {/* Page content */}
+        {/* Nội dung thay đổi của từng trang con */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-8">
           <Outlet />
         </div>

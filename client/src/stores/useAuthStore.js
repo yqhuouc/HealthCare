@@ -15,7 +15,7 @@ const useAuthStore = create((set) => ({
   isAuthenticated: false,
   isLoading: true, // true khi đang kiểm tra session lúc app khởi động
 
-  /** 
+  /**
    * Hàm helper rút trích thông tin hoTen/fullName dựa trên vaiTro
    * Giúp đồng bộ dữ liệu ngay lập tức sau khi login mà không cần F5.
    */
@@ -49,19 +49,22 @@ const useAuthStore = create((set) => ({
   },
 
   /**
-   * Đăng nhập: gọi API → server set cookie → lưu user vào store.
+   * Đăng nhập: gọi API → server set cookie → gọi fetchUser để lấy profile đầy đủ → lưu user vào store.
    * @param {{ email: string, password: string }} credentials
-   * @returns {object} user data từ server
+   * @returns {object} user data đầy đủ (sau khi đã fetch profile)
    */
   login: async (credentials) => {
-    const { processUserData } = useAuthStore.getState();
-    const res = await authService.login(credentials);
+    // 1. Gọi login API để xác thực và nhận cookie
+    await authService.login(credentials);
+
+    // 2. Ngay sau khi login thành công (server đã set cookie),
+    // Gọi fetchUser để lấy đầy đủ thông tin (bacSi, chuyên khoa...)
+    // Việc này giúp đồng bộ dữ liệu ngay lập tức mà không cần F5.
+    const { fetchUser } = useAuthStore.getState();
+    await fetchUser();
     
-    // Xử lý dữ liệu thô từ server thành định dạng store cần
-    const user = processUserData(res.data.user);
-    
-    set({ user, isAuthenticated: true });
-    return user;
+    // Trả về user mới nhất từ store
+    return useAuthStore.getState().user;
   },
 
   /**
@@ -79,7 +82,8 @@ const useAuthStore = create((set) => ({
   /**
    * Cập nhật thông tin user trong store (sau khi sửa profile).
    */
-  setUser: (user) => set({ user: { ...user, fullName: user.hoTen || user.fullName } }),
+  setUser: (user) =>
+    set({ user: { ...user, fullName: user.hoTen || user.fullName } }),
 }));
 
 export default useAuthStore;
