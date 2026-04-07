@@ -16,12 +16,14 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doctorService } from "../../services/doctorService";
+import useAuthStore from "../../stores/useAuthStore";
 
 /** Hàm format giá tiền sang dạng VND: 150000 → "150.000đ" */
 const formatPrice = (price) => Number(price).toLocaleString("vi-VN") + "đ";
 
 export default function DoctorDetailPage() {
   const { id } = useParams();
+  const { user } = useAuthStore();
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -159,15 +161,23 @@ export default function DoctorDetailPage() {
                 </p>
               )}
 
-              <Link
-                to={`/booking/${doctor.id}`}
-                className="inline-flex items-center gap-2 mt-6 px-8 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition"
-              >
-                <span className="material-symbols-outlined text-xl">
-                  calendar_month
-                </span>
-                Đặt lịch khám
-              </Link>
+              {/* Nút đặt lịch: Ẩn nếu là Bác sĩ/Admin */}
+              {(!user || user.vaiTro === "benh_nhan") ? (
+                <Link
+                  to={`/booking/${doctor.id}`}
+                  className="inline-flex items-center gap-2 mt-6 px-8 py-3 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary/90 transition shadow-lg shadow-primary/20 hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <span className="material-symbols-outlined text-xl">
+                    calendar_month
+                  </span>
+                  Đặt lịch khám ngay
+                </Link>
+              ) : (
+                <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 inline-flex items-center gap-3 text-slate-400">
+                  <span className="material-symbols-outlined">info</span>
+                  <p className="text-[10px] font-black uppercase tracking-tight">Tài khoản nhân viên không thể đặt lịch khám</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -107,43 +107,47 @@ function Header() {
 
                 {/* Dropdown menu tài khoản */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-lg shadow-lg border border-slate-100 py-2 z-50 ">
-                    <Link
-                      to="/appointments"
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition"
-                    >
-                      <span className="material-symbols-outlined text-lg text-slate-400">
-                        calendar_month
-                      </span>
-                      Lịch sử đặt khám
-                    </Link>
-                    <Link
-                      to="/profile"
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition"
-                    >
-                      <span className="material-symbols-outlined text-lg text-slate-400">
-                        person
-                      </span>
-                      Hồ sơ cá nhân
-                    </Link>
-                    <div className="border-t border-slate-100 my-1" />
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-100 py-2.5 z-50 overflow-hidden animate-in fade-in zoom-in duration-200">
+                    
+                    {/* Mục BỆNH NHÂN */}
+                    {user?.vaiTro === "benh_nhan" && (
+                      <>
+                        <Link to="/appointments" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary transition-all">
+                          <span className="material-symbols-outlined text-xl text-slate-400">calendar_month</span>
+                          Lịch sử đặt khám
+                        </Link>
+                        <Link to="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary transition-all">
+                          <span className="material-symbols-outlined text-xl text-slate-400">person</span>
+                          Hồ sơ cá nhân
+                        </Link>
+                      </>
+                    )}
+
+                    {/* Mục BÁC SĨ / ADMIN (Dẫn về trang quản lý) */}
+                    {(user?.vaiTro === "bac_si" || user?.vaiTro === "admin") && (
+                      <Link 
+                        to={user?.vaiTro === "bac_si" ? "/doctor/dashboard" : "/admin/dashboard"} 
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/5 transition-all"
+                      >
+                        <span className="material-symbols-outlined text-xl">dashboard</span>
+                        Bảng điều khiển
+                      </Link>
+                    )}
+
+                    <div className="border-t border-slate-50 my-2" />
                     <button
                       onClick={handleLogout}
                       disabled={isLoggingOut}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-rose-500 hover:bg-rose-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       {isLoggingOut ? (
                         <>
-                          <span className="material-symbols-outlined text-lg animate-spin">
-                            progress_activity
-                          </span>
+                          <span className="material-symbols-outlined text-xl animate-spin">progress_activity</span>
                           Đang đăng xuất...
                         </>
                       ) : (
                         <>
-                          <span className="material-symbols-outlined text-lg">
-                            logout
-                          </span>
+                          <span className="material-symbols-outlined text-xl">logout</span>
                           Đăng xuất
                         </>
                       )}
@@ -200,18 +204,27 @@ function Header() {
 
               {isAuthenticated ? (
                 <>
-                  <Link
-                    to="/appointments"
-                    className="px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    Lịch sử đặt khám
-                  </Link>
-                  <Link
-                    to="/profile"
-                    className="px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    Hồ sơ cá nhân
-                  </Link>
+                  {/* Mục BỆNH NHÂN */}
+                  {user?.vaiTro === "benh_nhan" && (
+                    <>
+                      <Link to="/appointments" className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-primary/5 hover:text-primary transition-all">
+                        Lịch sử đặt khám
+                      </Link>
+                      <Link to="/profile" className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-primary/5 hover:text-primary transition-all">
+                        Hồ sơ cá nhân
+                      </Link>
+                    </>
+                  )}
+
+                  {/* Mục BÁC SĨ / ADMIN */}
+                  {(user?.vaiTro === "bac_si" || user?.vaiTro === "admin") && (
+                    <Link 
+                      to={user?.vaiTro === "bac_si" ? "/doctor/dashboard" : "/admin/dashboard"} 
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-primary bg-primary/5 transition-all"
+                    >
+                      Bảng điều khiển
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     disabled={isLoggingOut}
