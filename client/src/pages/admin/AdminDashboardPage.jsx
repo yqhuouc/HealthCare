@@ -111,12 +111,12 @@ function AdminDashboardPage() {
       badge: "-1%", badgeGreen: false,
     },
     {
-      label: "Lịch hôm nay (Tạm tính)",
-      value: stats.tongChuyenKhoa, // Hiển thị tạm thông tin khác
-      icon: "event_available",
+      label: "Tổng chuyên khoa",
+      value: stats.tongChuyenKhoa,
+      icon: "domain",
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600",
-      badge: "Mới", badgeGreen: true,
+      badge: "Hoạt động", badgeGreen: true,
     },
   ];
 
@@ -160,40 +160,55 @@ function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Thống kê số lịch khám theo tháng
-          </h2>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              Doanh thu & Toàn hệ thống
+            </h2>
+            <p className="text-xs text-slate-500">Thống kê doanh thu kết hợp (Phí khám + Tiền thuốc) theo tháng</p>
+          </div>
           <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="text-sm bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/50 focus:border-primary"
+            className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none"
           >
             {[2023, 2024, 2025, 2026].map((y) => (
               <option key={y} value={y}>
-                {y}
+                Năm {y}
               </option>
             ))}
           </select>
         </div>
-        <div className="p-4 sm:p-6">
-          <div className="flex items-end justify-between gap-2 sm:gap-4 h-40">
-            {chartData.map((bar) => (
+        <div className="p-6">
+          <div className="flex items-end justify-between gap-2 sm:gap-4 h-56">
+            {chartData.length > 0 ? chartData.map((bar) => (
               <div
                 key={bar.month}
-                className="flex-1 flex flex-col items-center gap-2 group"
-                title={`Doanh thu: ${Number(bar.rawTong).toLocaleString("vi-VN")}đ`}
+                className="flex-1 flex flex-col items-center gap-3 group relative"
               >
+                {/* Custom Tooltip */}
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-10 whitespace-nowrap">
+                  {Number(bar.rawTong).toLocaleString("vi-VN")}đ
+                </div>
+                
                 <div
-                  className="w-full max-w-10 bg-primary rounded-t transition-opacity hover:opacity-80"
+                  className="w-full max-w-[40px] bg-linear-to-t from-primary to-primary-light rounded-t-sm transition-all duration-300 group-hover:scale-x-110 group-hover:brightness-110 relative"
                   style={{ height: bar.height, minHeight: "24px" }}
-                />
-                <span className="text-[10px] sm:text-xs font-medium text-slate-500">
+                >
+                   {/* Glass effect on top of bar */}
+                   <div className="absolute top-0 left-0 right-0 h-1/4 bg-white/20 rounded-t-sm" />
+                </div>
+                
+                <span className="text-[10px] sm:text-xs font-bold text-slate-400 group-hover:text-primary transition-colors">
                   {bar.month}
                 </span>
               </div>
-            ))}
+            )) : (
+              <div className="w-full flex items-center justify-center text-slate-400 text-sm">
+                Đang tải dữ liệu biểu đồ...
+              </div>
+            )}
           </div>
         </div>
       </div>

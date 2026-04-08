@@ -45,8 +45,17 @@ import AdminSpecialtiesPage from "../pages/admin/AdminSpecialtiesPage";
 import AdminAppointmentsPage from "../pages/admin/AdminAppointmentsPage";
 import AdminFAQsPage from "../pages/admin/AdminFAQsPage";
 import AdminAddDoctorPage from "../pages/admin/AdminAddDoctorPage";
+import AdminEditDoctorPage from "../pages/admin/AdminEditDoctorPage";
 import AdminAddSpecialtyPage from "../pages/admin/AdminAddSpecialtyPage";
+import AdminEditSpecialtyPage from "../pages/admin/AdminEditSpecialtyPage";
 import AdminAddFAQPage from "../pages/admin/AdminAddFAQPage";
+import AdminEditFAQPage from "../pages/admin/AdminEditFAQPage";
+import AdminAppointmentDetailPage from "../pages/admin/AdminAppointmentDetailPage";
+import AdminPatientDetailPage from "../pages/admin/AdminPatientDetailPage";
+import AdminTimeSlotsPage from "../pages/admin/AdminTimeSlotsPage";
+import AdminDoctorSchedulesPage from "../pages/admin/AdminDoctorSchedulesPage";
+import AdminPaymentMethodsPage from "../pages/admin/AdminPaymentMethodsPage";
+import AdminEditPatientPage from "../pages/admin/AdminEditPatientPage";
 
 /* ==========================================================
    ROUTES BỆNH NHÂN — dùng layout Header + Footer
@@ -103,13 +112,22 @@ export const adminRoutes = [
   { path: "dashboard", component: AdminDashboardPage },
   { path: "specialties", component: AdminSpecialtiesPage },
   { path: "specialties/add", component: AdminAddSpecialtyPage },
+  { path: "specialties/edit/:id", component: AdminEditSpecialtyPage },
   { path: "doctors", component: AdminDoctorsPage },
   { path: "doctors/add", component: AdminAddDoctorPage },
+  { path: "doctors/edit/:id", component: AdminEditDoctorPage },
   { path: "patients", component: AdminPatientsPage },
+  { path: "patients/:id", component: AdminPatientDetailPage },
+  { path: "patients/edit/:id", component: AdminEditPatientPage },
   { path: "appointments", component: AdminAppointmentsPage },
+  { path: "appointments/:id", component: AdminAppointmentDetailPage },
+  { path: "schedules", component: AdminDoctorSchedulesPage },
+  { path: "time-slots", component: AdminTimeSlotsPage },
+  { path: "payment-methods", component: AdminPaymentMethodsPage },
   { path: "stats", component: AdminStatsPage },
   { path: "faqs", component: AdminFAQsPage },
   { path: "faqs/add", component: AdminAddFAQPage },
+  { path: "faqs/edit/:id", component: AdminEditFAQPage },
 ];
 
 /* ==========================================================

@@ -227,23 +227,21 @@ function AdminStatsPage() {
                 <div
                   key={m.thang}
                   className="flex-1 flex flex-col items-center gap-1.5 group relative"
-                  title={`Khám: ${m.doanhThuKham.toLocaleString()}đ | Thuốc: ${m.doanhThuThuoc.toLocaleString()}đ`}
                 >
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-medium px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                    {m.tongDoanhThu > 0 ? m.tongDoanhThu.toLocaleString("vi-VN") : "0"}đ
+                  {/* Tooltip */}
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-10 whitespace-nowrap">
+                    {m.tongDoanhThu.toLocaleString("vi-VN")}đ
                   </div>
                   <div
-                    className={`w-full max-w-8 rounded-t transition-all flex flex-col justify-end overflow-hidden ${
-                      m.tongDoanhThu > 0 ? "bg-slate-100" : "bg-slate-100"
-                    }`}
-                    style={{ height: `${Math.max(heightPercent, 4)}%` }}
+                    className="w-full max-w-10 rounded-t-sm transition-all flex flex-col justify-end overflow-hidden bg-slate-100 group-hover:brightness-105"
+                    style={{ height: `${Math.max(heightPercent, 8)}%` }}
                   >
                     {/* Phần doanh thu khám (Xanh dương) */}
-                    <div style={{ height: `${(m.doanhThuKham / (m.tongDoanhThu || 1)) * 100}%` }} className="bg-blue-400 group-hover:bg-blue-500 w-full transition-colors" />
+                    <div style={{ height: `${(m.doanhThuKham / (m.tongDoanhThu || 1)) * 100}%` }} className="bg-linear-to-t from-blue-600 to-blue-400 w-full transition-colors" />
                     {/* Phần doanh thu thuốc (Xanh lá) */}
-                    <div style={{ height: `${(m.doanhThuThuoc / (m.tongDoanhThu || 1)) * 100}%` }} className="bg-emerald-400 group-hover:bg-emerald-500 w-full transition-colors" />
+                    <div style={{ height: `${(m.doanhThuThuoc / (m.tongDoanhThu || 1)) * 100}%` }} className="bg-linear-to-t from-emerald-600 to-emerald-400 w-full transition-colors" />
                   </div>
-                  <span className="text-[10px] sm:text-xs font-medium text-slate-400">
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-400 group-hover:text-slate-900">
                     T{m.thang}
                   </span>
                 </div>
@@ -348,16 +346,7 @@ function AdminStatsPage() {
                   Bác sĩ
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Chuyên khoa
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
                   Số lịch khám
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Đánh giá
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Trạng thái
                 </th>
               </tr>
             </thead>
@@ -386,32 +375,9 @@ function AdminStatsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      —
-                    </td>
                     <td className="px-6 py-4">
                       <span className="text-sm font-bold text-slate-900">
                         {doc.soLuong}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1 text-sm">
-                        <span className="material-symbols-outlined text-amber-500 text-base">
-                          star
-                        </span>
-                        <span className="font-semibold text-slate-900">
-                          5.0
-                        </span>
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-600`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full bg-emerald-500`}
-                        />
-                        Hoạt động
                       </span>
                     </td>
                   </tr>

@@ -9,4 +9,10 @@ import api from "./api";
 export const paymentService = {
   /** Lấy tất cả hình thức thanh toán */
   getAll: () => api.get("/hinh-thuc-thanh-toan"),
+
+  /** Tạo hình thức thanh toán mới (Admin) */
+  create: (data) => api.post("/hinh-thuc-thanh-toan", data),
+
+  /** Xóa hình thức thanh toán (Admin) */
+  remove: (id) => api.delete(`/hinh-thuc-thanh-toan/${id}`),
 };

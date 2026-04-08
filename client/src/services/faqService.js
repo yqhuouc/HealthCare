@@ -15,6 +15,9 @@ export const faqService = {
   /** Lấy tất cả FAQ (bao gồm cả bị ẩn) (admin) */
   getAllAdmin: (params = {}) => api.get("/cau-hoi-thuong-gap/all", { params }),
 
+  /** Lấy chi tiết 1 FAQ */
+  getById: (id) => api.get(`/cau-hoi-thuong-gap/${id}`),
+
   /** Tạo FAQ mới (admin) */
   create: (data) => api.post("/cau-hoi-thuong-gap", data),
 

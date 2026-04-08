@@ -25,7 +25,7 @@
  * ============================================================
  */
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { DOCTOR_STATUS_CONFIG } from "../../data/mockAdminData";
 import { doctorService } from "../../services/doctorService";
@@ -36,6 +36,7 @@ const ITEMS_PER_PAGE = 5;
 
 
 export default function AdminDoctorsPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [doctors, setDoctors] = useState([]);
@@ -79,7 +80,7 @@ export default function AdminDoctorsPage() {
   }, [fetchDoctors]);
 
   const handleEdit = (id) => {
-    toast.info(`Tính năng chỉnh sửa tạm thời bị khóa cho tài khoản số ${id}`);
+    navigate(`/admin/doctors/edit/${id}`);
   };
 
   const handleDelete = async (id) => {

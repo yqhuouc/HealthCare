@@ -15,11 +15,9 @@
  * State:
  * - search: chuỗi tìm kiếm
  * - page: trang hiện tại
- *
- * Dữ liệu: ADMIN_PATIENTS từ mockAdminData.js
- * ============================================================
  */
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { patientService } from "../../services/patientService";
 import { getInitials } from "../../utils/formatters";
@@ -53,9 +51,9 @@ export default function AdminPatientsPage() {
         search: debouncedSearch,
       });
       if (res.success) {
-        setPatients(res.data.benhNhans || []);
-        setTotalPages(res.data.pagination?.totalPages || 1);
-        setTotalPatients(res.data.pagination?.total || 0);
+        setPatients(res.data || []);
+        setTotalPages(res.pagination?.totalPages || 1);
+        setTotalPatients(res.pagination?.total || 0);
       }
     } catch (error) {
       console.error(error);
@@ -69,12 +67,31 @@ export default function AdminPatientsPage() {
     fetchPatients();
   }, [fetchPatients]);
 
-  const handleDetail = (id) => {
-    toast.info(`Tính năng xem chi tiết #${id} đang được phát triển`);
+
+
+  const handleBlock = async (id, currentStatus) => {
+    const newStatus = currentStatus === 1 ? 0 : 1;
+    const msg = newStatus === 0 ? "Khóa tài khoản" : "Mở khóa tài khoản";
+    if (!window.confirm(`Bạn có chắc muốn ${msg} này?`)) return;
+    
+    try {
+      await patientService.update(id, { taiKhoan: { trangThaiTaiKhoan: newStatus } });
+      toast.success(`${msg} thành công!`);
+      fetchPatients();
+    } catch (err) {
+      toast.error(err.message || "Lỗi khi cập nhật trạng thái");
+    }
   };
 
-  const handleBlock = async (id) => {
-    toast.warning(`Tính năng chặn người dùng #${id} đang được phát triển`);
+  const handleDelete = async (id) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa hồ sơ bệnh nhân này? Thao tác này không thể hoàn tác!")) return;
+    try {
+      await patientService.remove(id);
+      toast.success("Xóa bệnh nhân thành công");
+      fetchPatients();
+    } catch (err) {
+      toast.error(err.message || "Lỗi khi xóa bệnh nhân");
+    }
   };
 
   return (
@@ -112,7 +129,7 @@ export default function AdminPatientsPage() {
               setPage(1);
             }}
             placeholder="Tìm theo mã, tên, SĐT, email..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
           />
         </div>
       </div>
@@ -164,18 +181,35 @@ export default function AdminPatientsPage() {
                     <td className="py-3 px-4 text-slate-600">{formattedDate}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleDetail(p.id)}
-                          className="px-3 py-1.5 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition"
+                        <Link
+                          to={`/admin/patients/${p.id}`}
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-primary hover:bg-primary/5 transition"
+                          title="Chi tiết"
                         >
-                          Chi tiết
+                          <span className="material-symbols-outlined text-xl">visibility</span>
+                        </Link>
+                        <Link
+                          to={`/admin/patients/edit/${p.id}`}
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-amber-500 hover:bg-amber-50 transition"
+                          title="Chỉnh sửa"
+                        >
+                          <span className="material-symbols-outlined text-xl">edit</span>
+                        </Link>
+                        <button
+                          onClick={() => handleBlock(p.id, p.taiKhoan?.trangThaiTaiKhoan)}
+                          className={`p-1.5 rounded-lg border border-slate-200 transition ${p.taiKhoan?.trangThaiTaiKhoan === 0 ? "text-emerald-500 hover:bg-emerald-50" : "text-amber-500 hover:bg-amber-50"}`}
+                          title={p.taiKhoan?.trangThaiTaiKhoan === 0 ? "Mở khóa" : "Khóa"}
+                        >
+                          <span className="material-symbols-outlined text-xl">
+                            {p.taiKhoan?.trangThaiTaiKhoan === 0 ? "lock_open" : "lock"}
+                          </span>
                         </button>
                         <button
-                          onClick={() => handleBlock(p.id)}
-                          className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-500"
-                          aria-label="Chặn"
+                          onClick={() => handleDelete(p.id)}
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition"
+                          title="Xóa"
                         >
-                          <span className="material-symbols-outlined text-xl">block</span>
+                          <span className="material-symbols-outlined text-xl">delete</span>
                         </button>
                       </div>
                     </td>
@@ -203,17 +237,23 @@ export default function AdminPatientsPage() {
                     <p className="text-sm text-slate-500 truncate">{p.taiKhoan?.email || p.emailLienHe || "—"}</p>
                     <p className="text-sm text-slate-500 mt-1">{formattedDate}</p>
                     <div className="flex gap-2 mt-3">
-                      <button
-                        onClick={() => handleDetail(p.id)}
-                        className="px-3 py-1.5 rounded-lg border border-primary text-primary text-sm font-medium"
+                      <Link
+                        to={`/admin/patients/${p.id}`}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium"
                       >
                         Chi tiết
-                      </button>
-                      <button
-                        onClick={() => handleBlock(p.id)}
-                        className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-500"
+                      </Link>
+                      <Link
+                        to={`/admin/patients/edit/${p.id}`}
+                        className="px-3 py-1.5 rounded-lg border border-amber-200 text-amber-600 text-sm font-medium"
                       >
-                        <span className="material-symbols-outlined text-xl">block</span>
+                        Sửa
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500"
+                      >
+                        <span className="material-symbols-outlined text-xl">delete</span>
                       </button>
                     </div>
                   </div>

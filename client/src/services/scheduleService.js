@@ -26,4 +26,10 @@ export const scheduleService = {
 
   /** Lấy tất cả khung giờ master (Ca Sáng, Ca Chiều, Ca Tối...) */
   getAllKhungGio: () => api.get("/lich-lam-viec/khung-gio"),
+
+  /** Tạo khung giờ mới (Admin) */
+  createKhungGio: (data) => api.post("/lich-lam-viec/khung-gio", data),
+
+  /** Xóa khung giờ (Admin) */
+  deleteKhungGio: (id) => api.delete(`/lich-lam-viec/khung-gio/${id}`),
 };

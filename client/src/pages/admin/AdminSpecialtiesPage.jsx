@@ -127,11 +127,11 @@ function AdminSpecialtiesPage() {
                       {item._count?.bacSiList || 0}
                     </span>
                   </td>
-                  <td className="px-5 py-4">
+                      <td className="px-5 py-4">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => toast.info(`Chỉnh sửa chuyên khoa #${item.id} đang phát triển`)} className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors">
+                      <Link to={`/admin/specialties/edit/${item.id}`} className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors">
                         <span className="material-symbols-outlined text-xl">edit_square</span>
-                      </button>
+                      </Link>
                       <button onClick={() => handleDelete(item.id, item._count?.bacSiList || 0)} className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-500 transition-colors">
                         <span className="material-symbols-outlined text-xl">delete</span>
                       </button>

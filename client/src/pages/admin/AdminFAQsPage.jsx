@@ -49,8 +49,8 @@ function AdminFAQsPage() {
     try {
       const res = await faqService.getAllAdmin({ page, limit: ITEMS_PER_PAGE });
       if (res.success) {
-        setFaqs(res.data.faqs || []);
-        setTotalPages(res.data.pagination?.totalPages || 1);
+        setFaqs(res.data || []);
+        setTotalPages(res.pagination?.totalPages || 1);
       }
     } catch (error) {
       console.error(error);
@@ -147,12 +147,12 @@ function AdminFAQsPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleEdit(item.id)}
+                        <Link
+                          to={`/admin/faqs/edit/${item.id}`}
                           className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors"
                         >
                           <span className="material-symbols-outlined text-xl">edit</span>
-                        </button>
+                        </Link>
                         <button
                           onClick={() => handleDelete(item.id)}
                           className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-500 transition-colors"
