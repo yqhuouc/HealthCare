@@ -1,22 +1,3 @@
-/**
- * ============================================================
- * TRANG: Thêm bác sĩ mới (Admin)
- * Đường dẫn: /admin/doctors/add
- * ============================================================
- *
- * Chức năng:
- * - Form thêm bác sĩ: họ tên, chuyên khoa (dropdown), email, SĐT, kinh nghiệm, mô tả
- * - Validate: bắt buộc nhập họ tên + chọn chuyên khoa
- * - Breadcrumb: Quản lý bác sĩ / Thêm bác sĩ mới
- * - Nút "Lưu bác sĩ" → toast thành công → quay về /admin/doctors
- * - Nút "Hủy" → quay về /admin/doctors
- *
- * State:
- * - form: { name, specialty, email, phone, experience, description }
- *
- * Dữ liệu: SPECIALTIES (danh sách chuyên khoa cho dropdown)
- * ============================================================
- */
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -39,7 +20,6 @@ function AdminAddDoctorPage() {
   });
 
   useEffect(() => {
-    // Lấy danh sách chuyên khoa
     const fetchSpecialties = async () => {
       try {
         const res = await specialtyService.getAll();
@@ -80,163 +60,171 @@ function AdminAddDoctorPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto pb-10 font-sans">
       <div className="flex items-center gap-2 mb-6 text-sm">
-        <Link
-          to="/admin/doctors"
-          className="text-slate-500 hover:text-primary transition-colors"
-        >
+        <Link to="/admin/doctors" className="text-slate-500 hover:text-primary transition-colors font-medium">
           Quản lý bác sĩ
         </Link>
         <span className="text-slate-300">/</span>
-        <span className="text-slate-900 font-medium">Thêm bác sĩ mới</span>
+        <span className="text-slate-900 font-bold tracking-tight">Thêm bác sĩ mới</span>
       </div>
 
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900">Thêm bác sĩ mới</h2>
-        <p className="text-slate-500 text-sm mt-1">
-          Nhập thông tin bác sĩ để thêm vào hệ thống.
-        </p>
+      <div className="mb-10 text-center sm:text-left">
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Thêm bác sĩ mới</h2>
+        <p className="text-slate-500 text-sm mt-2">Khởi tạo tài khoản và hồ sơ bác sĩ vào hệ thống chuyên môn.</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-6 sm:p-8 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Họ tên bác sĩ <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="tenBacSi"
-                value={form.tenBacSi}
-                onChange={handleChange}
-                placeholder="VD: Nguyễn Văn A"
-                className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Chuyên khoa <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="chuyenKhoaId"
-                value={form.chuyenKhoaId}
-                onChange={handleChange}
-                className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
-              >
-                <option value="">-- Chọn chuyên khoa --</option>
-                {specialties.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.tenChuyenKhoa}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Email / Tên đăng nhập <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="bacsi_a@example.com"
-                className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Mật khẩu <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="matKhau"
-                type="password"
-                value={form.matKhau}
-                onChange={handleChange}
-                placeholder="Mật khẩu ít nhất 6 ký tự"
-                className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
-              />
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-8 sm:p-12 space-y-10">
+          
+          {/* Section: Thông tin cơ bản */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span className="size-2 rounded-full bg-primary ring-4 ring-primary/10"></span>
+              Thông tin cơ bản
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Họ tên bác sĩ <span className="text-rose-500">*</span></label>
+                <input
+                  name="tenBacSi"
+                  value={form.tenBacSi}
+                  onChange={handleChange}
+                  placeholder="VD: PGS. TS. Nguyễn Văn A"
+                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Chuyên khoa <span className="text-rose-500">*</span></label>
+                <select
+                  name="chuyenKhoaId"
+                  value={form.chuyenKhoaId}
+                  onChange={handleChange}
+                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium appearance-none cursor-pointer"
+                >
+                  <option value="">-- Chọn chuyên khoa --</option>
+                  {specialties.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.tenChuyenKhoa}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Chức danh / Học vị
-              </label>
-              <input
-                name="hocViChucDanh"
-                value={form.hocViChucDanh}
-                onChange={handleChange}
-                placeholder="VD: ThS. BS."
-                className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Giá khám (VNĐ)
-              </label>
-              <input
-                name="giaKham"
-                type="number"
-                value={form.giaKham}
-                onChange={handleChange}
-                placeholder="VD: 300000"
-                className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
-              />
+          <hr className="border-slate-100" />
+
+          {/* Section: Tài khoản */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span className="size-2 rounded-full bg-amber-500 ring-4 ring-amber-100"></span>
+              Tài khoản đăng nhập
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Email công tác <span className="text-rose-500">*</span></label>
+                <input
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="doctor@example.com"
+                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Mật khẩu khởi tạo <span className="text-rose-500">*</span></label>
+                <input
+                  name="matKhau"
+                  type="password"
+                  value={form.matKhau}
+                  onChange={handleChange}
+                  placeholder="Bảo mật tối thiểu 6 ký tự"
+                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                />
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Mô tả ngắn
-            </label>
-            <input
-              name="moTaNgan"
-              value={form.moTaNgan}
-              onChange={handleChange}
-              placeholder="VD: Bác sĩ chuyên khoa nội uy tín..."
-              className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary mb-5"
-            />
+          <hr className="border-slate-100" />
 
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Mô tả chi tiết
-            </label>
-            <textarea
-              name="moTaChiTiet"
-              value={form.moTaChiTiet}
-              onChange={handleChange}
-              rows={4}
-              placeholder="Thông tin giới thiệu về bác sĩ..."
-              className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
-            />
+          {/* Section: Chuyên môn & Chi phí */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span className="size-2 rounded-full bg-green-500 ring-4 ring-green-100"></span>
+              Chuyên môn & Chi phí
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Học vị / Chức danh</label>
+                <input
+                  name="hocViChucDanh"
+                  value={form.hocViChucDanh}
+                  onChange={handleChange}
+                  placeholder="VD: Bác sĩ chuyên khoa II, ThS..."
+                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Giá khám bệnh (VNĐ)</label>
+                <input
+                  name="giaKham"
+                  type="number"
+                  value={form.giaKham}
+                  onChange={handleChange}
+                  placeholder="VD: 500000"
+                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-bold text-primary"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">Mô tả ngắn gọn chuyên môn</label>
+              <input
+                name="moTaNgan"
+                value={form.moTaNgan}
+                onChange={handleChange}
+                placeholder="VD: Chuyên gia hàng đầu về tim mạch can thiệp với hơn 20 năm kinh nghiệm."
+                className="w-full px-5 py-4 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">Giới thiệu chi tiết</label>
+              <textarea
+                name="moTaChiTiet"
+                value={form.moTaChiTiet}
+                onChange={handleChange}
+                rows={10}
+                placeholder="Nhập quá trình công tác, đào tạo và các thành tựu của bác sĩ..."
+                className="w-full px-5 py-4 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium resize-none leading-relaxed"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="bg-slate-50 px-6 sm:px-8 py-4 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 border-t border-slate-200">
+        {/* Action bar */}
+        <div className="bg-slate-50/80 px-8 sm:px-12 py-6 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-100">
           <button
             onClick={() => navigate("/admin/doctors")}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-slate-300 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl text-sm font-bold text-slate-500 hover:bg-slate-200 transition-all"
           >
-            Hủy
+            Hủy bỏ
           </button>
           <button
             onClick={handleSave}
             disabled={loading}
-            className={`w-full sm:w-auto px-6 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
-              loading ? "bg-slate-300" : "bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
+            className={`w-full sm:w-auto px-12 py-3.5 rounded-2xl text-white text-sm font-black transition-all flex items-center justify-center gap-2 shadow-xl ${
+              loading ? "bg-slate-300" : "bg-primary hover:bg-primary/90 shadow-primary/20"
             }`}
           >
             {loading ? (
               <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
             ) : (
-              <span className="material-symbols-outlined text-sm">save</span>
+              <span className="material-symbols-outlined text-sm">how_to_reg</span>
             )}
-            Lưu bác sĩ
+            Xác nhận thêm bác sĩ
           </button>
         </div>
       </div>
