@@ -24,36 +24,12 @@ import { Link } from "react-router-dom";
 import { scheduleService } from "../../services/scheduleService";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
+import { formatTime } from "../../utils/formatters";
 
 // Mảng định nghĩa tên các thứ trong tuần để hiển thị lên đầu bộ lịch
 const DAYS_OF_WEEK = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-/**
- * HÀM HỖ TRỢ: Định dạng lại giờ hiển thị (Ví dụ: từ "08:00:00" thành "08:00")
- * Tác dụng: Giúp giao diện gọn gàng và xử lý đúng múi giờ Việt Nam.
- */
-function formatTime(timeInput) {
-  if (!timeInput) return "";
-  // Nếu dữ liệu trả về là chuỗi giờ thuần (HH:mm:ss)
-  if (
-    typeof timeInput === "string" &&
-    !timeInput.includes("T") &&
-    timeInput.includes(":")
-  ) {
-    return timeInput.substring(0, 5);
-  }
-  const d = new Date(timeInput);
-  if (isNaN(d.getTime())) return timeInput;
 
-  // MẸO: Ép năm về 2024 để tránh các lỗi lệch múi giờ lịch sử trong JavaScript
-  d.setFullYear(2024);
-  return d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
 
 /**
  * HÀM HỖ TRỢ: Tính xem một tháng có bao nhiêu ngày (28, 29, 30 hay 31)

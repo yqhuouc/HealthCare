@@ -20,4 +20,15 @@ export const doctorService = {
    * @param {number|string} id
    */
   getById: (id) => api.get(`/bac-si/${id}`),
+
+  // ===== ADMIN PORTAL =====
+  
+  /** Tạo mới bác sĩ (admin) */
+  create: (data) => api.post("/bac-si", data),
+
+  /** Cập nhật thông tin bác sĩ (admin) */
+  update: (id, data) => api.put(`/bac-si/${id}`, data),
+
+  /** Xóa bác sĩ (admin) */
+  remove: (id) => api.delete(`/bac-si/${id}`),
 };

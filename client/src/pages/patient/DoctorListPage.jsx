@@ -17,10 +17,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { doctorService } from "../../services/doctorService";
+import { formatPrice } from "../../utils/formatters";
 import { specialtyService } from "../../services/specialtyService";
 
 /** Hàm format giá tiền sang dạng VND: 150000 → "150.000đ" */
-const formatPrice = (price) => Number(price).toLocaleString("vi-VN") + "đ";
 
 export default function DoctorListPage() {
   const [searchQuery, setSearchQuery] = useState("");

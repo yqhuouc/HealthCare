@@ -20,6 +20,7 @@ import { Link } from "react-router-dom";
 import { appointmentService } from "../../services/appointmentService";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
+import { formatTime } from "../../utils/formatters";
 
 /** 
  * CẤU HÌNH NHÃN (BADGE): Định nghĩa màu sắc và nội dung cho từng trạng thái
@@ -42,25 +43,7 @@ const STATUS_FILTERS = [
   { value: 3, label: "Đã hủy" },
 ];
 
-/** 
- * HÀM HỖ TRỢ: Định dạng giờ (Ví dụ: "08:30")
- * Đảm bảo giờ hiển thị đúng múi giờ Việt Nam (UTC+7).
- */
-function formatTime(timeInput) {
-  if (!timeInput) return "";
-  if (typeof timeInput === "string" && !timeInput.includes("T") && timeInput.includes(":")) {
-    return timeInput.substring(0, 5);
-  }
-  const d = new Date(timeInput);
-  if (isNaN(d.getTime())) return timeInput;
-  d.setFullYear(2024); // Mẹo fix lệch múi giờ lịch sử trong JS
-  return d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit", 
-    minute: "2-digit", 
-    hour12: false, 
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
+
 
 /**
  * HÀM HỖ TRỢ: Xử lý đường dẫn ảnh đại diện của bệnh nhân

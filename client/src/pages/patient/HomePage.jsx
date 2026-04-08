@@ -14,11 +14,11 @@
  */
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { formatPrice } from "../../utils/formatters";
 import { specialtyService } from "../../services/specialtyService";
 import { doctorService } from "../../services/doctorService";
 
 /** Hàm format giá tiền sang dạng VND: 150000 → "150.000đ" */
-const formatPrice = (price) => Number(price).toLocaleString("vi-VN") + "đ";
 
 /** Icon mặc định cho chuyên khoa nếu không có ảnh */
 const SPECIALTY_ICONS = [

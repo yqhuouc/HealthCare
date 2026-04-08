@@ -22,32 +22,12 @@ import { useNavigate, Link } from "react-router-dom";
 import { scheduleService } from "../../services/scheduleService";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
+import { formatTime } from "../../utils/formatters";
 
 // Mảng định nghĩa tiêu đề các thứ trong tuần
 const DAYS_OF_WEEK = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-/**
- * Hàm format giờ (HH:mm) đảm bảo tính nhất quán múi giờ VN
- */
-function formatTime(timeInput) {
-  if (!timeInput) return "";
-  if (
-    typeof timeInput === "string" &&
-    !timeInput.includes("T") &&
-    timeInput.includes(":")
-  ) {
-    return timeInput.substring(0, 5);
-  }
-  const d = new Date(timeInput);
-  if (isNaN(d.getTime())) return timeInput;
-  d.setFullYear(2024);
-  return d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
+
 
 /**
  * Helper: Tính số ngày của tháng

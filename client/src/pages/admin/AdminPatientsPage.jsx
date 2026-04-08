@@ -19,46 +19,62 @@
  * Dữ liệu: ADMIN_PATIENTS từ mockAdminData.js
  * ============================================================
  */
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
-import { ADMIN_PATIENTS } from "../../data/mockAdminData";
+import { patientService } from "../../services/patientService";
+import { getInitials } from "../../utils/formatters";
 
 const ITEMS_PER_PAGE = 5;
-/** Tổng số BN thực tế (hiển thị khi không search) — sẽ lấy từ API */
-const TOTAL_PATIENTS = 1284;
 
 export default function AdminPatientsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalPatients, setTotalPatients] = useState(0);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return ADMIN_PATIENTS;
-    const q = search.toLowerCase();
-    return ADMIN_PATIENTS.filter(
-      (p) =>
-        p.code.toLowerCase().includes(q) ||
-        p.name.toLowerCase().includes(q) ||
-        p.phone.includes(q) ||
-        p.email.toLowerCase().includes(q)
-    );
+  // Debounce search
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset trang khi tìm kiếm mới
+    }, 500);
+    return () => clearTimeout(timer);
   }, [search]);
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE;
-    return filtered.slice(start, start + ITEMS_PER_PAGE);
-  }, [filtered, page]);
+  const fetchPatients = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await patientService.getAll({
+        page,
+        limit: ITEMS_PER_PAGE,
+        search: debouncedSearch,
+      });
+      if (res.success) {
+        setPatients(res.data.benhNhans || []);
+        setTotalPages(res.data.pagination?.totalPages || 1);
+        setTotalPatients(res.data.pagination?.total || 0);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi lấy danh sách bệnh nhân");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, debouncedSearch]);
 
-  const startIdx = (page - 1) * ITEMS_PER_PAGE + 1;
-  const endIdx = Math.min(page * ITEMS_PER_PAGE, filtered.length);
-  const displayTotal = search.trim() ? filtered.length : TOTAL_PATIENTS;
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
 
   const handleDetail = (id) => {
-    toast.info(`Xem chi tiết bệnh nhân #${id}`);
+    toast.info(`Tính năng xem chi tiết #${id} đang được phát triển`);
   };
 
-  const handleBlock = (id) => {
-    toast.warning(`Chặn bệnh nhân #${id} - chức năng sẽ được triển khai.`);
+  const handleBlock = async (id) => {
+    toast.warning(`Tính năng chặn người dùng #${id} đang được phát triển`);
   };
 
   return (
@@ -77,7 +93,7 @@ export default function AdminPatientsPage() {
           <div>
             <p className="text-sm text-slate-500 font-medium">Tổng bệnh nhân</p>
             <p className="text-xl font-bold text-primary">
-              {TOTAL_PATIENTS.toLocaleString("vi-VN")}
+              {totalPatients.toLocaleString("vi-VN")}
             </p>
           </div>
         </div>
@@ -114,82 +130,102 @@ export default function AdminPatientsPage() {
                 <th className="text-left py-4 px-4 text-sm font-semibold text-slate-600">Hành động</th>
               </tr>
             </thead>
-            <tbody>
-              {paginated.map((p) => (
-                <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition">
-                  <td className="py-3 px-4">
-                    <span className="text-primary font-semibold">{p.code}</span>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-10">
+                    <span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                        {p.initials}
+                </tr>
+              ) : patients.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-10 text-slate-500">
+                    Chưa có bệnh nhân nào.
+                  </td>
+                </tr>
+              ) : patients.map((p) => {
+                const dateRaw = p.taiKhoan?.ngayTao;
+                const formattedDate = dateRaw ? new Date(dateRaw).toLocaleDateString("vi-VN") : "Chưa xác định";
+                return (
+                  <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition">
+                    <td className="py-3 px-4">
+                      <span className="text-primary font-semibold">BN{p.id}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                          {getInitials(p.hoTen)}
+                        </div>
+                        <span className="font-medium text-slate-800">{p.hoTen}</span>
                       </div>
-                      <span className="font-medium text-slate-800">{p.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-slate-600">{p.phone}</td>
-                  <td className="py-3 px-4 text-slate-600">{p.email}</td>
-                  <td className="py-3 px-4 text-slate-600">{p.date}</td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
+                    </td>
+                    <td className="py-3 px-4 text-slate-600">{p.soDienThoai || "—"}</td>
+                    <td className="py-3 px-4 text-slate-600">{p.taiKhoan?.email || p.emailLienHe || "—"}</td>
+                    <td className="py-3 px-4 text-slate-600">{formattedDate}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleDetail(p.id)}
+                          className="px-3 py-1.5 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition"
+                        >
+                          Chi tiết
+                        </button>
+                        <button
+                          onClick={() => handleBlock(p.id)}
+                          className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-500"
+                          aria-label="Chặn"
+                        >
+                          <span className="material-symbols-outlined text-xl">block</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="md:hidden divide-y divide-slate-100">
+          {patients.map((p) => {
+            const dateRaw = p.taiKhoan?.ngayTao;
+            const formattedDate = dateRaw ? new Date(dateRaw).toLocaleDateString("vi-VN") : "Chưa xác định";
+            return (
+              <div key={p.id} className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
+                    {getInitials(p.hoTen)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-primary">BN{p.id}</p>
+                    <p className="font-medium text-slate-800">{p.hoTen}</p>
+                    <p className="text-sm text-slate-500">{p.soDienThoai || "—"}</p>
+                    <p className="text-sm text-slate-500 truncate">{p.taiKhoan?.email || p.emailLienHe || "—"}</p>
+                    <p className="text-sm text-slate-500 mt-1">{formattedDate}</p>
+                    <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => handleDetail(p.id)}
-                        className="px-3 py-1.5 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition"
+                        className="px-3 py-1.5 rounded-lg border border-primary text-primary text-sm font-medium"
                       >
                         Chi tiết
                       </button>
                       <button
                         onClick={() => handleBlock(p.id)}
                         className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-500"
-                        aria-label="Chặn"
                       >
                         <span className="material-symbols-outlined text-xl">block</span>
                       </button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="md:hidden divide-y divide-slate-100">
-          {paginated.map((p) => (
-            <div key={p.id} className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
-                  {p.initials}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-primary">{p.code}</p>
-                  <p className="font-medium text-slate-800">{p.name}</p>
-                  <p className="text-sm text-slate-500">{p.phone}</p>
-                  <p className="text-sm text-slate-500 truncate">{p.email}</p>
-                  <p className="text-sm text-slate-500 mt-1">{p.date}</p>
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={() => handleDetail(p.id)}
-                      className="px-3 py-1.5 rounded-lg border border-primary text-primary text-sm font-medium"
-                    >
-                      Chi tiết
-                    </button>
-                    <button
-                      onClick={() => handleBlock(p.id)}
-                      className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-500"
-                    >
-                      <span className="material-symbols-outlined text-xl">block</span>
-                    </button>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50/50">
           <p className="text-sm text-slate-500">
-            Hiển thị {startIdx}-{endIdx} trong số {displayTotal.toLocaleString("vi-VN")} bệnh nhân
+            Trang {page} / {totalPages}
           </p>
           {totalPages > 1 && (
             <div className="flex gap-2">

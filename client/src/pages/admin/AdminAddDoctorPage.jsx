@@ -17,44 +17,66 @@
  * Dữ liệu: SPECIALTIES (danh sách chuyên khoa cho dropdown)
  * ============================================================
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-
-/** Danh sách chuyên khoa cho dropdown — sẽ thay bằng API */
-const SPECIALTIES = [
-  "Nội tổng quát",
-  "Nhi khoa",
-  "Da liễu",
-  "Ngoại thần kinh",
-  "Sản phụ khoa",
-  "Tai Mũi Họng",
-  "Tim mạch",
-  "Nha khoa",
-];
+import { doctorService } from "../../services/doctorService";
+import { specialtyService } from "../../services/specialtyService";
 
 function AdminAddDoctorPage() {
   const navigate = useNavigate();
+  const [specialties, setSpecialties] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    name: "",
+    tenBacSi: "",
     email: "",
-    phone: "",
-    specialty: "",
-    experience: "",
-    description: "",
+    matKhau: "",
+    chuyenKhoaId: "",
+    hocViChucDanh: "",
+    giaKham: "",
+    moTaNgan: "",
+    moTaChiTiet: "",
   });
+
+  useEffect(() => {
+    // Lấy danh sách chuyên khoa
+    const fetchSpecialties = async () => {
+      try {
+        const res = await specialtyService.getAll();
+        if (res.success) {
+          setSpecialties(res.data);
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error("Không thể tải danh sách chuyên khoa!");
+      }
+    };
+    fetchSpecialties();
+  }, []);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSave = () => {
-    if (!form.name.trim() || !form.specialty) {
-      toast.warn("Vui lòng nhập đầy đủ họ tên và chuyên khoa.");
+  const handleSave = async () => {
+    if (!form.tenBacSi.trim() || !form.chuyenKhoaId || !form.email || !form.matKhau) {
+      toast.warn("Vui lòng nhập đầy đủ: Họ tên, Chuyên khoa, Email, Mật khẩu.");
       return;
     }
-    toast.success(`Đã thêm bác sĩ "${form.name}" thành công!`);
-    navigate("/admin/doctors");
+    
+    setLoading(true);
+    try {
+      await doctorService.create({
+        ...form,
+        giaKham: form.giaKham ? Number(form.giaKham) : null,
+      });
+      toast.success(`Đã thêm bác sĩ "${form.tenBacSi}" thành công!`);
+      navigate("/admin/doctors");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi thêm bác sĩ!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -85,10 +107,10 @@ function AdminAddDoctorPage() {
                 Họ tên bác sĩ <span className="text-red-500">*</span>
               </label>
               <input
-                name="name"
-                value={form.name}
+                name="tenBacSi"
+                value={form.tenBacSi}
                 onChange={handleChange}
-                placeholder="VD: BS. Nguyễn Văn A"
+                placeholder="VD: Nguyễn Văn A"
                 className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
               />
             </div>
@@ -97,15 +119,15 @@ function AdminAddDoctorPage() {
                 Chuyên khoa <span className="text-red-500">*</span>
               </label>
               <select
-                name="specialty"
-                value={form.specialty}
+                name="chuyenKhoaId"
+                value={form.chuyenKhoaId}
                 onChange={handleChange}
                 className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
               >
                 <option value="">-- Chọn chuyên khoa --</option>
-                {SPECIALTIES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+                {specialties.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.tenChuyenKhoa}
                   </option>
                 ))}
               </select>
@@ -115,26 +137,55 @@ function AdminAddDoctorPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Email
+                Email / Tên đăng nhập <span className="text-red-500">*</span>
               </label>
               <input
                 name="email"
                 type="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="doctor@example.com"
+                placeholder="bacsi_a@example.com"
                 className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Số điện thoại
+                Mật khẩu <span className="text-red-500">*</span>
               </label>
               <input
-                name="phone"
-                value={form.phone}
+                name="matKhau"
+                type="password"
+                value={form.matKhau}
                 onChange={handleChange}
-                placeholder="09xxxxxxxx"
+                placeholder="Mật khẩu ít nhất 6 ký tự"
+                className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Chức danh / Học vị
+              </label>
+              <input
+                name="hocViChucDanh"
+                value={form.hocViChucDanh}
+                onChange={handleChange}
+                placeholder="VD: ThS. BS."
+                className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Giá khám (VNĐ)
+              </label>
+              <input
+                name="giaKham"
+                type="number"
+                value={form.giaKham}
+                onChange={handleChange}
+                placeholder="VD: 300000"
                 className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
               />
             </div>
@@ -142,24 +193,22 @@ function AdminAddDoctorPage() {
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Kinh nghiệm
+              Mô tả ngắn
             </label>
             <input
-              name="experience"
-              value={form.experience}
+              name="moTaNgan"
+              value={form.moTaNgan}
               onChange={handleChange}
-              placeholder="VD: 10 năm"
-              className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
+              placeholder="VD: Bác sĩ chuyên khoa nội uy tín..."
+              className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary mb-5"
             />
-          </div>
 
-          <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Mô tả / Giới thiệu
+              Mô tả chi tiết
             </label>
             <textarea
-              name="description"
-              value={form.description}
+              name="moTaChiTiet"
+              value={form.moTaChiTiet}
               onChange={handleChange}
               rows={4}
               placeholder="Thông tin giới thiệu về bác sĩ..."
@@ -177,9 +226,16 @@ function AdminAddDoctorPage() {
           </button>
           <button
             onClick={handleSave}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-semibold shadow-md shadow-primary/20 transition-colors flex items-center justify-center gap-2"
+            disabled={loading}
+            className={`w-full sm:w-auto px-6 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+              loading ? "bg-slate-300" : "bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
+            }`}
           >
-            <span className="material-symbols-outlined text-sm">save</span>
+            {loading ? (
+              <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+            ) : (
+              <span className="material-symbols-outlined text-sm">save</span>
+            )}
             Lưu bác sĩ
           </button>
         </div>

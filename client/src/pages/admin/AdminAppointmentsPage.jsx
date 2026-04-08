@@ -18,24 +18,27 @@
  * Dữ liệu: ADMIN_APPOINTMENT_LIST, APPOINTMENT_STATUS_CONFIG từ mockAdminData.js
  * ============================================================
  */
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ADMIN_APPOINTMENT_LIST, APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData";
+import { toast } from "react-toastify";
+import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData";
+import { appointmentService } from "../../services/appointmentService";
+import { getInitials } from "../../utils/formatters";
 
-/** 4 card thống kê tổng hợp hiển thị trên đầu trang */
-const STATS = [
-  { label: "Tổng lịch khám", value: "1,284", valueClass: "" },
-  { label: "Chờ xác nhận", value: "45", valueClass: "text-amber-500" },
-  { label: "Đã khám", value: "892", valueClass: "text-emerald-500" },
-  { label: "Đã hủy", value: "12", valueClass: "text-red-500" },
-];
+// Mapping from numeric status in DB to string keys in APPOINTMENT_STATUS_CONFIG
+const STATUS_MAP = {
+  0: "pending",
+  1: "confirmed",
+  2: "completed",
+  3: "cancelled",
+};
 
 const STATUS_FILTERS = [
   { value: "all", label: "Tất cả" },
-  { value: "pending", label: "Chờ xác nhận" },
-  { value: "confirmed", label: "Đã xác nhận" },
-  { value: "completed", label: "Đã khám" },
-  { value: "cancelled", label: "Đã hủy" },
+  { value: "0", label: "Chờ xác nhận" },
+  { value: "1", label: "Đã xác nhận" },
+  { value: "2", label: "Đã khám" },
+  { value: "3", label: "Đã hủy" },
 ];
 
 const ITEMS_PER_PAGE = 5;
@@ -44,26 +47,51 @@ function AdminAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(1);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalAppointments, setTotalAppointments] = useState(0);
 
-  const filtered = ADMIN_APPOINTMENT_LIST.filter((apt) => {
-    const matchStatus = statusFilter === "all" || apt.status === statusFilter;
-    return matchStatus;
-  });
+  const fetchAppointments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = {
+        page,
+        limit: ITEMS_PER_PAGE,
+        ...(statusFilter !== "all" && { trangThai: statusFilter }),
+        ...(dateFrom && { ngayDat: dateFrom }),
+      };
+      const res = await appointmentService.getAllForAdmin(params);
+      if (res.success) {
+        setAppointments(res.data || []);
+        setTotalPages(res.pagination?.totalPages || 1);
+        setTotalAppointments(res.pagination?.total || 0);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi lấy danh sách lịch hẹn");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, statusFilter, dateFrom]);
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedData = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  useEffect(() => {
+    fetchAppointments();
+  }, [fetchAppointments]);
+
+  const handleFilter = () => {
+    setPage(1);
+    fetchAppointments();
+  };
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-        {STATS.map((s) => (
-          <div key={s.label} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <p className="text-sm text-slate-500">{s.label}</p>
-            <p className={`text-2xl font-bold mt-1 ${s.valueClass || "text-slate-800"}`}>{s.value}</p>
-          </div>
-        ))}
+        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+          <p className="text-sm text-slate-500">Tổng lịch đang hiện thị</p>
+          <p className={`text-2xl font-bold mt-1 text-slate-800`}>{totalAppointments}</p>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
@@ -100,7 +128,7 @@ function AdminAppointmentsPage() {
                 className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
               />
             </div>
-            <button className="mt-6 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
+            <button onClick={handleFilter} className="mt-6 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
               Lọc
             </button>
           </div>
@@ -121,21 +149,39 @@ function AdminAppointmentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedData.map((apt) => {
-                const config = APPOINTMENT_STATUS_CONFIG[apt.status];
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-10">
+                    <span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span>
+                  </td>
+                </tr>
+              ) : appointments.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-10 text-slate-500">
+                    Không tìm thấy lịch hẹn phù hợp.
+                  </td>
+                </tr>
+              ) : appointments.map((apt) => {
+                const statusString = STATUS_MAP[apt.trangThai] || "pending";
+                const config = APPOINTMENT_STATUS_CONFIG[statusString];
+                const patientName = apt.benhNhan?.hoTen || "Chưa xác định";
+                const doctorName = typeof apt.bacSi === "object" ? apt.bacSi?.tenBacSi : "Chưa xác định";
+                const formattedDate = new Date(apt.ngayDat).toLocaleDateString("vi-VN");
+                const timeString = apt.gioBatDau ? new Date(apt.gioBatDau).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "";
+                
                 return (
                   <tr key={apt.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-4 font-medium text-slate-800">{apt.code}</td>
+                    <td className="px-5 py-4 font-medium text-slate-800">LK-{apt.id}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`size-9 rounded-full flex items-center justify-center text-xs font-bold ${apt.initialsColor || "bg-slate-200 text-slate-700"}`}>
-                          {apt.initials}
+                        <div className={`size-9 rounded-full flex items-center justify-center text-xs font-bold bg-primary/10 text-primary`}>
+                          {getInitials(patientName)}
                         </div>
-                        <span className="font-medium text-slate-800">{apt.patient}</span>
+                        <span className="font-medium text-slate-800">{patientName}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-slate-600">{apt.doctor}</td>
-                    <td className="px-5 py-4 text-slate-600">{apt.dateTime}</td>
+                    <td className="px-5 py-4 text-slate-600">{doctorName}</td>
+                    <td className="px-5 py-4 text-slate-600">{timeString} - {formattedDate}</td>
                     <td className="px-5 py-4">
                       {config && (
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${config.className}`}>
@@ -156,18 +202,24 @@ function AdminAppointmentsPage() {
         </div>
 
         <div className="block md:hidden divide-y divide-slate-100">
-          {paginatedData.map((apt) => {
-            const config = APPOINTMENT_STATUS_CONFIG[apt.status];
+          {appointments.map((apt) => {
+            const statusString = STATUS_MAP[apt.trangThai] || "pending";
+            const config = APPOINTMENT_STATUS_CONFIG[statusString];
+            const patientName = apt.benhNhan?.hoTen || "Chưa xác định";
+            const doctorName = typeof apt.bacSi === "object" ? apt.bacSi?.tenBacSi : "Chưa xác định";
+            const formattedDate = new Date(apt.ngayDat).toLocaleDateString("vi-VN");
+            const timeString = apt.gioBatDau ? new Date(apt.gioBatDau).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "";
+            
             return (
               <div key={apt.id} className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
-                    <div className={`size-9 rounded-full flex items-center justify-center text-xs font-bold ${apt.initialsColor || "bg-slate-200 text-slate-700"}`}>
-                      {apt.initials}
+                    <div className={`size-9 rounded-full flex items-center justify-center text-xs font-bold bg-primary/10 text-primary`}>
+                      {getInitials(patientName)}
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-800">{apt.patient}</p>
-                      <p className="text-xs text-slate-500">{apt.code}</p>
+                      <p className="font-semibold text-slate-800">{patientName}</p>
+                      <p className="text-xs text-slate-500">LK-{apt.id}</p>
                     </div>
                   </div>
                   {config && (
@@ -176,8 +228,8 @@ function AdminAppointmentsPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-600">{apt.doctor}</p>
-                <p className="text-xs text-slate-500">{apt.dateTime}</p>
+                <p className="text-xs text-slate-600">{doctorName}</p>
+                <p className="text-xs text-slate-500">{timeString} - {formattedDate}</p>
                 <Link to={`/admin/appointments/${apt.id}`} className="inline-block text-primary font-medium text-sm hover:underline">
                   Xem chi tiết
                 </Link>
@@ -189,19 +241,19 @@ function AdminAppointmentsPage() {
         {totalPages > 1 && (
           <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between">
             <p className="text-xs text-slate-500">
-              Trang {currentPage} / {totalPages}
+              Trang {page} / {totalPages}
             </p>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
                 className="size-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined text-xl">chevron_left</span>
               </button>
               <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
                 className="size-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined text-xl">chevron_right</span>

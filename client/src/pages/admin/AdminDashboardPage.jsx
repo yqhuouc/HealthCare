@@ -20,62 +20,114 @@
  *           CHART_DATA từ mockAdminData.js
  * ============================================================
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  ADMIN_STATS,
-  RECENT_APPOINTMENTS,
-  APPOINTMENT_STATUS_CONFIG,
-  CHART_DATA,
-} from "../../data/mockAdminData";
-
-/** Cấu hình 4 card thống kê tổng quan hiển thị trên đầu trang */
-const STATS_CARDS = [
-  {
-    label: "Tổng số bác sĩ",
-    value: ADMIN_STATS.totalDoctors,
-    icon: "stethoscope",
-    iconBg: "bg-blue-50",
-    iconColor: "text-blue-600",
-    badge: ADMIN_STATS.doctorGrowth,
-    badgeGreen: true,
-  },
-  {
-    label: "Tổng số bệnh nhân",
-    value: ADMIN_STATS.totalPatients.toLocaleString("vi-VN"),
-    icon: "groups",
-    iconBg: "bg-purple-50",
-    iconColor: "text-purple-600",
-    badge: ADMIN_STATS.patientGrowth,
-    badgeGreen: true,
-  },
-  {
-    label: "Tổng số lịch khám",
-    value: ADMIN_STATS.totalAppointments.toLocaleString("vi-VN"),
-    icon: "book_online",
-    iconBg: "bg-orange-50",
-    iconColor: "text-orange-600",
-    badge: ADMIN_STATS.appointmentGrowth,
-    badgeGreen: false,
-  },
-  {
-    label: "Lịch khám hôm nay",
-    value: ADMIN_STATS.todayAppointments,
-    icon: "event_available",
-    iconBg: "bg-emerald-50",
-    iconColor: "text-emerald-600",
-    badge: ADMIN_STATS.todayGrowth,
-    badgeGreen: true,
-  },
-];
+import { adminStatsService } from "../../services/adminStatsService";
+import { appointmentService } from "../../services/appointmentService";
+import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData"; // Vẫn giữ config màu sắc
+import { getInitials } from "../../utils/formatters";
 
 function AdminDashboardPage() {
   const [year, setYear] = useState(new Date().getFullYear());
+  
+  // States cho dữ liệu API
+  const [stats, setStats] = useState({
+    tongBenhNhan: 0,
+    tongBacSi: 0,
+    tongLichHen: 0,
+    tongChuyenKhoa: 0,
+    tongDoanhThu: 0
+  });
+  const [chartData, setChartData] = useState([]);
+  const [recentAppointments, setRecentAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [tongQuanRes, doanhThuRes, appointmentsRes] = await Promise.all([
+          adminStatsService.getTongQuan(),
+          adminStatsService.getDoanhThuStats({ nam: year }),
+          appointmentService.getAllForAdmin({ page: 1, limit: 5 })
+        ]);
+
+        if (tongQuanRes.data) setStats(tongQuanRes.data);
+        
+        // API trả về mảng thống kê doanh thu theo 12 tháng
+        if (doanhThuRes.data && doanhThuRes.data.thongKeThang) {
+          // Format data cho biểu đồ
+          const formattedChart = doanhThuRes.data.thongKeThang.map(item => {
+            // Logic chiều cao thanh: Giả định 10 triệu = 100% (minHeight: 24px)
+            const heightPercent = item.tongDoanhThu > 0 
+                ? Math.min(100, Math.max(10, (item.tongDoanhThu / 10000000) * 100)) + "%"
+                : "24px";
+            return {
+              month: `T${item.thang}`,
+              height: heightPercent,
+              rawTong: item.tongDoanhThu
+            };
+          });
+          setChartData(formattedChart);
+        }
+
+        if (appointmentsRes.data) {
+          setRecentAppointments(appointmentsRes.data || []);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu dashboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [year]);
+
+  /** Cấu hình 4 card thống kê tổng quan hiển thị trên đầu trang */
+  const dynamicStatsCards = [
+    {
+      label: "Tổng số bác sĩ",
+      value: stats.tongBacSi,
+      icon: "stethoscope",
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      badge: "+2%", badgeGreen: true,
+    },
+    {
+      label: "Tổng số bệnh nhân",
+      value: stats.tongBenhNhan.toLocaleString("vi-VN"),
+      icon: "groups",
+      iconBg: "bg-purple-50",
+      iconColor: "text-purple-600",
+      badge: "+5%", badgeGreen: true,
+    },
+    {
+      label: "Tổng số lịch khám",
+      value: stats.tongLichHen.toLocaleString("vi-VN"),
+      icon: "book_online",
+      iconBg: "bg-orange-50",
+      iconColor: "text-orange-600",
+      badge: "-1%", badgeGreen: false,
+    },
+    {
+      label: "Lịch hôm nay (Tạm tính)",
+      value: stats.tongChuyenKhoa, // Hiển thị tạm thông tin khác
+      icon: "event_available",
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      badge: "Mới", badgeGreen: true,
+    },
+  ];
+
+  if (loading) {
+    return <div className="flex justify-center py-10"><span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span></div>;
+  }
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {STATS_CARDS.map((card) => (
+        {dynamicStatsCards.map((card) => (
           <div
             key={card.label}
             className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-slate-200"
@@ -127,10 +179,11 @@ function AdminDashboardPage() {
         </div>
         <div className="p-4 sm:p-6">
           <div className="flex items-end justify-between gap-2 sm:gap-4 h-40">
-            {CHART_DATA.map((bar) => (
+            {chartData.map((bar) => (
               <div
                 key={bar.month}
                 className="flex-1 flex flex-col items-center gap-2 group"
+                title={`Doanh thu: ${Number(bar.rawTong).toLocaleString("vi-VN")}đ`}
               >
                 <div
                   className="w-full max-w-10 bg-primary rounded-t transition-opacity hover:opacity-80"
@@ -159,43 +212,44 @@ function AdminDashboardPage() {
         </div>
 
         <div className="block md:hidden divide-y divide-slate-100">
-          {RECENT_APPOINTMENTS.map((apt) => {
-            const statusConfig = APPOINTMENT_STATUS_CONFIG[apt.status];
-            return (
-              <div key={apt.id} className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${apt.color} text-slate-700`}
-                    >
-                      {apt.initials}
+          {recentAppointments.length === 0 ? (
+            <p className="p-4 text-sm text-slate-500 text-center">Không có lịch khám nào.</p>
+          ) : (
+            recentAppointments.map((apt) => {
+              const statusConfig = APPOINTMENT_STATUS_CONFIG[apt.trangThai];
+              const pName = apt.benhNhan?.hoTen || "Ẩn danh";
+              const dName = apt.bacSi?.tenBacSi || "Không rõ";
+              const aptDate = new Date(apt.ngayDat).toLocaleDateString("vi-VN");
+              const initials = getInitials(pName);
+
+              return (
+                <div key={apt.id} className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-primary/10 text-primary">
+                        {initials}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{pName}</p>
+                        <p className="text-xs text-slate-500">{dName}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {apt.patient}
-                      </p>
-                      <p className="text-xs text-slate-500">{apt.doctor}</p>
-                    </div>
+                    {statusConfig && (
+                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${statusConfig.className}`}>
+                        {statusConfig.label}
+                      </span>
+                    )}
                   </div>
-                  {statusConfig && (
-                    <span
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${statusConfig.className}`}
-                    >
-                      {statusConfig.label}
-                    </span>
-                  )}
+                  <p className="text-xs text-slate-500">{aptDate}</p>
+                  <div className="flex justify-end">
+                    <Link to={`/admin/appointments/${apt.id}`} className="p-2 text-slate-400 hover:text-primary rounded-lg transition-colors">
+                      <span className="material-symbols-outlined text-xl">more_vert</span>
+                    </Link>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-500">{apt.date}</p>
-                <div className="flex justify-end">
-                  <button className="p-2 text-slate-400 hover:text-primary rounded-lg transition-colors">
-                    <span className="material-symbols-outlined text-xl">
-                      more_vert
-                    </span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
 
         <div className="overflow-x-auto hidden md:block">
@@ -220,50 +274,44 @@ function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {RECENT_APPOINTMENTS.map((apt) => {
-                const statusConfig = APPOINTMENT_STATUS_CONFIG[apt.status];
-                return (
-                  <tr
-                    key={apt.id}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${apt.color} text-slate-700`}
-                        >
-                          {apt.initials}
+              {recentAppointments.length === 0 ? (
+                <tr><td colSpan="5" className="text-center py-6 text-sm text-slate-500">Không có dữ liệu</td></tr>
+              ) : (
+                recentAppointments.map((apt) => {
+                  const statusConfig = APPOINTMENT_STATUS_CONFIG[apt.trangThai];
+                  const pName = apt.benhNhan?.hoTen || "Ẩn danh";
+                  const dName = apt.bacSi?.tenBacSi || "Không rõ";
+                  const aptDate = new Date(apt.ngayDat).toLocaleDateString("vi-VN");
+                  const initials = getInitials(pName);
+
+                  return (
+                    <tr key={apt.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-primary/10 text-primary">
+                            {initials}
+                          </div>
+                          <span className="text-sm font-semibold text-slate-900">{pName}</span>
                         </div>
-                        <span className="text-sm font-semibold text-slate-900">
-                          {apt.patient}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {apt.doctor}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {apt.date}
-                    </td>
-                    <td className="px-6 py-4">
-                      {statusConfig && (
-                        <span
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${statusConfig.className}`}
-                        >
-                          {statusConfig.label}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="p-2 text-slate-400 hover:text-primary rounded-lg transition-colors">
-                        <span className="material-symbols-outlined text-xl">
-                          more_vert
-                        </span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{dName}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{aptDate}</td>
+                      <td className="px-6 py-4">
+                        {statusConfig && (
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${statusConfig.className}`}>
+                            {statusConfig.label}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link to={`/admin/appointments/${apt.id}`} className="p-2 text-slate-400 hover:text-primary rounded-lg transition-colors">
+                          <span className="material-symbols-outlined text-xl">more_vert</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

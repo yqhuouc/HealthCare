@@ -26,17 +26,10 @@
  *           TOP_DOCTORS_STATS, DOCTOR_STATUS_CONFIG từ mockAdminData.js
  * ============================================================
  */
-import { useState } from "react";
-import {
-  STATS_OVERVIEW,
-  MONTHLY_APPOINTMENTS,
-  APPOINTMENT_STATUS_STATS,
-  SPECIALTY_APPOINTMENT_STATS,
-  PEAK_HOURS,
-  PATIENT_GROWTH,
-  TOP_DOCTORS_STATS,
-  DOCTOR_STATUS_CONFIG,
-} from "../../data/mockAdminData";
+import { useState, useEffect, useMemo } from "react";
+import { adminStatsService } from "../../services/adminStatsService";
+import { DOCTOR_STATUS_CONFIG } from "../../data/mockAdminData"; // Vẫn giữ config map trạng thái bác sĩ nếu cần
+import { getDoctorInitials } from "../../utils/formatters";
 
 /** Cấu hình tabs chọn kỳ thống kê */
 const PERIOD_TABS = [
@@ -79,37 +72,82 @@ function StatCard({ icon, iconBg, label, value, change, changeLabel }) {
 }
 
 function AdminStatsPage() {
-  const [period, setPeriod] = useState("month");
+  const [period, setPeriod] = useState("year");
+  const [loading, setLoading] = useState(true);
 
-  const maxMonthly = Math.max(...MONTHLY_APPOINTMENTS.map((m) => m.count));
-  const maxPatientGrowth = Math.max(...PATIENT_GROWTH.map((m) => m.count));
+  // States
+  const [overview, setOverview] = useState({
+    tongLichHen: 0,
+    lichHenTheoTrangThai: [],
+    doanhThuKham: 0,
+    doanhThuThuoc: 0,
+    tongDoanhThu: 0,
+    tongBenhNhan: 0
+  });
+  
+  const [revenueStats, setRevenueStats] = useState([]);
+  const [topDoctors, setTopDoctors] = useState([]);
 
-  const getInitials = (name) => {
-    const parts = name.replace("BS. ", "").split(" ");
-    return parts.length >= 2
-      ? parts[0][0] + parts[parts.length - 1][0]
-      : parts[0]?.slice(0, 2) || "BS";
-  };
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      try {
+        const [tongQuanRes, doanhThuRes, lichHenRes] = await Promise.all([
+          adminStatsService.getTongQuan(),
+          adminStatsService.getDoanhThuStats({ nam: new Date().getFullYear() }),
+          adminStatsService.getLichHenStats({})
+        ]);
 
-  const appointmentsChange =
-    STATS_OVERVIEW.appointmentsLastMonth > 0
-      ? (
-          ((STATS_OVERVIEW.appointmentsThisMonth -
-            STATS_OVERVIEW.appointmentsLastMonth) /
-            STATS_OVERVIEW.appointmentsLastMonth) *
-          100
-        ).toFixed(1)
-      : 0;
+        if (tongQuanRes.data) {
+          setOverview(tongQuanRes.data);
+        }
 
-  const patientsChange =
-    STATS_OVERVIEW.newPatientsLastMonth > 0
-      ? (
-          ((STATS_OVERVIEW.newPatientsThisMonth -
-            STATS_OVERVIEW.newPatientsLastMonth) /
-            STATS_OVERVIEW.newPatientsLastMonth) *
-          100
-        ).toFixed(1)
-      : 0;
+        if (doanhThuRes.data?.thongKeThang) {
+          setRevenueStats(doanhThuRes.data.thongKeThang);
+        }
+
+        if (lichHenRes.data?.lichHenTheoBacSi) {
+          setTopDoctors(lichHenRes.data.lichHenTheoBacSi);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải trang stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, [period]);
+
+
+
+  // Tính toán Tỷ lệ theo trạng thái
+  const statusStatsArr = useMemo(() => {
+    const total = overview.tongLichHen || 1; 
+    let hoanThanh = 0;
+    let xacNhan = 0;
+    let choXacNhan = 0;
+    let huy = 0;
+
+    overview.lichHenTheoTrangThai.forEach(item => {
+      if (item.trangThai === 0) choXacNhan = item.soLuong;
+      if (item.trangThai === 1) xacNhan = item.soLuong;
+      if (item.trangThai === 2) hoanThanh = item.soLuong;
+      if (item.trangThai === 3) huy = item.soLuong;
+    });
+
+    return [
+      { status: 2, label: "Đã hoàn thành", count: hoanThanh, percent: Math.round((hoanThanh/total)*100), color: "bg-emerald-500" },
+      { status: 1, label: "Đã xác nhận", count: xacNhan, percent: Math.round((xacNhan/total)*100), color: "bg-blue-500" },
+      { status: 0, label: "Chờ xác nhận", count: choXacNhan, percent: Math.round((choXacNhan/total)*100), color: "bg-amber-500" },
+      { status: 3, label: "Đã hủy", count: huy, percent: Math.round((huy/total)*100), color: "bg-rose-500" }
+    ];
+  }, [overview]);
+
+  const maxRevenue = Math.max(...revenueStats.map(s => s.tongDoanhThu || 0), 10000000); // Tránh chia 0
+
+  if (loading) {
+    return <div className="flex justify-center py-10"><span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -139,77 +177,82 @@ function AdminStatsPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards (API Data) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon="calendar_month"
           iconBg="bg-primary/10 text-primary"
-          label="Lịch khám tháng này"
-          value={STATS_OVERVIEW.appointmentsThisMonth.toLocaleString("vi-VN")}
-          change={Number(appointmentsChange)}
-          changeLabel="so với tháng trước"
+          label="Tổng lịch khám"
+          value={overview.tongLichHen.toLocaleString("vi-VN")}
+          change={0}
+          changeLabel="(toàn thời gian)"
         />
         <StatCard
-          icon="task_alt"
+          icon="payments"
           iconBg="bg-emerald-500/10 text-emerald-600"
-          label="Tỷ lệ hoàn thành khám"
-          value={`${STATS_OVERVIEW.completionRate}%`}
-          change={STATS_OVERVIEW.completionRateChange}
-          changeLabel="so với tháng trước"
+          label="Tổng doanh thu"
+          value={`${(overview.tongDoanhThu / 1000000).toFixed(1)} Tr`}
+          change={0}
+          changeLabel="(VNĐ)"
         />
         <StatCard
-          icon="event_busy"
-          iconBg="bg-rose-500/10 text-rose-600"
-          label="Tỷ lệ hủy lịch"
-          value={`${STATS_OVERVIEW.cancellationRate}%`}
-          change={STATS_OVERVIEW.cancellationRateChange}
-          changeLabel="so với tháng trước"
+          icon="vaccines"
+          iconBg="bg-blue-500/10 text-blue-600"
+          label="Doanh thu thuốc"
+          value={`${(overview.doanhThuThuoc / 1000000).toFixed(1)} Tr`}
+          change={0}
+          changeLabel="(Tiền kê đơn)"
         />
         <StatCard
           icon="person_add"
           iconBg="bg-violet-500/10 text-violet-600"
-          label="Bệnh nhân mới"
-          value={STATS_OVERVIEW.newPatientsThisMonth}
-          change={Number(patientsChange)}
-          changeLabel="so với tháng trước"
+          label="Tổng bệnh nhân"
+          value={overview.tongBenhNhan.toLocaleString("vi-VN")}
+          change={0}
+          changeLabel="(Người)"
         />
       </div>
 
-      {/* Row: Monthly chart + Status breakdown */}
+      {/* Row: Monthly revenue chart + Status breakdown */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Monthly appointments bar chart */}
+        {/* Monthly revenue bar chart */}
         <div className="xl:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
           <h3 className="text-base font-bold text-slate-900 mb-5">
-            Lượt đặt lịch khám theo tháng
+            Doanh thu theo tháng (VNĐ)
           </h3>
           <div className="flex items-end gap-1 sm:gap-2 h-44 sm:h-52">
-            {MONTHLY_APPOINTMENTS.map((m) => {
-              const heightPercent =
-                maxMonthly > 0 ? (m.count / maxMonthly) * 100 : 0;
+            {revenueStats.length > 0 ? revenueStats.map((m) => {
+              const heightPercent = maxRevenue > 0 ? (m.tongDoanhThu / maxRevenue) * 100 : 0;
               return (
                 <div
-                  key={m.month}
+                  key={m.thang}
                   className="flex-1 flex flex-col items-center gap-1.5 group relative"
+                  title={`Khám: ${m.doanhThuKham.toLocaleString()}đ | Thuốc: ${m.doanhThuThuoc.toLocaleString()}đ`}
                 >
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-medium px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                    {m.count > 0 ? m.count.toLocaleString("vi-VN") : "—"}
+                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-medium px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                    {m.tongDoanhThu > 0 ? m.tongDoanhThu.toLocaleString("vi-VN") : "0"}đ
                   </div>
                   <div
-                    className={`w-full max-w-8 rounded-t transition-all ${
-                      m.count > 0
-                        ? "bg-primary group-hover:bg-primary/80"
-                        : "bg-slate-100"
+                    className={`w-full max-w-8 rounded-t transition-all flex flex-col justify-end overflow-hidden ${
+                      m.tongDoanhThu > 0 ? "bg-slate-100" : "bg-slate-100"
                     }`}
-                    style={{
-                      height: `${Math.max(heightPercent, 4)}%`,
-                    }}
-                  />
+                    style={{ height: `${Math.max(heightPercent, 4)}%` }}
+                  >
+                    {/* Phần doanh thu khám (Xanh dương) */}
+                    <div style={{ height: `${(m.doanhThuKham / (m.tongDoanhThu || 1)) * 100}%` }} className="bg-blue-400 group-hover:bg-blue-500 w-full transition-colors" />
+                    {/* Phần doanh thu thuốc (Xanh lá) */}
+                    <div style={{ height: `${(m.doanhThuThuoc / (m.tongDoanhThu || 1)) * 100}%` }} className="bg-emerald-400 group-hover:bg-emerald-500 w-full transition-colors" />
+                  </div>
                   <span className="text-[10px] sm:text-xs font-medium text-slate-400">
-                    {m.month}
+                    T{m.thang}
                   </span>
                 </div>
               );
-            })}
+            }) : <p className="text-slate-400 text-sm">Chưa có dữ liệu</p>}
+          </div>
+          <div className="mt-4 flex gap-4 justify-end text-xs text-slate-500">
+             <span className="flex items-center gap-2"><span className="w-3 h-3 bg-blue-400 rounded-sm"></span> Phí khám</span>
+             <span className="flex items-center gap-2"><span className="w-3 h-3 bg-emerald-400 rounded-sm"></span> Phí thuốc</span>
           </div>
         </div>
 
@@ -223,27 +266,27 @@ function AdminStatsPage() {
               className="w-36 h-36 rounded-full relative"
               style={{
                 background: `conic-gradient(
-                  #10b981 0% ${APPOINTMENT_STATUS_STATS[0].percent}%,
-                  #3b82f6 ${APPOINTMENT_STATUS_STATS[0].percent}% ${APPOINTMENT_STATUS_STATS[0].percent + APPOINTMENT_STATUS_STATS[1].percent}%,
-                  #f59e0b ${APPOINTMENT_STATUS_STATS[0].percent + APPOINTMENT_STATUS_STATS[1].percent}% ${APPOINTMENT_STATUS_STATS[0].percent + APPOINTMENT_STATUS_STATS[1].percent + APPOINTMENT_STATUS_STATS[2].percent}%,
-                  #f43f5e ${APPOINTMENT_STATUS_STATS[0].percent + APPOINTMENT_STATUS_STATS[1].percent + APPOINTMENT_STATUS_STATS[2].percent}% 100%
+                  #10b981 0% ${statusStatsArr[0].percent}%,
+                  #3b82f6 ${statusStatsArr[0].percent}% ${statusStatsArr[0].percent + statusStatsArr[1].percent}%,
+                  #f59e0b ${statusStatsArr[0].percent + statusStatsArr[1].percent}% ${statusStatsArr[0].percent + statusStatsArr[1].percent + statusStatsArr[2].percent}%,
+                  #f43f5e ${statusStatsArr[0].percent + statusStatsArr[1].percent + statusStatsArr[2].percent}% 100%
                 )`,
               }}
             >
               <div className="absolute inset-4 bg-white rounded-full flex flex-col items-center justify-center">
-                <span className="text-lg font-bold text-slate-900">1.284</span>
+                <span className="text-lg font-bold text-slate-900">{overview.tongLichHen.toLocaleString("vi-VN")}</span>
                 <span className="text-[10px] text-slate-400 font-medium">
                   Tổng cộng
                 </span>
               </div>
             </div>
             <div className="w-full space-y-2.5">
-              {APPOINTMENT_STATUS_STATS.map((s) => (
+              {statusStatsArr.map((s) => (
                 <div key={s.status} className="flex items-center gap-2.5">
                   <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.color}`} />
                   <span className="text-sm text-slate-600 flex-1">{s.label}</span>
                   <span className="text-sm font-semibold text-slate-900">
-                    {s.count}
+                    {s.count.toLocaleString()}
                   </span>
                   <span className="text-xs text-slate-400 w-10 text-right">
                     {s.percent}%
@@ -255,113 +298,11 @@ function AdminStatsPage() {
         </div>
       </div>
 
-      {/* Row: Specialty stats + Peak hours */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Specialty horizontal bars */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
-          <h3 className="text-base font-bold text-slate-900 mb-5">
-            Lượt khám theo chuyên khoa
-          </h3>
-          <div className="space-y-3">
-            {SPECIALTY_APPOINTMENT_STATS.map((s) => (
-              <div key={s.name}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate-700">{s.name}</span>
-                  <span className="text-sm font-semibold text-slate-900">
-                    {s.count}
-                  </span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all"
-                    style={{ width: `${s.percent}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Peak hours */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
-          <h3 className="text-base font-bold text-slate-900 mb-5">
-            Khung giờ đặt lịch phổ biến
-          </h3>
-          <div className="space-y-3">
-            {PEAK_HOURS.map((h) => (
-              <div key={h.time} className="flex items-center gap-3">
-                <span className="text-xs font-medium text-slate-500 w-24 shrink-0">
-                  {h.time}
-                </span>
-                <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      h.percent === 100
-                        ? "bg-emerald-500"
-                        : h.percent >= 70
-                        ? "bg-primary"
-                        : h.percent >= 50
-                        ? "bg-amber-500"
-                        : "bg-slate-300"
-                    }`}
-                    style={{ width: `${h.percent}%` }}
-                  />
-                </div>
-                <span className="text-xs font-semibold text-slate-700 w-8 text-right">
-                  {h.count}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-4 text-[10px] font-medium text-slate-400">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" /> Cao nhất
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-primary" /> Cao
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-amber-500" /> Trung bình
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-slate-300" /> Thấp
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Patient growth mini chart */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
-        <h3 className="text-base font-bold text-slate-900 mb-5">
-          Bệnh nhân đăng ký mới theo tháng
-        </h3>
-        <div className="flex items-end gap-1 sm:gap-2 h-32 sm:h-40">
-          {PATIENT_GROWTH.map((m) => {
-            const heightPercent =
-              maxPatientGrowth > 0 ? (m.count / maxPatientGrowth) * 100 : 0;
-            return (
-              <div
-                key={m.month}
-                className="flex-1 flex flex-col items-center gap-1.5 group relative"
-              >
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-medium px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                  {m.count > 0 ? m.count : "—"}
-                </div>
-                <div
-                  className={`w-full max-w-8 rounded-t transition-all ${
-                    m.count > 0
-                      ? "bg-violet-500 group-hover:bg-violet-400"
-                      : "bg-slate-100"
-                  }`}
-                  style={{ height: `${Math.max(heightPercent, 4)}%` }}
-                />
-                <span className="text-[10px] sm:text-xs font-medium text-slate-400">
-                  {m.month}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+      {/* Tính năng phân tích sâu (Chưa có API) */}
+      <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-6 text-center shadow-inner">
+        <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">construction</span>
+        <h3 className="text-slate-600 font-semibold mb-1">Tính năng phân tích đang được xây dựng</h3>
+        <p className="text-sm text-slate-400">Các biểu đồ phân bổ thời gian và tăng trưởng chi tiết sẽ được cập nhật trong bản sau.</p>
       </div>
 
       {/* Top doctors table */}
@@ -374,35 +315,20 @@ function AdminStatsPage() {
 
         {/* Mobile cards */}
         <div className="block md:hidden divide-y divide-slate-100">
-          {TOP_DOCTORS_STATS.map((doc, idx) => {
-            const statusConfig = DOCTOR_STATUS_CONFIG[doc.status];
+          {topDoctors.length === 0 ? <p className="text-center p-4 text-sm text-slate-500">Chưa có dữ liệu</p> : topDoctors.map((doc, idx) => {
             return (
-              <div key={doc.id} className="p-4 flex items-start gap-3">
+              <div key={doc.bacSiId} className="p-4 flex items-start gap-3">
                 <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
                   {idx + 1}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-900 truncate">
-                    {doc.name}
+                    {doc.tenBacSi}
                   </p>
-                  <p className="text-xs text-slate-500">{doc.specialty}</p>
-                  <div className="flex flex-wrap items-center gap-3 mt-2 text-xs">
+                  <div className="flex flex-wrap items-center gap-3 mt-1 text-xs">
                     <span className="text-slate-600 font-medium">
-                      {doc.appointments} lịch khám
+                      {doc.soLuong} lượt khám
                     </span>
-                    <span className="flex items-center gap-0.5 text-amber-600">
-                      <span className="material-symbols-outlined text-sm">
-                        star
-                      </span>
-                      {doc.rating}
-                    </span>
-                    {statusConfig && (
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${statusConfig.className}`}
-                      >
-                        {statusConfig.label}
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -436,11 +362,10 @@ function AdminStatsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {TOP_DOCTORS_STATS.map((doc, idx) => {
-                const statusConfig = DOCTOR_STATUS_CONFIG[doc.status];
+              {topDoctors.length === 0 ? <tr><td colSpan={6} className="text-center p-4 text-sm text-slate-500">Chưa có dữ liệu</td></tr> : topDoctors.map((doc, idx) => {
                 return (
                   <tr
-                    key={doc.id}
+                    key={doc.bacSiId}
                     className="hover:bg-slate-50 transition-colors"
                   >
                     <td className="px-6 py-4">
@@ -451,22 +376,22 @@ function AdminStatsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                          {getInitials(doc.name)}
+                          {getDoctorInitials(doc.tenBacSi)}
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-slate-900">
-                            {doc.name}
+                            {doc.tenBacSi}
                           </p>
-                          <p className="text-xs text-slate-400">{doc.code}</p>
+                          <p className="text-xs text-slate-400">ID: {doc.bacSiId}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {doc.specialty}
+                      —
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm font-bold text-slate-900">
-                        {doc.appointments}
+                        {doc.soLuong}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -475,21 +400,19 @@ function AdminStatsPage() {
                           star
                         </span>
                         <span className="font-semibold text-slate-900">
-                          {doc.rating}
+                          5.0
                         </span>
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {statusConfig && (
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-600`}
+                      >
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${statusConfig.className}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`}
-                          />
-                          {statusConfig.label}
-                        </span>
-                      )}
+                          className={`w-1.5 h-1.5 rounded-full bg-emerald-500`}
+                        />
+                        Hoạt động
+                      </span>
                     </td>
                   </tr>
                 );

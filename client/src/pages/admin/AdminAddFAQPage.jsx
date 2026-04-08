@@ -20,29 +20,22 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-
-/** Danh sách chuyên mục FAQ kèm màu badge */
-const CATEGORIES = [
-  { value: "Hướng dẫn", color: "bg-blue-100 text-blue-800" },
-  { value: "Thanh toán", color: "bg-purple-100 text-purple-800" },
-  { value: "Dịch vụ", color: "bg-orange-100 text-orange-800" },
-  { value: "Thông tin", color: "bg-emerald-100 text-emerald-800" },
-];
+import { faqService } from "../../services/faqService";
 
 function AdminAddFAQPage() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     question: "",
     answer: "",
-    category: "",
-    status: "visible",
+    status: "1",
   });
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.question.trim()) {
       toast.warn("Vui lòng nhập câu hỏi.");
       return;
@@ -51,12 +44,22 @@ function AdminAddFAQPage() {
       toast.warn("Vui lòng nhập câu trả lời.");
       return;
     }
-    if (!form.category) {
-      toast.warn("Vui lòng chọn chuyên mục.");
-      return;
+
+    setLoading(true);
+    try {
+      await faqService.create({
+        cauHoi: form.question,
+        traLoi: form.answer,
+        dangHoatDong: Number(form.status),
+      });
+      toast.success("Đã thêm FAQ mới thành công!");
+      navigate("/admin/faqs");
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Lỗi khi thêm câu hỏi");
+    } finally {
+      setLoading(false);
     }
-    toast.success("Đã thêm FAQ mới thành công!");
-    navigate("/admin/faqs");
   };
 
   return (
@@ -113,25 +116,7 @@ function AdminAddFAQPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Chuyên mục <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
-              >
-                <option value="">-- Chọn chuyên mục --</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.value}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Trạng thái
+                Trạng thái hiển thị
               </label>
               <select
                 name="status"
@@ -139,25 +124,11 @@ function AdminAddFAQPage() {
                 onChange={handleChange}
                 className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
               >
-                <option value="visible">Hiển thị</option>
-                <option value="hidden">Ẩn</option>
-                <option value="draft">Bản nháp</option>
+                <option value="1">Hiển thị</option>
+                <option value="0">Ẩn / Bản nháp</option>
               </select>
             </div>
           </div>
-
-          {form.category && (
-            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
-              <span className="text-sm text-slate-600">Chuyên mục:</span>
-              <span
-                className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${
-                  CATEGORIES.find((c) => c.value === form.category)?.color || ""
-                }`}
-              >
-                {form.category}
-              </span>
-            </div>
-          )}
         </div>
 
         <div className="bg-slate-50 px-6 sm:px-8 py-4 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 border-t border-slate-200">
@@ -169,9 +140,16 @@ function AdminAddFAQPage() {
           </button>
           <button
             onClick={handleSave}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-semibold shadow-md shadow-primary/20 transition-colors flex items-center justify-center gap-2"
+            disabled={loading}
+            className={`w-full sm:w-auto px-6 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+              loading ? "bg-slate-300 cursor-not-allowed" : "bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
+            }`}
           >
-            <span className="material-symbols-outlined text-sm">save</span>
+            {loading ? (
+              <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+            ) : (
+              <span className="material-symbols-outlined text-sm">save</span>
+            )}
             Lưu câu hỏi
           </button>
         </div>

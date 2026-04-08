@@ -26,52 +26,59 @@
  * Dữ liệu: ADMIN_FAQS từ mockAdminData.js
  * ============================================================
  */
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { ADMIN_FAQS } from "../../data/mockAdminData";
-
-/** Cấu hình các tab lọc */
-const TABS = [
-  { value: "all", label: "Tất cả" },
-  { value: "published", label: "Đã xuất bản" },
-  { value: "draft", label: "Bản nháp" },
-  { value: "archived", label: "Lưu trữ" },
-];
+import { faqService } from "../../services/faqService";
 
 const STATUS_MAP = {
-  visible: { label: "Hiển thị", dotClass: "bg-emerald-500" },
-  hidden: { label: "Ẩn", dotClass: "bg-slate-400" },
-  draft: { label: "Bản nháp", dotClass: "bg-amber-500" },
-  archived: { label: "Lưu trữ", dotClass: "bg-slate-400" },
+  1: { label: "Hiển thị", dotClass: "bg-emerald-500" },
+  0: { label: "Ẩn", dotClass: "bg-slate-400" },
 };
 
 const ITEMS_PER_PAGE = 5;
 
 function AdminFAQsPage() {
-  const [activeTab, setActiveTab] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [faqs, setFaqs] = useState(ADMIN_FAQS);
+  const [page, setPage] = useState(1);
+  const [faqs, setFaqs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const filtered = faqs.filter((item) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "published") return item.status === "visible";
-    if (activeTab === "draft") return item.status === "draft";
-    if (activeTab === "archived") return item.status === "archived";
-    return true;
-  });
+  const fetchFaqs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await faqService.getAllAdmin({ page, limit: ITEMS_PER_PAGE });
+      if (res.success) {
+        setFaqs(res.data.faqs || []);
+        setTotalPages(res.data.pagination?.totalPages || 1);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi lấy danh sách FAQ");
+    } finally {
+      setLoading(false);
+    }
+  }, [page]);
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedData = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  useEffect(() => {
+    fetchFaqs();
+  }, [fetchFaqs]);
 
   const handleEdit = (id) => {
-    toast.info("Chức năng chỉnh sửa đang phát triển");
+    toast.info(`Chức năng chỉnh sửa FAQ #${id} đang phát triển`);
   };
 
-  const handleDelete = (id) => {
-    setFaqs((prev) => prev.filter((f) => f.id !== id));
-    toast.success("Đã xóa FAQ");
+  const handleDelete = async (id) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa câu hỏi này không?")) return;
+    
+    try {
+      await faqService.remove(id);
+      toast.success("Đã xóa câu hỏi thành công");
+      fetchFaqs();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Lỗi khi xóa câu hỏi");
+    }
   };
 
   return (
@@ -90,26 +97,7 @@ function AdminFAQsPage() {
         </Link>
       </div>
 
-      <div className="border-b border-slate-200">
-        <div className="flex gap-6">
-          {TABS.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => {
-                setActiveTab(tab.value);
-                setCurrentPage(1);
-              }}
-              className={`pb-3 text-sm font-medium transition-colors ${
-                activeTab === tab.value
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-slate-500 hover:text-slate-700 border-b-2 border-transparent"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="hidden md:block overflow-x-auto">
@@ -124,19 +112,33 @@ function AdminFAQsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedData.map((item) => {
-                const statusInfo = STATUS_MAP[item.status] || STATUS_MAP.hidden;
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-10">
+                    <span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span>
+                  </td>
+                </tr>
+              ) : faqs.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-10 text-slate-500">
+                    Chưa có câu hỏi nào được lưu trong hệ thống.
+                  </td>
+                </tr>
+              ) : faqs.map((item) => {
+                const statusInfo = STATUS_MAP[item.dangHoatDong] || STATUS_MAP[0];
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-5 py-4 max-w-[320px]">
-                      <p className="line-clamp-1 text-slate-800 font-medium">{item.question}</p>
+                      <p className="line-clamp-1 text-slate-800 font-medium">{item.cauHoi}</p>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${item.categoryColor}`}>
-                        {item.category}
+                      <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary`}>
+                        {item.cauHoiThuongGap_ChuyenMuc?.tenChuyenMuc || "Hệ thống"}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-slate-600">{item.createdAt}</td>
+                    <td className="px-5 py-4 text-slate-600">
+                      {new Date(item.ngayTao || Date.now()).toLocaleDateString("vi-VN")}
+                    </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <span className={`size-2 rounded-full ${statusInfo.dotClass}`} />
@@ -167,21 +169,23 @@ function AdminFAQsPage() {
         </div>
 
         <div className="block md:hidden divide-y divide-slate-100">
-          {paginatedData.map((item) => {
-            const statusInfo = STATUS_MAP[item.status] || STATUS_MAP.hidden;
+          {faqs.map((item) => {
+            const statusInfo = STATUS_MAP[item.dangHoatDong] || STATUS_MAP[0];
             return (
               <div key={item.id} className="p-4 space-y-3">
-                <p className="line-clamp-1 font-medium text-slate-800">{item.question}</p>
+                <p className="line-clamp-1 font-medium text-slate-800">{item.cauHoi}</p>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${item.categoryColor}`}>
-                    {item.category}
+                  <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary`}>
+                    {item.cauHoiThuongGap_ChuyenMuc?.tenChuyenMuc || "Hệ thống"}
                   </span>
                   <div className="flex items-center gap-2">
                     <span className={`size-2 rounded-full ${statusInfo.dotClass}`} />
                     <span className="text-xs text-slate-600">{statusInfo.label}</span>
                   </div>
                 </div>
-                <p className="text-xs text-slate-500">{item.createdAt}</p>
+                <p className="text-xs text-slate-500">
+                  {new Date(item.ngayTao || Date.now()).toLocaleDateString("vi-VN")}
+                </p>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleEdit(item.id)}
@@ -204,19 +208,19 @@ function AdminFAQsPage() {
         {totalPages > 1 && (
           <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between">
             <p className="text-xs text-slate-500">
-              Trang {currentPage} / {totalPages}
+              Trang {page} / {totalPages}
             </p>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
                 className="size-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined text-xl">chevron_left</span>
               </button>
               <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
                 className="size-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined text-xl">chevron_right</span>

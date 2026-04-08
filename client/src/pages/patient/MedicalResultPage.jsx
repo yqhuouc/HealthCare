@@ -17,44 +17,9 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { appointmentService } from "../../services/appointmentService";
+import { formatTime, formatDate, formatPrice } from "../../utils/formatters";
 
-/** Format Date object hoặc ISO string thành "dd/MM/yyyy" */
-function formatDate(dateInput) {
-  if (!dateInput) return "";
-  const d = new Date(dateInput);
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
 
-/** Format giờ từ Date hoặc chuỗi ISO/Time */
-function formatTime(timeInput) {
-  if (!timeInput) return "";
-  // Nếu là chuỗi HH:mm (như từ API slot trống gửi về) thì lấy luôn
-  if (
-    typeof timeInput === "string" &&
-    !timeInput.includes("T") &&
-    timeInput.includes(":")
-  ) {
-    return timeInput.substring(0, 5);
-  }
-  const d = new Date(timeInput);
-  if (isNaN(d.getTime())) return timeInput;
-  d.setFullYear(2024); // Chuẩn hóa năm để tránh lỗi múi giờ lịch sử
-  return d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
-
-/** Format giá tiền VND */
-function formatPrice(price) {
-  if (price === undefined || price === null) return "0đ";
-  return Number(price).toLocaleString("vi-VN") + "đ";
-}
 
 export default function MedicalResultPage() {
   const { id } = useParams();

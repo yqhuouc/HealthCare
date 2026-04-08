@@ -20,6 +20,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
+import { specialtyService } from "../../services/specialtyService";
 
 /** Danh sách icon Material Symbols để chọn cho chuyên khoa */
 const ICON_OPTIONS = [
@@ -37,6 +38,7 @@ const ICON_OPTIONS = [
 
 function AdminAddSpecialtyPage() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     icon: "",
@@ -47,13 +49,27 @@ function AdminAddSpecialtyPage() {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) {
       toast.warn("Vui lòng nhập tên chuyên khoa.");
       return;
     }
-    toast.success(`Đã thêm chuyên khoa "${form.name}" thành công!`);
-    navigate("/admin/specialties");
+    
+    setLoading(true);
+    try {
+      await specialtyService.create({
+        tenChuyenKhoa: form.name.trim(),
+        anhChuyenKhoa: form.icon, // Lưu tạm tên icon vào anhChuyenKhoa
+        moTaChuyenKhoa: form.description,
+      });
+      toast.success(`Đã thêm chuyên khoa "${form.name}" thành công!`);
+      navigate("/admin/specialties");
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi thêm chuyên khoa!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -148,9 +164,16 @@ function AdminAddSpecialtyPage() {
           </button>
           <button
             onClick={handleSave}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-semibold shadow-md shadow-primary/20 transition-colors flex items-center justify-center gap-2"
+            disabled={loading}
+            className={`w-full sm:w-auto px-6 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+              loading ? "bg-slate-300" : "bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
+            }`}
           >
-            <span className="material-symbols-outlined text-sm">save</span>
+            {loading ? (
+              <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+            ) : (
+              <span className="material-symbols-outlined text-sm">save</span>
+            )}
             Lưu chuyên khoa
           </button>
         </div>

@@ -18,18 +18,57 @@
  * Dữ liệu: ADMIN_SPECIALTIES từ mockAdminData.js
  * ============================================================
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ADMIN_SPECIALTIES } from "../../data/mockAdminData";
+import { toast } from "react-toastify";
+import { specialtyService } from "../../services/specialtyService";
 
 const ITEMS_PER_PAGE = 5;
 
 function AdminSpecialtiesPage() {
   const [currentPage, setCurrentPage] = useState(1);
-  const data = ADMIN_SPECIALTIES;
-  const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+  const [specialties, setSpecialties] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSpecialties = async () => {
+    setLoading(true);
+    try {
+      const res = await specialtyService.getAll();
+      if (res.success) {
+        setSpecialties(res.data);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi tải danh sách chuyên khoa");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSpecialties();
+  }, []);
+
+  const totalPages = Math.ceil(specialties.length / ITEMS_PER_PAGE);
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedData = data.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  const paginatedData = specialties.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+
+  const handleDelete = async (id, doctorCount) => {
+    if (doctorCount > 0) {
+      toast.error("Không thể xóa chuyên khoa đang có bác sĩ!");
+      return;
+    }
+    if (window.confirm("Bạn có chắc chắn muốn xóa chuyên khoa này?")) {
+      try {
+        await specialtyService.remove(id);
+        toast.success("Xóa chuyên khoa thành công!");
+        fetchSpecialties();
+      } catch (error) {
+        console.error(error);
+        toast.error(error.response?.data?.message || "Có lỗi xảy ra khi xóa");
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -59,29 +98,41 @@ function AdminSpecialtiesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedData.map((item) => (
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="text-center py-10">
+                    <span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span>
+                  </td>
+                </tr>
+              ) : paginatedData.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="text-center py-10 text-slate-500">
+                    Chưa có chuyên khoa nào.
+                  </td>
+                </tr>
+              ) : paginatedData.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <span className="material-symbols-outlined text-primary text-xl">{item.icon}</span>
+                        <span className="material-symbols-outlined text-primary text-xl">medical_services</span>
                       </div>
-                      <span className="font-bold text-slate-800">{item.name}</span>
+                      <span className="font-bold text-slate-800">{item.tenChuyenKhoa}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-slate-600 max-w-[280px] line-clamp-1">{item.description}</td>
+                  <td className="px-5 py-4 text-slate-600 max-w-[280px] line-clamp-1">{item.moTaChuyenKhoa}</td>
                   <td className="px-5 py-4">
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">
                       <span className="material-symbols-outlined text-base">groups</span>
-                      {item.doctorCount}
+                      {item._count?.bacSiList || 0}
                     </span>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-1">
-                      <button className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors">
+                      <button onClick={() => toast.info(`Chỉnh sửa chuyên khoa #${item.id} đang phát triển`)} className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors">
                         <span className="material-symbols-outlined text-xl">edit_square</span>
                       </button>
-                      <button className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-500 transition-colors">
+                      <button onClick={() => handleDelete(item.id, item._count?.bacSiList || 0)} className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-500 transition-colors">
                         <span className="material-symbols-outlined text-xl">delete</span>
                       </button>
                     </div>
@@ -97,23 +148,23 @@ function AdminSpecialtiesPage() {
             <div key={item.id} className="p-4 space-y-3">
               <div className="flex items-start gap-3">
                 <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-primary text-xl">{item.icon}</span>
+                  <span className="material-symbols-outlined text-primary text-xl">medical_services</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-800">{item.name}</p>
-                  <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{item.description}</p>
+                  <p className="font-bold text-slate-800">{item.tenChuyenKhoa}</p>
+                  <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{item.moTaChuyenKhoa}</p>
                 </div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">
                   <span className="material-symbols-outlined text-base">groups</span>
-                  {item.doctorCount} bác sĩ
+                  {item._count?.bacSiList || 0} bác sĩ
                 </span>
                 <div className="flex items-center gap-1">
-                  <button className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100">
+                  <button onClick={() => toast.info(`Chỉnh sửa ${item.id}`)} className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100">
                     <span className="material-symbols-outlined text-xl">edit_square</span>
                   </button>
-                  <button className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-500">
+                  <button onClick={() => handleDelete(item.id, item._count?.bacSiList || 0)} className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-500">
                     <span className="material-symbols-outlined text-xl">delete</span>
                   </button>
                 </div>
@@ -147,25 +198,25 @@ function AdminSpecialtiesPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-sm text-slate-700">
-          Khi xóa một chuyên khoa, hãy đảm bảo không còn bác sĩ hoặc lịch khám nào đang liên kết với chuyên khoa đó.
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-sm text-slate-700">
+            Khi xóa một chuyên khoa, hãy đảm bảo không còn bác sĩ hoặc lịch khám nào đang liên kết với chuyên khoa đó.
+          </div>
+          <div className="p-4 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-between">
+            <span className="font-medium">Tổng chuyên khoa</span>
+            <span className="flex items-center gap-1.5 font-bold">
+              <span className="material-symbols-outlined text-xl">medical_services</span>
+              {specialties.length}
+            </span>
+          </div>
+          <div className="p-4 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-between">
+            <span className="font-medium">Chuyên khoa nổi bật</span>
+            <span className="flex items-center gap-1.5 font-bold">
+              <span className="material-symbols-outlined text-xl">star</span>
+              {specialties.length > 0 ? "Kích hoạt" : "Trống"}
+            </span>
+          </div>
         </div>
-        <div className="p-4 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-between">
-          <span className="font-medium">Hoạt động</span>
-          <span className="flex items-center gap-1.5 font-bold">
-            <span className="material-symbols-outlined text-xl">verified</span>
-            12/12
-          </span>
-        </div>
-        <div className="p-4 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-between">
-          <span className="font-medium">Yêu cầu mới</span>
-          <span className="flex items-center gap-1.5 font-bold">
-            <span className="material-symbols-outlined text-xl">medical_information</span>
-            03
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

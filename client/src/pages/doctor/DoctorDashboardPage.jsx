@@ -19,6 +19,7 @@ import { Link } from "react-router-dom";
 import { appointmentService } from "../../services/appointmentService";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
+import { getInitials, formatTime } from "../../utils/formatters";
 
 /**
  * Cấu hình hiển thị cho các trạng thái lịch hẹn
@@ -31,31 +32,7 @@ const STATUS_CONFIG = {
   3: { label: "Đã hủy", color: "bg-rose-100 text-rose-600" },
 };
 
-/**
- * Hàm format giờ hiển thị từ chuỗi ISO hoặc định dạng HH:mm:ss của Backend.
- * @param {string} timeInput - Chuỗi thời gian đầu vào
- * @returns {string} - Định dạng HH:mm (VD: 08:30)
- */
-function formatTime(timeInput) {
-  if (!timeInput) return "";
-  // Nếu là định dạng HH:mm:ss thuần (không có T của ISO)
-  if (
-    typeof timeInput === "string" &&
-    !timeInput.includes("T") &&
-    timeInput.includes(":")
-  ) {
-    return timeInput.substring(0, 5);
-  }
-  const d = new Date(timeInput);
-  if (isNaN(d.getTime())) return timeInput;
-  d.setFullYear(2024); // Ép năm cố định để tránh lỗi lệch múi giờ lịch sử
-  return d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
+
 
 function DoctorDashboardPage() {
   // Lấy User hiện tại từ Auth Store (Zustand)
@@ -155,16 +132,7 @@ function DoctorDashboardPage() {
     }
   };
 
-  /**
-   * Lấy chữ cái đầu của tên để hiển thị Avatar mặc định nếu ko có ảnh
-   */
-  const getInitials = (name) => {
-    if (!name) return "?";
-    const parts = name.split(" ");
-    return parts.length >= 2
-      ? parts[parts.length - 2][0] + parts[parts.length - 1][0]
-      : parts[0][0];
-  };
+
 
   /**
    * Render nhãn trạng thái (Badge) + ký hiệu đã kê đơn

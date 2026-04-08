@@ -24,50 +24,75 @@
  * Dữ liệu: ADMIN_DOCTORS, DOCTOR_STATUS_CONFIG từ mockAdminData.js
  * ============================================================
  */
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { ADMIN_DOCTORS, DOCTOR_STATUS_CONFIG } from "../../data/mockAdminData";
+import { DOCTOR_STATUS_CONFIG } from "../../data/mockAdminData";
+import { doctorService } from "../../services/doctorService";
+import { getDoctorInitials } from "../../utils/formatters";
 
 const ITEMS_PER_PAGE = 5;
 
-/** Lấy 2 ký tự đầu tên (bỏ prefix "BS.") để làm avatar initials */
-function getInitials(name) {
-  const parts = name.replace(/^BS\.\s*/i, "").trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
+
 
 export default function AdminDoctorsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalDoctors, setTotalDoctors] = useState(0);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return ADMIN_DOCTORS;
-    const q = search.toLowerCase();
-    return ADMIN_DOCTORS.filter(
-      (d) =>
-        d.name.toLowerCase().includes(q) ||
-        d.code.toLowerCase().includes(q) ||
-        d.specialty.toLowerCase().includes(q)
-    );
+  // Debounce search
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset trang khi tìm kiếm mới
+    }, 500);
+    return () => clearTimeout(timer);
   }, [search]);
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE;
-    return filtered.slice(start, start + ITEMS_PER_PAGE);
-  }, [filtered, page]);
+  const fetchDoctors = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await doctorService.getAll({
+        page,
+        limit: ITEMS_PER_PAGE,
+        search: debouncedSearch,
+      });
+      if (res.success) {
+        setDoctors(res.data);
+        setTotalPages(res.pagination?.totalPages || 1);
+        setTotalDoctors(res.pagination?.totalItems || 0);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi lấy danh sách bác sĩ");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, debouncedSearch]);
 
+  useEffect(() => {
+    fetchDoctors();
+  }, [fetchDoctors]);
 
   const handleEdit = (id) => {
-    toast.info(`Chỉnh sửa bác sĩ #${id}`);
+    toast.info(`Tính năng chỉnh sửa tạm thời bị khóa cho tài khoản số ${id}`);
   };
 
-  const handleDelete = (id) => {
-    toast.warning(`Xóa bác sĩ #${id} - chức năng sẽ được triển khai.`);
+  const handleDelete = async (id) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa bác sĩ #${id} không?`)) {
+      try {
+        await doctorService.remove(id);
+        toast.success("Xóa bác sĩ thành công!");
+        fetchDoctors();
+      } catch (error) {
+        console.error(error);
+        toast.error("Có lỗi xảy ra, không thể xóa bác sĩ!");
+      }
+    }
   };
 
   return (
@@ -120,75 +145,96 @@ export default function AdminDoctorsPage() {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((doc) => {
-                const statusCfg = DOCTOR_STATUS_CONFIG[doc.status] || DOCTOR_STATUS_CONFIG.active;
-                return (
-                  <tr
-                    key={doc.id}
-                    className="group border-b border-slate-100 hover:bg-slate-50/50 transition"
-                  >
-                    <td className="py-3 px-4">
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                        {getInitials(doc.name)}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="font-semibold text-slate-800">{doc.name}</p>
-                      <p className="text-sm text-slate-500">{doc.code}</p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-sm font-medium">
-                        {doc.specialty}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-600">{doc.experience}</td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium ${statusCfg.className}`}
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dotColor}`} />
-                        {statusCfg.label}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
-                        <button
-                          onClick={() => handleEdit(doc.id)}
-                          className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary"
-                          aria-label="Chỉnh sửa"
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-10">
+                    <span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span>
+                  </td>
+                </tr>
+              ) : doctors.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-10 text-slate-500">
+                    Không tìm thấy bác sĩ nào.
+                  </td>
+                </tr>
+              ) : (
+                 doctors.map((doc) => {
+                  const status = doc.taiKhoan?.trangThaiTaiKhoan === 1 ? "active" : "inactive";
+                  const statusCfg = DOCTOR_STATUS_CONFIG[status] || DOCTOR_STATUS_CONFIG.active;
+                  const specialtyName = doc.chuyenKhoa?.tenChuyenKhoa || "Chưa xác định";
+                  const fullName = `${doc.hocViChucDanh ? doc.hocViChucDanh + " " : ""}${doc.tenBacSi}`;
+                  
+                  return (
+                    <tr
+                      key={doc.id}
+                      className="group border-b border-slate-100 hover:bg-slate-50/50 transition"
+                    >
+                      <td className="py-3 px-4">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                          {getDoctorInitials(doc.tenBacSi)}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <p className="font-semibold text-slate-800">{fullName}</p>
+                        <p className="text-sm text-slate-500">ID: {doc.id}</p>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-sm font-medium">
+                          {specialtyName}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-600">—</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium ${statusCfg.className}`}
                         >
-                          <span className="material-symbols-outlined text-xl">edit</span>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(doc.id)}
-                          className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-500"
-                          aria-label="Xóa"
-                        >
-                          <span className="material-symbols-outlined text-xl">delete</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dotColor}`} />
+                          {statusCfg.label}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
+                          <button
+                            onClick={() => handleEdit(doc.id)}
+                            className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary"
+                            aria-label="Chỉnh sửa"
+                          >
+                            <span className="material-symbols-outlined text-xl">edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(doc.id)}
+                            className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-500"
+                            aria-label="Xóa"
+                          >
+                            <span className="material-symbols-outlined text-xl">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
 
         <div className="md:hidden divide-y divide-slate-100">
-          {paginated.map((doc) => {
-            const statusCfg = DOCTOR_STATUS_CONFIG[doc.status] || DOCTOR_STATUS_CONFIG.active;
+          {doctors.map((doc) => {
+            const status = doc.taiKhoan?.trangThaiTaiKhoan === 1 ? "active" : "inactive";
+            const statusCfg = DOCTOR_STATUS_CONFIG[status] || DOCTOR_STATUS_CONFIG.active;
+            const specialtyName = doc.chuyenKhoa?.tenChuyenKhoa || "Chưa xác định";
+            const fullName = `${doc.hocViChucDanh ? doc.hocViChucDanh + " " : ""}${doc.tenBacSi}`;
             return (
               <div key={doc.id} className="p-4 flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
-                  {getInitials(doc.name)}
+                  {getDoctorInitials(doc.tenBacSi)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-slate-800">{doc.name}</p>
-                  <p className="text-sm text-slate-500">{doc.code}</p>
+                  <p className="font-semibold text-slate-800">{fullName}</p>
+                  <p className="text-sm text-slate-500">ID: {doc.id}</p>
                   <div className="flex flex-wrap gap-2 mt-2">
                     <span className="inline-flex px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">
-                      {doc.specialty}
+                      {specialtyName}
                     </span>
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${statusCfg.className}`}
@@ -197,7 +243,6 @@ export default function AdminDoctorsPage() {
                       {statusCfg.label}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-600 mt-1">{doc.experience}</p>
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => handleEdit(doc.id)}
@@ -218,7 +263,7 @@ export default function AdminDoctorsPage() {
           })}
         </div>
 
-        {filtered.length > ITEMS_PER_PAGE && (
+        {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50/50">
             <p className="text-sm text-slate-500">
               Trang {page} / {totalPages}
@@ -246,11 +291,11 @@ export default function AdminDoctorsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-primary/10 rounded-xl p-4 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary text-2xl">person_add</span>
+            <span className="material-symbols-outlined text-primary text-2xl">group</span>
           </div>
           <div>
-            <p className="text-sm text-slate-600 font-medium">Mới tháng này</p>
-            <p className="text-xl font-bold text-primary">+12 Bác sĩ</p>
+            <p className="text-sm text-slate-600 font-medium">Tổng bác sĩ</p>
+            <p className="text-xl font-bold text-primary">{totalDoctors}</p>
           </div>
         </div>
         <div className="bg-green-100 text-green-600 rounded-xl p-4 flex items-center gap-4">

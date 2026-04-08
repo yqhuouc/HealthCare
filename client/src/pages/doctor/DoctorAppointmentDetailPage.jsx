@@ -23,6 +23,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { appointmentService } from "../../services/appointmentService";
 import { prescriptionService } from "../../services/prescriptionService";
 import { toast } from "react-toastify";
+import { formatTime, formatDate, formatPrice } from "../../utils/formatters";
 
 /**
  * Cấu trúc mặc định của một dòng thuốc trong đơn
@@ -35,48 +36,9 @@ const EMPTY_MED = {
   ghiChu: "",
 };
 
-/**
- * Format giờ hiển thị (HH:mm)
- */
-function formatTime(timeInput) {
-  if (!timeInput) return "";
-  if (
-    typeof timeInput === "string" &&
-    !timeInput.includes("T") &&
-    timeInput.includes(":")
-  ) {
-    return timeInput.substring(0, 5);
-  }
-  const d = new Date(timeInput);
-  if (isNaN(d.getTime())) return timeInput;
-  d.setFullYear(2024);
-  return d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
 
-/**
- * Format ngày hiển thị (DD/MM/YYYY)
- */
-function formatDate(dateStr) {
-  if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
 
-/**
- * Định dạng tiền tệ VNĐ
- */
-function formatPrice(val) {
-  return Number(val || 0).toLocaleString("vi-VN") + "đ";
-}
+
 
 function DoctorAppointmentDetailPage() {
   const { id } = useParams(); // Lấy ID lịch hẹn từ URL

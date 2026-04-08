@@ -20,19 +20,9 @@ import { Link } from "react-router-dom";
 import { appointmentService } from "../../services/appointmentService";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
+import { getInitials, formatDate } from "../../utils/formatters";
 
-/**
- * Hàm format ngày sang định dạng VN (DD/MM/YYYY)
- */
-function formatDate(dateStr) {
-  if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
+
 
 function DoctorHistoryPage() {
   // Lấy thông tin bác sĩ từ Store
@@ -89,16 +79,7 @@ function DoctorHistoryPage() {
     return matchSearch && matchFrom && matchTo;
   });
 
-  /**
-   * Lấy chữ cái đầu cho Avatar mặc định
-   */
-  const getInitials = (name) => {
-    if (!name) return "?";
-    const parts = name.split(" ");
-    return parts.length >= 2
-      ? parts[parts.length - 2][0] + parts[parts.length - 1][0]
-      : parts[0][0];
-  };
+
 
   /**
    * Xử lý URL ảnh đại diện bệnh nhân

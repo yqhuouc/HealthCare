@@ -19,6 +19,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { appointmentService } from "../../services/appointmentService";
 import useAuthStore from "../../stores/useAuthStore";
+import { formatTime, formatDate } from "../../utils/formatters";
 
 /**
  * Mapping trạng thái lịch hẹn: number → { label, color }
@@ -40,40 +41,7 @@ const FILTER_TABS = [
   { key: 3, label: "Đã hủy" },
 ];
 
-/** Format Date object hoặc ISO string thành "dd/MM/yyyy" */
-function formatDate(dateInput) {
-  if (!dateInput) return "";
-  const d = new Date(dateInput);
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
 
-/** Format giờ từ Date hoặc chuỗi ISO/Time */
-function formatTime(timeInput) {
-  if (!timeInput) return "";
-
-  // Nếu là chuỗi HH:mm (như từ API slot trống gửi về) thì lấy luôn
-  if (typeof timeInput === "string" && !timeInput.includes("T") && timeInput.includes(":")) {
-    return timeInput.substring(0, 5);
-  }
-
-  // Nếu là đối tượng Date hoặc chuỗi ISO (có T và Z/múi giờ)
-  const d = new Date(timeInput);
-  if (isNaN(d.getTime())) return timeInput;
-
-  // QUAN TRỌNG: Ép về năm 2024 để tránh lỗi múi giờ lịch sử của Asia/Ho_Chi_Minh 
-  // (Năm 1970 múi giờ VN là +8, còn hiện tại là +7)
-  d.setFullYear(2024);
-
-  return d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
 
 export default function AppointmentHistoryPage() {
   const user = useAuthStore((s) => s.user);

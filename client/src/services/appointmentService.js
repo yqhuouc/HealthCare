@@ -36,4 +36,13 @@ export const appointmentService = {
   /** Cập nhật trạng thái lịch hẹn (0=Chờ, 1=Xác nhận, 2=Đã khám, 3=Hủy) */
   updateTrangThai: (id, trangThai) =>
     api.put(`/dat-lich/${id}/trang-thai`, { trangThai }),
+
+  // ===== ADMIN PORTAL =====
+
+  /** Lấy danh sách tất cả lịch hẹn (admin) */
+  getAllForAdmin: (params = {}) => api.get("/dat-lich", { params }),
+
+  /** Cập nhật trạng thái thanh toán (admin) */
+  updateThanhToan: (id, trangThaiThanhToan) =>
+    api.put(`/dat-lich/${id}/thanh-toan`, { trangThaiThanhToan }),
 };

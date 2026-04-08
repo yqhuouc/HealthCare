@@ -22,6 +22,7 @@ import { doctorService } from "../../services/doctorService";
 import { appointmentService } from "../../services/appointmentService";
 import { paymentService } from "../../services/paymentService";
 import useAuthStore from "../../stores/useAuthStore";
+import { formatPrice } from "../../utils/formatters";
 
 /** Tên viết tắt các ngày trong tuần (0=CN, 1=T2, ..., 6=T7) */
 const DAY_NAMES = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
@@ -46,10 +47,7 @@ function generateNext14Days() {
   return days;
 }
 
-/** Format giá tiền VND */
-function formatPrice(price) {
-  return Number(price).toLocaleString("vi-VN") + "đ";
-}
+
 
 /** Format ngày hiển thị dạng dd/MM/yyyy */
 function formatDisplayDate(dateStr) {
