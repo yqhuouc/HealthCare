@@ -17,11 +17,8 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { specialtyService } from "../../services/specialtyService";
 
-/** Icon mặc định cho chuyên khoa */
-const SPECIALTY_ICONS = [
-  "stethoscope", "child_care", "pregnant_woman", "face",
-  "hearing", "dentistry", "psychology", "cardiology",
-];
+// Icon mặc định cho chuyên khoa nếu không có dữ liệu trong DB
+const DEFAULT_ICON = "medical_services";
 
 export default function SpecialtyListPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -102,7 +99,7 @@ export default function SpecialtyListPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-            {filteredSpecialties.map((specialty, index) => (
+            {filteredSpecialties.map((specialty) => (
               <div
                 key={specialty.id}
                 className="group bg-white p-6 rounded-lg border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
@@ -110,7 +107,7 @@ export default function SpecialtyListPage() {
                 {/* Icon chuyên khoa — đổi màu khi hover */}
                 <div className="w-14 h-14 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-5 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                   <span className="material-symbols-outlined text-3xl">
-                    {SPECIALTY_ICONS[index % SPECIALTY_ICONS.length]}
+                    {specialty.icon || DEFAULT_ICON}
                   </span>
                 </div>
 

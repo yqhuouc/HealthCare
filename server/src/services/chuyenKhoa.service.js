@@ -30,7 +30,8 @@ const create = async (data) => {
   return prisma.chuyenKhoa.create({
     data: { 
       tenChuyenKhoa: data.tenChuyenKhoa, 
-      anhChuyenKhoa: data.anhChuyenKhoa, 
+      anhChuyenKhoa: data.anhChuyenKhoa,
+      icon: data.icon,
       moTaChuyenKhoa: data.moTaChuyenKhoa,
       thoiLuongKham: data.thoiLuongKham 
     },
@@ -45,7 +46,8 @@ const update = async (id, data) => {
     where: { id: BigInt(id) },
     data: { 
       tenChuyenKhoa: data.tenChuyenKhoa, 
-      anhChuyenKhoa: data.anhChuyenKhoa, 
+      anhChuyenKhoa: data.anhChuyenKhoa,
+      icon: data.icon,
       moTaChuyenKhoa: data.moTaChuyenKhoa,
       thoiLuongKham: data.thoiLuongKham 
     },

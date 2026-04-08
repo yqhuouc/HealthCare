@@ -43,6 +43,7 @@ model ChuyenKhoa {
   id             BigInt  @id @default(autoincrement())
   tenChuyenKhoa  String  @db.VarChar(120)
   anhChuyenKhoa  String? @db.VarChar(255)
+  icon           String? @db.VarChar(50)
   moTaChuyenKhoa String? @db.Text
   thoiLuongKham  Int     @default(20) // Thời lượng khám (phút), mặc định 20 phút
 

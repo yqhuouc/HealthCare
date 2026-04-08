@@ -20,11 +20,8 @@ import { doctorService } from "../../services/doctorService";
 
 /** Hàm format giá tiền sang dạng VND: 150000 → "150.000đ" */
 
-/** Icon mặc định cho chuyên khoa nếu không có ảnh */
-const SPECIALTY_ICONS = [
-  "favorite", "child_care", "pregnant_woman", "face",
-  "hearing", "dentistry", "psychology", "cardiology",
-];
+// Icon mặc định cho chuyên khoa nếu không có dữ liệu trong DB
+const DEFAULT_ICON = "medical_services";
 
 function HomePage() {
   const [specialties, setSpecialties] = useState([]);
@@ -121,14 +118,13 @@ function HeroSection() {
    Specialty Card — Card hiển thị 1 chuyên khoa
    ------------------------------------------------------------ */
 
-function SpecialtyCard({ specialty, index }) {
-  const icon = SPECIALTY_ICONS[index % SPECIALTY_ICONS.length];
-
+function SpecialtyCard({ specialty }) {
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow group border border-slate-100">
-      {/* Icon chuyên khoa — đổi màu khi hover */}
-      <div className="w-12 h-12 bg-primary/10 text-primary rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
-        <span className="material-symbols-outlined text-3xl">{icon}</span>
+    <div className="group bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
+      <div className="w-14 h-14 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-5 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+        <span className="material-symbols-outlined text-3xl">
+          {specialty.icon || DEFAULT_ICON}
+        </span>
       </div>
       <h4 className="text-xl font-bold mb-2">{specialty.tenChuyenKhoa}</h4>
       <p className="text-slate-500 text-sm mb-4 line-clamp-2">
@@ -167,8 +163,8 @@ function SpecialtiesSection({ specialties, loading }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {specialties.slice(0, 6).map((spec, index) => (
-              <SpecialtyCard key={spec.id} specialty={spec} index={index} />
+            {specialties.slice(0, 6).map((spec) => (
+              <SpecialtyCard key={spec.id} specialty={spec} />
             ))}
           </div>
         )}
