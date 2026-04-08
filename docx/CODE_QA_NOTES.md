@@ -73,6 +73,11 @@ Ghi chú câu hỏi — trả lời khi đọc / làm backend. **Mỗi mục có
 | [qa-fe-001](#qa-fe-001) | Upload file (Ảnh đại diện) bằng FormData hoạt động ra sao ở Frontend? |
 | [qa-fe-002](#qa-fe-002) | Logic mở/đóng (Accordion) trong trang FAQ hoạt động như thế nào? |
 | [qa-fe-003](#qa-fe-003) | Tại sao cần gọi `getMe()` khi đã có Zustand lưu thông tin người dùng rồi? |
+| [qa-fe-004](#qa-fe-004) | Vai trò của `useNavigate` và `useLocation` trong Layout Bác sĩ? |
+| [qa-fe-005](#qa-fe-005) | Cách xử lý ảnh đại diện (Avatar) giữa Local và Cloud? (getAvatarUrl) |
+| [qa-fe-006](#qa-fe-006) | Cơ chế hiển thị tiêu đề trang động cho các route lồng nhau (basePath)? |
+| [qa-fe-007](#qa-fe-007) | Sửa lỗi: Tại sao trước đây phải F5 mới tải đầy đủ dữ liệu sau khi đăng nhập? |
+| [qa-fe-008](#qa-fe-008) | Giải thích hàm `formatTime` và mẹo ép năm 2024 (Xử lý múi giờ VN)? |
 
 ---
 
@@ -722,6 +727,131 @@ const isOpen = openIndex === index;
 - **Đăng xuất / Hết hạn:** Xóa sạch cả Zustand và Cookie $\rightarrow$ Kết thúc phiên làm việc.
 
 **Tóm lại:** Zustand là cái kho để xài nhanh (tránh gọi API nhiều lần), còn `getMe()` là "máy phát điện dự phòng" giúp khôi phục cái kho đó mỗi khi web bị reset.
+
+[↑ Về mục lục FE](#toc-fe)
+
+---
+
+<a id="qa-fe-004"></a>
+
+### FE-004 — Vai trò của `useNavigate` và `useLocation` trong Layout Bác sĩ?
+
+Hai React Hook này cực kỳ quan trọng trong việc quản lý điều hướng và giao diện của trang Doctor Portal:
+
+1. **`useNavigate()` (Bộ điều hướng):**
+   - **Mục đích:** Dùng để chuyển hướng người dùng sang trang khác bằng mã nguồn (programmatic navigation) thay vì thẻ Link.
+   - **Ứng dụng:** Thường dùng trong hàm xử lý logic, ví dụ hàm `handleLogout`. Sau khi xóa session, ta gọi `navigate("/doctor/login")` để đẩy người dùng về trang đăng nhập.
+
+2. **`useLocation()` (Bộ nhận diện vị trí):**
+   - **Mục đích:** Lấy thông tin về URL hiện tại (pathname, search, v.v.).
+   - **Ứng dụng:** Dùng để xác định tiêu đề trang. Dựa vào `location.pathname`, Layout biết bác sĩ đang ở trang nào để hiển thị tiêu đề (Dashboard, Lịch làm việc...) tương ứng trên thanh Header.
+
+[↑ Về mục lục FE](#toc-fe)
+
+---
+
+<a id="qa-fe-005"></a>
+
+### FE-005 — Cách xử lý ảnh đại diện (Avatar) giữa Local và Cloud? (getAvatarUrl)
+
+Hàm `getAvatarUrl` là một bộ lọc thông minh giúp xử lý ảnh từ hai nguồn khác nhau:
+
+- **Link Cloud (Tuyệt đối):** Nếu URL bắt đầu bằng `http`, hệ thống hiểu đây là link từ dịch vụ bên ngoài (Facebook, Google, Cloudinary). Nó sẽ giữ nguyên link đó.
+- **Link Local (Tương đối):** Nếu URL là dạng đường dẫn thư mục (vd: `/uploads/abc.jpg`), hệ thống sẽ tự động ghép thêm địa chỉ Backend (`VITE_API_URL`) vào đằng trước để trình duyệt có thể tìm thấy file trên server nội bộ.
+
+**Cơ chế Ưu tiên (Priority Fallback):**
+Hệ thống sử dụng toán tử `||` để chọn ảnh theo thứ tự:
+`Ảnh User (Mới nhất) || Ảnh hồ sơ Bác sĩ || Ảnh mặc định (UI-Avatars)`.
+Việc dùng **UI-Avatars** làm phương án cuối giúp giao diện luôn có ảnh đại diện (chữ cái đầu của tên) cực kỳ chuyên nghiệp ngay cả khi người dùng chưa bao giờ upload ảnh.
+
+[↑ Về mục lục FE](#toc-fe)
+
+---
+
+<a id="qa-fe-006"></a>
+
+### FE-006 — Cơ chế hiển thị tiêu đề trang động cho các route lồng nhau (basePath)?
+
+Trong `DoctorLayout`, có một logic xử lý đường dẫn khá "thông minh":
+`const basePath = "/" + location.pathname.split("/").slice(1, 3).join("/");`
+
+**Tại sao cần đoạn này?**
+Khi có các trang lồng nhau sâu (vd: `/doctor/schedule/add` hoặc `/doctor/schedule/edit/1`), nếu chỉ so sánh khớp hoàn toàn URL, hệ thống sẽ không tìm thấy tiêu đề phù hợp trong `PAGE_TITLES`.
+
+**Cách hoạt động:**
+- Nó "cắt gọt" URL để chỉ lấy 2 cấp đầu tiên (vd: `/doctor/schedule`).
+- Điều này giúp mọi trang con (thêm/sửa/chi tiết) đều dùng chung một tiêu đề chính của chuyên mục đó, giúp Header luôn hiển thị nhất quán.
+- Nếu không tìm thấy trong danh sách khai báo, nó sử dụng fallback: `title: "Doctor Portal"`.
+
+[↑ Về mục lục FE](#toc-fe)
+
+---
+
+<a id="qa-fe-007"></a>
+
+### FE-007 — Sửa lỗi: Tại sao trước đây phải F5 mới tải đầy đủ dữ liệu sau khi đăng nhập?
+
+**Lý do:** 
+API `auth/login` thường chỉ trả về thông tin tài khoản cơ bản. Các thông tin chi tiết (populated) như chuyên khoa, chức danh bác sĩ... chỉ có đầy đủ khi gọi API `/auth/me` (hàm `fetchUser`). Trước đây, `fetchUser` chỉ chạy khi App khởi động lại (F5).
+
+**Cách khắc phục:**
+Cập nhật hàm `login` trong `useAuthStore.js` để tự động gọi `fetchUser()` ngay lập tức sau khi xác thực thành công.
+```js
+  login: async (credentials) => {
+    await authService.login(credentials); // 1. Lấy Cookie
+    const { fetchUser } = useAuthStore.getState();
+    await fetchUser(); // 2. Lấy Full Profile ngay lập tức
+    return useAuthStore.getState().user;
+  },
+```
+Việc này đảm bảo dữ liệu trong Store đã "đầy đủ 100%" trước khi trang web thực hiện chuyển hướng (`navigate`), giúp người dùng thấy thông tin ngay mà không cần tải lại trang.
+
+[↑ Về mục lục FE](#toc-fe)
+
+---
+
+<a id="qa-fe-008"></a>
+
+### FE-008 — Giải thích hàm `formatTime` và mẹo ép năm 2024 (Xử lý múi giờ VN)?
+
+**Vấn đề:**
+Khi hiển thị giờ (ví dụ `08:00`), nếu chỉ dùng `new Date()` đơn thuần, JavaScript sẽ mặc định lấy mốc năm **1970**. Điều này gây ra lỗi "lệch 1 tiếng" tại Việt Nam vì:
+- Trước năm 1975, múi giờ Sài Gòn (`Asia/Ho_Chi_Minh`) trong thư viện quốc tế được ghi nhận là **UTC+8**.
+- Sau năm 1975, múi giờ chuẩn là **UTC+7**.
+- Nếu dùng năm 1970, hệ thống tự cộng 8 tiếng $\rightarrow$ 7h sáng biến thành 8h sáng.
+
+**Giải pháp với hàm `formatTime`:**
+
+```javascript
+function formatTime(timeInput) {
+  if (!timeInput) return "";
+  
+  // 1. Tối ưu: Nếu là chuỗi giờ thuần "HH:mm:ss", cắt lấy HH:mm cho nhanh
+  if (typeof timeInput === "string" && !timeInput.includes("T") && timeInput.includes(":")) {
+    return timeInput.substring(0, 5);
+  }
+
+  const d = new Date(timeInput);
+  if (isNaN(d.getTime())) return timeInput;
+
+  // 2. MẸO QUAN TRỌNG: Ép năm về 2024
+  // Giúp trình duyệt luôn dùng quy tắc múi giờ hiện đại (UTC+7), tránh sai lệch lịch sử.
+  d.setFullYear(2024); 
+
+  // 3. Định dạng chuẩn hóa
+  return d.toLocaleTimeString("vi-VN", {
+    hour: "2-digit", 
+    minute: "2-digit", 
+    hour12: false, 
+    timeZone: "Asia/Ho_Chi_Minh", // Đảm bảo luôn hiện giờ VN kể cả khách ở nước ngoài
+  });
+}
+```
+
+**Lợi ích:**
+- **Chính xác tuyệt đối**: Giờ giấc luôn nhất quán giữa Backend (lưu UTC) và Frontend (hiển thị VN).
+- **Chuyên nghiệp**: Tránh các lỗi hiển thị giờ kiểu `02:00 PM` khó đọc, thay vào đó là `14:00`.
+- **Ổn định**: Hoạt động đúng trên mọi trình duyệt (Chrome, Safari, Firefox) nhờ dùng `Intl` API chuẩn.
 
 [↑ Về mục lục FE](#toc-fe)
 

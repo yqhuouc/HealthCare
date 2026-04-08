@@ -1,21 +1,20 @@
 /**
- * ============================================================
- * TRANG: Quản lý chi tiết lịch khám (Bác sĩ)
+ * =============================================================================
+ * TRANG: QUẢN LÝ CHI TIẾT LỊCH KHÁM (DÀNH CHO BÁC SĨ)
  * Đường dẫn: /doctor/appointments
- * ============================================================
+ * =============================================================================
  * 
- * Chức năng chính:
- * 1. Danh sách toàn bộ lịch khám của bác sĩ (có phân trang/lọc).
- * 2. Bộ lọc thông minh: 
- *    - Theo ngày: Hôm nay, Ngày mai, hoặc chọn ngày bất kỳ từ Calendar.
- *    - Theo từ khóa: Tìm theo tên bệnh nhân hoặc Mã BN (BN-XXX).
- *    - Theo trạng thái: Chờ xác nhận, Đã xác nhận, Hoàn thành, Đã hủy.
- * 3. Thao tác trạng thái: Xác nhận, Từ chối, Hoàn thành, Hủy, Khôi phục.
- * 4. Thống kê nhanh số lượng lịch theo từng trạng thái ở cuối trang.
- * 
- * Biến state: appointments (data gốc), filtered (data sau lọc), loading, activeDate...
- * ============================================================
+ * CHỨC NĂNG CHÍNH:
+ * 1. QUẢN LÝ DANH SÁCH: Hiển thị tất cả lịch hẹn mà bệnh nhân đã đặt với bác sĩ này.
+ * 2. BỘ LỌC THÔNG MINH (3 Lớp):
+ *    - Lọc theo Ngày: Có các nút nhanh (Hôm nay, Ngày mai) hoặc chọn ngày bất kỳ.
+ *    - Lọc theo Trạng thái: Đang chờ, Đã xác nhận, Hoàn thành, Đã hủy.
+ *    - Tìm kiếm: Tìm theo Tên bệnh nhân hoặc Mã định danh (Ví dụ: BN-001).
+ * 3. THAO TÁC TRẠNG THÁI: Bác sĩ có thể Xác nhận, Từ chối, hoặc Đánh dấu Hoàn thành ca khám.
+ * 4. THỐNG KÊ NHANH: Các thẻ ở cuối trang tổng kết số lượng ca theo từng loại.
+ * =============================================================================
  */
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { appointmentService } from "../../services/appointmentService";
@@ -23,7 +22,7 @@ import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
 
 /** 
- * Cấu hình Badge cho các trạng thái lịch hẹn
+ * CẤU HÌNH NHÃN (BADGE): Định nghĩa màu sắc và nội dung cho từng trạng thái
  */
 const STATUS_BADGE = {
   0: { label: "Đang chờ", className: "bg-amber-100 text-amber-600 border border-amber-200" },
@@ -33,10 +32,10 @@ const STATUS_BADGE = {
 };
 
 /** 
- * Danh sách các tab lọc trạng thái
+ * DANH SÁCH CÁC TAB LỌC: Để người dùng bấm chọn nhanh trạng thái muốn xem
  */
 const STATUS_FILTERS = [
-  { value: "all", label: "Tất cả trạng thái" },
+  { value: "all", label: "Tất cả" },
   { value: 0, label: "Đang chờ" },
   { value: 1, label: "Đã xác nhận" },
   { value: 2, label: "Hoàn thành" },
@@ -44,7 +43,8 @@ const STATUS_FILTERS = [
 ];
 
 /** 
- * Hàm format giờ (HH:mm) đảm bảo tính nhất quán múi giờ VN
+ * HÀM HỖ TRỢ: Định dạng giờ (Ví dụ: "08:30")
+ * Đảm bảo giờ hiển thị đúng múi giờ Việt Nam (UTC+7).
  */
 function formatTime(timeInput) {
   if (!timeInput) return "";
@@ -53,7 +53,7 @@ function formatTime(timeInput) {
   }
   const d = new Date(timeInput);
   if (isNaN(d.getTime())) return timeInput;
-  d.setFullYear(2024);
+  d.setFullYear(2024); // Mẹo fix lệch múi giờ lịch sử trong JS
   return d.toLocaleTimeString("vi-VN", {
     hour: "2-digit", 
     minute: "2-digit", 
@@ -63,7 +63,8 @@ function formatTime(timeInput) {
 }
 
 /**
- * Xử lý đường dẫn Avatar bệnh nhân
+ * HÀM HỖ TRỢ: Xử lý đường dẫn ảnh đại diện của bệnh nhân
+ * Nếu là ảnh Cloud thì dùng trực tiếp, nếu ảnh nội bộ thì nối thêm URL Backend.
  */
 function getPatientAvatar(anhDaiDien) {
   if (!anhDaiDien) return null;
@@ -72,20 +73,22 @@ function getPatientAvatar(anhDaiDien) {
 }
 
 function DoctorAppointmentsPage() {
+  // Lấy thông tin bác sĩ từ Store (Zustand)
   const { user } = useAuthStore();
+  const bacSiId = user?.bacSi?.id;
+
+  // QUẢN LÝ DỮ LIỆU
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Quản lý bộ lọc
-  const [activeDate, setActiveDate] = useState("today"); // today, tomorrow, custom
-  const [dateInput, setDateInput] = useState("");        // Giá trị khi chọn date picker
-  const [searchQuery, setSearchQuery] = useState("");    // Ô tìm kiếm tên/mã BN
+  // QUẢN LÝ BỘ LỌC (STATE)
+  const [activeDate, setActiveDate] = useState("today"); // Mặc định là hiện lịch "Hôm nay"
+  const [dateInput, setDateInput] = useState("");        // Lưu ngày khi dùng ô chọn ngày (date picker)
+  const [searchQuery, setSearchQuery] = useState("");    // Lưu từ khóa tìm theo tên/mã BN
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const bacSiId = user?.bacSi?.id;
-
   /**
-   * Lấy dữ liệu từ API khi vào trang hoặc khi bacSiId thay đổi
+   * LUỒNG CHÍNH: Tải danh sách lịch hẹn từ máy chủ
    */
   useEffect(() => {
     if (!bacSiId) return;
@@ -94,7 +97,7 @@ function DoctorAppointmentsPage() {
         const res = await appointmentService.getByBacSi(bacSiId);
         setAppointments(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error("Fetch error:", err);
+        console.error("Lỗi khi tải dữ liệu:", err);
         toast.error("Không thể tải danh sách lịch khám");
       } finally {
         setLoading(false);
@@ -104,29 +107,30 @@ function DoctorAppointmentsPage() {
   }, [bacSiId]);
 
   /** 
-   * Xử lý ngày tháng để lọc
+   * XỬ LÝ NGÀY THÁNG ĐÊ LỌC:
+   * Chuyển đổi Hôm nay/Ngày mai/Ngày chọn riêng thành chuỗi YYYY-MM-DD để so sánh.
    */
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
   const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_MinH" });
 
-  // Xác định ngày đang được chọn dựa trên tab active
   const selectedDate =
     activeDate === "today" ? today :
     activeDate === "tomorrow" ? tomorrow :
     dateInput;
 
   /** 
-   * Filter chính: Kết hợp Ngày + Trạng thái + Tìm kiếm
+   * BỘ LỌC TỔNG HỢP: 
+   * Đây là nơi kết hợp 3 điều kiện (Ngày + Trạng thái + Tìm kiếm) để lọc dữ liệu hiển thị.
    */
   const filtered = appointments.filter((apt) => {
-    // 1. Lọc theo ngày
+    // Lớp 1: Lọc theo Ngày khám
     const aptDate = new Date(apt.ngayDat).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
     const matchDate = !selectedDate || aptDate === selectedDate;
 
-    // 2. Lọc theo trạng thái
+    // Lớp 2: Lọc theo Trạng thái (Chờ/Xác nhận/Hủy...)
     const matchStatus = statusFilter === "all" || apt.trangThai === statusFilter;
 
-    // 3. Lọc theo tên hoặc Mã BN
+    // Lớp 3: Tìm kiếm theo Tên hoặc Mã BN (Ví dụ: BN-005)
     const q = searchQuery.trim().toLowerCase();
     const patientId = apt.benhNhan?.id || apt.benhNhanId || apt.id;
     const matchSearch = !q ||
@@ -137,7 +141,7 @@ function DoctorAppointmentsPage() {
   });
 
   /** 
-   * Tính toán chỉ số cho các thẻ thống kê
+   * THỐNG KÊ NHANH: Tính toán con số cho các thẻ ở cuối trang
    */
   const stats = {
     total: filtered.length,
@@ -147,7 +151,8 @@ function DoctorAppointmentsPage() {
   };
 
   /** 
-   * Hàm cập nhật trạng thái lịch khám
+   * CHỨC NĂNG: Cập nhật trạng thái lịch (Xác nhận/Hủy...)
+   * Gửi yêu cầu lên Server và cập nhật lại giao diện ngay lập tức.
    */
   const handleUpdateStatus = async (id, newStatus) => {
     try {
@@ -162,7 +167,7 @@ function DoctorAppointmentsPage() {
     }
   };
 
-  // UI Loading
+  // Trạng thái chờ tải dữ liệu
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -173,73 +178,75 @@ function DoctorAppointmentsPage() {
 
   return (
     <div className="space-y-6">
+      {/* TIÊU ĐỀ TRANG */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-black text-slate-800">Lịch khám bệnh nhân</h1>
-          <p className="text-slate-500 text-sm font-medium">Quản lý và cập nhật tiến độ khám chữa bệnh</p>
+          <p className="text-slate-500 text-sm font-medium">Quản lý danh sách và tiến độ khám chữa bệnh</p>
         </div>
       </div>
 
-      {/* THANH BỘ LỌC (Filters Bar) */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-primary/5">
+      {/* THANH BỘ LỌC (Control Bar) */}
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 italic md:not-italic">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Lọc theo ngày nhanh */}
-          <button
-            onClick={() => { setActiveDate("today"); setDateInput(""); }}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-              activeDate === "today" ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            Hôm nay
-          </button>
-          <button
-            onClick={() => { setActiveDate("tomorrow"); setDateInput(""); }}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-              activeDate === "tomorrow" ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            Ngày mai
-          </button>
+          
+          {/* Lọc nhanh theo Ngày */}
+          <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-100">
+            <button
+              onClick={() => { setActiveDate("today"); setDateInput(""); }}
+              className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
+                activeDate === "today" ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              Hôm nay
+            </button>
+            <button
+              onClick={() => { setActiveDate("tomorrow"); setDateInput(""); }}
+              className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
+                activeDate === "tomorrow" ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              Ngày mai
+            </button>
+          </div>
 
-          {/* Chọn ngày cụ thể */}
+          {/* Ô chọn ngày cụ thể */}
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-              calendar_today
-            </span>
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">calendar_today</span>
             <input
               type="date"
               value={dateInput}
               onChange={(e) => { setDateInput(e.target.value); setActiveDate("custom"); }}
-              className="pl-10 pr-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-700 font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+              className="pl-10 pr-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all"
             />
           </div>
 
-          <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+          <div className="h-8 w-px bg-slate-100 hidden sm:block" />
 
-          {/* Ô tìm kiếm thông minh */}
-          <div className="relative flex-1 min-w-[240px]">
+          {/* Ô Tìm kiếm theo tên/Mã BN */}
+          <div className="relative flex-1 min-w-[200px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
             <input
               type="text"
               placeholder="Tìm tên hoặc Mã BN (BN-XXX)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all"
             />
           </div>
 
-          <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+          <div className="h-8 w-px bg-slate-100 hidden sm:block" />
 
-          {/* Tab trạng thái */}
+          {/* Cụm Tab bộ lọc Trạng thái */}
           <div className="flex flex-wrap gap-2">
             {STATUS_FILTERS.map((f) => (
               <button
                 key={String(f.value)}
                 onClick={() => setStatusFilter(f.value)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${
                   statusFilter === f.value
-                    ? "bg-primary/10 text-primary border border-primary/20"
-                    : "bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent"
+                    ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                    : "bg-white text-slate-400 hover:text-slate-600 border-slate-100"
                 }`}
               >
                 {f.label}
@@ -249,12 +256,13 @@ function DoctorAppointmentsPage() {
         </div>
       </div>
 
-      {/* DANH SÁCH LỊCH HẸN */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        {/* Chế độ Mobile: Card Layout */}
+      {/* DANH SÁCH HIỂN THỊ */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        
+        {/* --- PHIÊN BẢN MOBILE: Dạng Card dọc --- */}
         <div className="block md:hidden">
           {filtered.length > 0 ? (
-            <div className="divide-y divide-slate-100 italic">
+            <div className="divide-y divide-slate-50">
               {filtered.map((apt) => {
                 const badge = STATUS_BADGE[apt.trangThai] || STATUS_BADGE[0];
                 const patientId = apt.benhNhan?.id || apt.benhNhanId || apt.id;
@@ -265,9 +273,8 @@ function DoctorAppointmentsPage() {
                       <div className="flex items-center gap-3">
                         <img
                           src={getPatientAvatar(apt.benhNhan?.taiKhoan?.anhDaiDien) || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.benhNhan?.hoTen || "BN")}&size=128&background=f1f5f9&color=64748b`}
-                          alt={apt.benhNhan?.hoTen}
+                          alt="Avatar"
                           className="size-10 rounded-full object-cover shrink-0 border-2 border-white shadow-sm"
-                          onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.benhNhan?.hoTen || "BN")}&size=128&background=f1f5f9&color=64748b`; }}
                         />
                         <div>
                           <p className="font-bold text-slate-800 leading-tight">{apt.benhNhan?.hoTen || "—"}</p>
@@ -278,37 +285,36 @@ function DoctorAppointmentsPage() {
                         {badge.label}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
+                    <div className="flex items-center gap-4 text-[11px] font-bold text-slate-500">
                       <span className="flex items-center gap-1">
                         <span className="material-symbols-outlined text-sm text-primary">schedule</span>
                         {formatTime(apt.gioBatDau)}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm text-slate-400">call</span>
+                      <span className="flex items-center gap-1 font-mono">
+                        <span className="material-symbols-outlined text-sm text-slate-400 font-normal">call</span>
                         {apt.benhNhan?.soDienThoai}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 line-clamp-2 italic font-normal">Lý do: {apt.lyDoKham}</p>
                     
-                    {/* Các nút thao tác Mobile */}
+                    {/* Các nút thao tác nhanh cho Mobile */}
                     <div className="flex items-center gap-2 pt-1">
                       {apt.trangThai === 0 && (
                         <>
-                          <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-1 py-1.5 rounded-lg text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100">Xác nhận</button>
-                          <button onClick={() => handleUpdateStatus(apt.id, 3)} className="flex-1 py-1.5 rounded-lg text-[11px] font-bold text-rose-500 bg-rose-50 border border-rose-100">Từ chối</button>
+                          <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 border border-emerald-100">Xác nhận</button>
+                          <button onClick={() => handleUpdateStatus(apt.id, 3)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-rose-500 bg-rose-50 border border-rose-100">Hủy</button>
                         </>
                       )}
                       {apt.trangThai === 1 && (
                         <>
-                          <button onClick={() => handleUpdateStatus(apt.id, 2)} className="flex-1 py-1.5 rounded-lg text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-100">Hoàn thành</button>
-                          <button onClick={() => handleUpdateStatus(apt.id, 3)} className="flex-1 py-1.5 rounded-lg text-[11px] font-bold text-rose-500 bg-rose-50 border border-rose-100">Hủy</button>
+                          <button onClick={() => handleUpdateStatus(apt.id, 2)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-blue-600 bg-blue-50 border border-blue-100">Hoàn thành</button>
+                          <button onClick={() => handleUpdateStatus(apt.id, 3)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-rose-500 bg-rose-50 border border-rose-100">Hủy</button>
                         </>
                       )}
                       {apt.trangThai === 2 && (
-                        <Link to={`/doctor/appointments/${apt.id}`} className="flex-1 text-center py-1.5 rounded-lg text-[11px] font-bold text-primary bg-primary/5 border border-primary/10">Xem chi tiết</Link>
+                        <Link to={`/doctor/appointments/${apt.id}`} className="flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase text-primary bg-primary/5 border border-primary/10">Kết quả</Link>
                       )}
                       {apt.trangThai === 3 && (
-                        <button onClick={() => handleUpdateStatus(apt.id, 0)} className="flex-1 py-1.5 rounded-lg text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200">Khôi phục</button>
+                        <button onClick={() => handleUpdateStatus(apt.id, 0)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-slate-600 bg-slate-100 border border-slate-200">Khôi phục</button>
                       )}
                     </div>
                   </div>
@@ -316,109 +322,103 @@ function DoctorAppointmentsPage() {
               })}
             </div>
           ) : (
-            <div className="px-5 py-20 text-center flex flex-col items-center">
-              <span className="material-symbols-outlined text-5xl text-slate-200 mb-3 block">search_off</span>
-              <p className="text-slate-500 font-bold">Không tìm thấy lịch khám nào</p>
-              <p className="text-slate-400 text-xs mt-1">Hãy thử điều chỉnh lại bộ lọc hoặc từ khóa tìm kiếm.</p>
+            <div className="px-5 py-20 text-center">
+              <p className="text-slate-400 font-bold italic text-sm">Không tìm thấy lịch khám nào.</p>
             </div>
           )}
         </div>
 
-        {/* Chế độ Desktop: Table Layout */}
+        {/* --- PHIÊN BẢN DESKTOP: Dạng Bảng ngang --- */}
         <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="text-left px-5 py-4 font-black text-[11px] uppercase tracking-widest text-slate-400">Giờ khám</th>
-                <th className="text-left px-5 py-4 font-black text-[11px] uppercase tracking-widest text-slate-400">Bệnh nhân</th>
-                <th className="text-left px-5 py-4 font-black text-[11px] uppercase tracking-widest text-slate-400">Số điện thoại</th>
-                <th className="text-left px-5 py-4 font-black text-[11px] uppercase tracking-widest text-slate-400">Lý do khám</th>
-                <th className="text-left px-5 py-4 font-black text-[11px] uppercase tracking-widest text-slate-400">Trạng thái</th>
-                <th className="text-center px-5 py-4 font-black text-[11px] uppercase tracking-widest text-slate-400">Thao tác</th>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="text-left px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Giờ khám</th>
+                <th className="text-left px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Bệnh nhân</th>
+                <th className="text-left px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Số điện thoại</th>
+                <th className="text-left px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Lý do khám</th>
+                <th className="text-left px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Trạng thái</th>
+                <th className="text-center px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-50 italic md:not-italic">
               {filtered.length > 0 ? (
                 filtered.map((apt) => {
                   const badge = STATUS_BADGE[apt.trangThai] || STATUS_BADGE[0];
                   const patientId = apt.benhNhan?.id || apt.benhNhanId || apt.id;
                   const code = `BN-${String(patientId).padStart(3, "0")}`;
                   return (
-                    <tr key={apt.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-primary text-lg">schedule</span>
-                          <span className="font-bold text-slate-800">{formatTime(apt.gioBatDau)}</span>
-                        </div>
+                    <tr key={apt.id} className="hover:bg-slate-50/30 transition-colors group">
+                      <td className="px-6 py-4 font-bold text-primary">
+                        {formatTime(apt.gioBatDau)}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <img
                             src={getPatientAvatar(apt.benhNhan?.taiKhoan?.anhDaiDien) || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.benhNhan?.hoTen || "BN")}&size=128&background=f1f5f9&color=64748b`}
-                            alt={apt.benhNhan?.hoTen}
+                            alt="Avatar"
                             className="size-9 rounded-full object-cover shrink-0 border border-slate-100"
-                            onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.benhNhan?.hoTen || "BN")}&size=128&background=f1f5f9&color=64748b`; }}
                           />
                           <div>
                             <p className="font-bold text-slate-800 leading-tight">{apt.benhNhan?.hoTen || "—"}</p>
-                            <p className="text-[10px] font-black text-primary/70 mt-0.5 tracking-widest uppercase">{code}</p>
+                            <p className="text-[9px] font-black text-primary/70 mt-0.5 tracking-widest uppercase">{code}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-slate-600 font-medium">{apt.benhNhan?.soDienThoai || "—"}</td>
-                      <td className="px-5 py-4 text-slate-500 max-w-[200px] truncate italic">{apt.lyDoKham || "—"}</td>
-                      <td className="px-5 py-4">
+                      <td className="px-6 py-4 text-slate-500 font-medium font-mono">{apt.benhNhan?.soDienThoai || "—"}</td>
+                      <td className="px-6 py-4 text-slate-400 max-w-[200px] truncate italic text-xs">{apt.lyDoKham || "—"}</td>
+                      <td className="px-6 py-4">
                         <div className="flex flex-col items-start gap-1">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${badge.className}`}>
                             {badge.label}
                           </span>
                           {apt.donThuoc && (
-                            <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-tighter shadow-sm">
+                            <span className="flex items-center gap-1 text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-tighter">
                               <span className="material-symbols-outlined text-[10px]">pill</span>
                               Đã kê đơn
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-1.5">
-                          {/* Case: Đang chờ (0) */}
+                          {/* Case: Đang chờ xác nhận */}
                           {apt.trangThai === 0 && (
                             <>
-                              <button onClick={() => handleUpdateStatus(apt.id, 1)} title="Xác nhận lịch"
-                                className="size-8 rounded-lg flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all">
+                              <button onClick={() => handleUpdateStatus(apt.id, 1)} title="Xác nhận"
+                                className="size-8 rounded-lg flex items-center justify-center text-emerald-500 hover:bg-emerald-50 transition-all">
                                 <span className="material-symbols-outlined text-lg font-bold">check</span>
                               </button>
-                              <button onClick={() => handleUpdateStatus(apt.id, 3)} title="Từ chối lịch"
-                                className="size-8 rounded-lg flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-100 transition-all">
+                              <button onClick={() => handleUpdateStatus(apt.id, 3)} title="Từ chối"
+                                className="size-8 rounded-lg flex items-center justify-center text-rose-400 hover:bg-rose-50 transition-all">
                                 <span className="material-symbols-outlined text-lg font-bold">close</span>
                               </button>
                             </>
                           )}
-                          {/* Case: Đã xác nhận (1) */}
+                          {/* Case: Đã xác nhận - Chờ khám */}
                           {apt.trangThai === 1 && (
                             <>
-                              <button onClick={() => handleUpdateStatus(apt.id, 2)} title="Đánh dấu hoàn thành"
-                                className="size-8 rounded-lg flex items-center justify-center text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all">
+                              <button onClick={() => handleUpdateStatus(apt.id, 2)} title="Hoàn thành"
+                                className="size-8 rounded-lg flex items-center justify-center text-blue-500 hover:bg-blue-50 transition-all">
                                 <span className="material-symbols-outlined text-lg font-bold">verified</span>
                               </button>
-                              <button onClick={() => handleUpdateStatus(apt.id, 3)} title="Hủy lịch"
-                                className="size-8 rounded-lg flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-100 transition-all">
+                              <button onClick={() => handleUpdateStatus(apt.id, 3)} title="Hủy"
+                                className="size-8 rounded-lg flex items-center justify-center text-rose-400 hover:bg-rose-50 transition-all">
                                 <span className="material-symbols-outlined text-lg font-bold">close</span>
                               </button>
                             </>
                           )}
-                          {/* Case: Hoàn thành (2) */}
+                          {/* Case: Đã khám xong */}
                           {apt.trangThai === 2 && (
                             <Link to={`/doctor/appointments/${apt.id}`}
-                              className="px-4 py-1.5 rounded-lg text-[11px] font-black uppercase bg-primary/5 text-primary hover:bg-primary/10 transition-all border border-primary/20">
-                              Kết quả
+                              className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-primary/5 text-primary hover:bg-primary/10 transition-all border border-primary/10">
+                              Chi tiết
                             </Link>
                           )}
-                          {/* Case: Đã hủy (3) */}
+                          {/* Case: Đã hủy lịch */}
                           {apt.trangThai === 3 && (
                             <button onClick={() => handleUpdateStatus(apt.id, 0)}
-                              className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all">
+                              className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-slate-50 text-slate-400 hover:bg-slate-100 transition-all">
                               Khôi phục
                             </button>
                           )}
@@ -429,8 +429,8 @@ function DoctorAppointmentsPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-5 py-20 text-center font-bold text-slate-400 italic">
-                    Không có lịch khám nào trong danh sách hiện tại.
+                  <td colSpan={6} className="px-6 py-20 text-center font-bold text-slate-300 italic">
+                    Không có lịch khám nào trong danh sách.
                   </td>
                 </tr>
               )}
@@ -439,42 +439,42 @@ function DoctorAppointmentsPage() {
         </div>
       </div>
 
-      {/* CÁC THẺ THỐNG KÊ (Statistics Widgets) */}
+      {/* CÁC THẺ THỐNG KÊ (KPIs) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-primary/10 flex items-center justify-between transition-all hover:scale-[1.02]">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-50 flex items-center justify-between transition-all hover:scale-[1.02]">
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tổng lượt khám</p>
-            <p className="text-2xl font-black text-slate-800 mt-1">{stats.total}</p>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Tổng kết quả lọc</p>
+            <p className="text-2xl font-black text-slate-800 mt-2">{stats.total}</p>
           </div>
-          <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary text-2xl">calendar_today</span>
+          <div className="size-11 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10">
+            <span className="material-symbols-outlined text-primary text-xl">list_alt</span>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-amber-200 flex items-center justify-between transition-all hover:scale-[1.02]">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-50 flex items-center justify-between transition-all hover:scale-[1.02]">
           <div>
-            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Đang chờ</p>
-            <p className="text-2xl font-black text-slate-800 mt-1">{stats.pending}</p>
+            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Đang chờ xử lý</p>
+            <p className="text-2xl font-black text-slate-800 mt-2">{stats.pending}</p>
           </div>
-          <div className="size-12 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-100">
-            <span className="material-symbols-outlined text-amber-600 text-2xl">hourglass_empty</span>
+          <div className="size-11 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-100">
+            <span className="material-symbols-outlined text-amber-600 text-xl">hourglass_empty</span>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-emerald-200 flex items-center justify-between transition-all hover:scale-[1.02]">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-50 flex items-center justify-between transition-all hover:scale-[1.02]">
           <div>
-            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Hoàn thành</p>
-            <p className="text-2xl font-black text-slate-800 mt-1">{stats.completed}</p>
+            <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest leading-none">Đã hoàn thành</p>
+            <p className="text-2xl font-black text-slate-800 mt-2">{stats.completed}</p>
           </div>
-          <div className="size-12 rounded-xl bg-emerald-50 flex items-center justify-center border border-emerald-100">
-            <span className="material-symbols-outlined text-emerald-600 text-2xl">task_alt</span>
+          <div className="size-11 rounded-xl bg-emerald-50 flex items-center justify-center border border-emerald-100">
+            <span className="material-symbols-outlined text-emerald-600 text-xl">task_alt</span>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-rose-200 flex items-center justify-between transition-all hover:scale-[1.02]">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-50 flex items-center justify-between transition-all hover:scale-[1.02]">
           <div>
-            <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Đã hủy bỏ</p>
-            <p className="text-2xl font-black text-slate-800 mt-1">{stats.cancelled}</p>
+            <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest leading-none">Số ca đã hủy</p>
+            <p className="text-2xl font-black text-slate-800 mt-2">{stats.cancelled}</p>
           </div>
-          <div className="size-12 rounded-xl bg-rose-50 flex items-center justify-center border border-rose-100">
-            <span className="material-symbols-outlined text-rose-600 text-2xl">cancel</span>
+          <div className="size-11 rounded-xl bg-rose-50 flex items-center justify-center border border-rose-100">
+            <span className="material-symbols-outlined text-rose-600 text-xl">cancel</span>
           </div>
         </div>
       </div>

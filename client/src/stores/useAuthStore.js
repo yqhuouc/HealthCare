@@ -28,7 +28,6 @@ const useAuthStore = create((set) => ({
     return {
       ...userData,
       hoTen: hoTen,
-      fullName: hoTen, // Tương thích với các component cũ dùng fullName
     };
   },
 

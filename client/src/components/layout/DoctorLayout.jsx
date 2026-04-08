@@ -24,7 +24,9 @@ const NAV_ITEMS = [
 function DoctorLayout() {
   // Quản lý trạng thái đóng/mở sidebar trên thiết bị di động
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // - useNavigate: Dùng để chuyển trang bằng code (ví dụ: quay lại login sau khi logout)
   const navigate = useNavigate();
+  // - useLocation: Dùng để lấy URL hiện tại (để hiển thị đúng tiêu đề trang tương ứng)
   const location = useLocation();
   
   // Lấy thông tin người dùng và hàm đăng xuất từ store (Zustand)

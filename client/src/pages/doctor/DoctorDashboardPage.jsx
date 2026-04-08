@@ -3,13 +3,13 @@
  * TRANG: Dashboard Bác sĩ (Tổng quan)
  * Đường dẫn: /doctor/dashboard
  * ============================================================
- * 
+ *
  * Chức năng chính:
  * 1. Hiển thị các chỉ số thống kê nhanh (Lịch hôm nay, Hoàn thành, Chờ xác nhận, Tổng BN).
  * 2. Liệt kê danh sách bệnh nhân có lịch hẹn trong ngày hôm nay.
  * 3. Thao tác nhanh: Xác nhận hoặc Hoàn thành lịch hẹn trực tiếp từ bảng.
  * 4. Đồng bộ dữ liệu realtime khi bác sĩ cập nhật trạng thái.
- * 
+ *
  * Biến môi trường: VITE_API_URL dùng để gọi API backend.
  * State quản lý: appointments (danh sách), loading (trạng thái tải).
  * ============================================================
@@ -20,7 +20,7 @@ import { appointmentService } from "../../services/appointmentService";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
 
-/** 
+/**
  * Cấu hình hiển thị cho các trạng thái lịch hẹn
  * Dùng để render Badge (nhãn) với màu sắc tương ứng.
  */
@@ -31,7 +31,7 @@ const STATUS_CONFIG = {
   3: { label: "Đã hủy", color: "bg-rose-100 text-rose-600" },
 };
 
-/** 
+/**
  * Hàm format giờ hiển thị từ chuỗi ISO hoặc định dạng HH:mm:ss của Backend.
  * @param {string} timeInput - Chuỗi thời gian đầu vào
  * @returns {string} - Định dạng HH:mm (VD: 08:30)
@@ -39,16 +39,20 @@ const STATUS_CONFIG = {
 function formatTime(timeInput) {
   if (!timeInput) return "";
   // Nếu là định dạng HH:mm:ss thuần (không có T của ISO)
-  if (typeof timeInput === "string" && !timeInput.includes("T") && timeInput.includes(":")) {
+  if (
+    typeof timeInput === "string" &&
+    !timeInput.includes("T") &&
+    timeInput.includes(":")
+  ) {
     return timeInput.substring(0, 5);
   }
   const d = new Date(timeInput);
   if (isNaN(d.getTime())) return timeInput;
   d.setFullYear(2024); // Ép năm cố định để tránh lỗi lệch múi giờ lịch sử
   return d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit", 
-    minute: "2-digit", 
-    hour12: false, 
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
     timeZone: "Asia/Ho_Chi_Minh",
   });
 }
@@ -81,53 +85,58 @@ function DoctorDashboardPage() {
     fetchData();
   }, [bacSiId]);
 
-  /** 
+  /**
    * Xử lý lọc dữ liệu ngay tại Client
    */
   // Lấy chuỗi ngày hôm nay theo định dạng YYYY-MM-DD (múi giờ VN)
-  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
-  
+  const todayStr = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+
   // Lọc lấy các lịch hẹn của hôm nay
   const todayAppointments = appointments.filter((a) => {
     const d = new Date(a.ngayDat);
-    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }) === todayStr;
+    return (
+      d.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }) ===
+      todayStr
+    );
   });
 
-  /** 
+  /**
    * Tính toán các con số thống kê cho 4 Card ở đầu trang
    */
   const stats = [
     {
-      label: "Lịch hôm nay", 
+      label: "Lịch hôm nay",
       icon: "event_upcoming",
       value: todayAppointments.filter((a) => a.trangThai !== 3).length, // Không tính lịch đã hủy
-      iconBg: "bg-primary/10", 
+      iconBg: "bg-primary/10",
       iconColor: "text-primary",
     },
     {
-      label: "Đã khám xong", 
+      label: "Đã khám xong",
       icon: "check_circle",
       value: todayAppointments.filter((a) => a.trangThai === 2).length,
-      iconBg: "bg-green-500/10", 
+      iconBg: "bg-green-500/10",
       iconColor: "text-green-600",
     },
     {
-      label: "Chờ xác nhận", 
+      label: "Chờ xác nhận",
       icon: "pending",
       value: todayAppointments.filter((a) => a.trangThai === 0).length,
-      iconBg: "bg-amber-500/10", 
+      iconBg: "bg-amber-500/10",
       iconColor: "text-amber-600",
     },
     {
-      label: "Tổng bệnh nhân", 
+      label: "Tổng bệnh nhân",
       icon: "group",
       value: appointments.filter((a) => a.trangThai !== 3).length, // Tổng lịch (trừ hủy)
-      iconBg: "bg-purple-500/10", 
+      iconBg: "bg-purple-500/10",
       iconColor: "text-purple-600",
     },
   ];
 
-  /** 
+  /**
    * Hàm gọi API cập nhật trạng thái lịch hẹn (Xác nhận/Hoàn thành...)
    * @param {number} id - ID lịch hẹn
    * @param {number} newStatus - Trạng thái mới (0, 1, 2, 3)
@@ -137,7 +146,7 @@ function DoctorDashboardPage() {
       await appointmentService.updateTrangThai(id, newStatus);
       // Cập nhật lại state cục bộ để UI thay đổi ngay lập tức
       setAppointments((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, trangThai: newStatus } : a))
+        prev.map((a) => (a.id === id ? { ...a, trangThai: newStatus } : a)),
       );
       const labels = { 1: "Đã xác nhận", 2: "Đã hoàn thành", 3: "Đã hủy" };
       toast.success(labels[newStatus] || "Cập nhật thành công");
@@ -146,7 +155,7 @@ function DoctorDashboardPage() {
     }
   };
 
-  /** 
+  /**
    * Lấy chữ cái đầu của tên để hiển thị Avatar mặc định nếu ko có ảnh
    */
   const getInitials = (name) => {
@@ -157,7 +166,7 @@ function DoctorDashboardPage() {
       : parts[0][0];
   };
 
-  /** 
+  /**
    * Render nhãn trạng thái (Badge) + ký hiệu đã kê đơn
    */
   const renderStatusBadge = (appointment) => {
@@ -166,7 +175,9 @@ function DoctorDashboardPage() {
     if (!config) return null;
     return (
       <div className="flex flex-col items-start gap-1">
-        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase shadow-sm ${config.color}`}>
+        <span
+          className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase shadow-sm ${config.color}`}
+        >
           {config.label}
         </span>
         {donThuoc && (
@@ -179,7 +190,7 @@ function DoctorDashboardPage() {
     );
   };
 
-  /** 
+  /**
    * Render các nút thao tác tùy theo trạng thái lịch
    */
   const renderActions = (appointment) => {
@@ -193,7 +204,9 @@ function DoctorDashboardPage() {
             className="group size-8 flex items-center justify-center bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
             title="Xác nhận lịch hẹn"
           >
-            <span className="material-symbols-outlined text-lg font-bold">check</span>
+            <span className="material-symbols-outlined text-lg font-bold">
+              check
+            </span>
           </button>
         )}
         {/* Nút Hoàn thành cho lịch "Đã xác nhận" */}
@@ -203,10 +216,12 @@ function DoctorDashboardPage() {
             className="group size-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-all shadow-sm shadow-emerald-600/20"
             title="Đánh dấu hoàn thành"
           >
-            <span className="material-symbols-outlined text-lg font-bold">verified</span>
+            <span className="material-symbols-outlined text-lg font-bold">
+              verified
+            </span>
           </button>
         )}
-        
+
         {/* Link Thao tác chính: Kết quả hoặc Quản lý */}
         {trangThai === 2 ? (
           <Link
@@ -231,7 +246,9 @@ function DoctorDashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
+          progress_activity
+        </span>
       </div>
     );
   }
@@ -245,14 +262,22 @@ function DoctorDashboardPage() {
             key={card.label}
             className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3 sm:gap-4 transition-all hover:shadow-md"
           >
-            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${card.iconBg}`}>
-              <span className={`material-symbols-outlined text-xl sm:text-2xl ${card.iconColor}`}>
+            <div
+              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${card.iconBg}`}
+            >
+              <span
+                className={`material-symbols-outlined text-xl sm:text-2xl ${card.iconColor}`}
+              >
                 {card.icon}
               </span>
             </div>
             <div className="min-w-0">
-              <p className="text-xl sm:text-2xl font-black text-slate-900">{card.value}</p>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium truncate">{card.label}</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-900">
+                {card.value}
+              </p>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium truncate">
+                {card.label}
+              </p>
             </div>
           </div>
         ))}
@@ -262,9 +287,12 @@ function DoctorDashboardPage() {
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Bệnh nhân đặt câu hỏi & khám ngày hôm nay
+            Lịch làm việc hôm nay
           </h2>
-          <Link to="/doctor/appointments" className="text-sm text-primary font-bold hover:underline">
+          <Link
+            to="/doctor/appointments"
+            className="text-sm text-primary font-bold hover:underline"
+          >
             Xem toàn bộ
           </Link>
         </div>
@@ -272,10 +300,16 @@ function DoctorDashboardPage() {
         {todayAppointments.length === 0 ? (
           <div className="px-5 py-20 text-center flex flex-col items-center">
             <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-4xl text-slate-300">event_busy</span>
+              <span className="material-symbols-outlined text-4xl text-slate-300">
+                event_busy
+              </span>
             </div>
-            <p className="text-slate-500 font-medium">Hôm nay bạn chưa có lịch khám nào.</p>
-            <p className="text-slate-400 text-xs mt-1">Lịch hẹn mới sẽ được hiển thị tại đây.</p>
+            <p className="text-slate-500 font-medium">
+              Hôm nay bạn chưa có lịch khám nào.
+            </p>
+            <p className="text-slate-400 text-xs mt-1">
+              Lịch hẹn mới sẽ được hiển thị tại đây.
+            </p>
           </div>
         ) : (
           <>
@@ -289,17 +323,28 @@ function DoctorDashboardPage() {
                         {getInitials(appt.benhNhan?.hoTen)}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">{appt.benhNhan?.hoTen || "—"}</p>
-                        <p className="text-xs text-slate-500">{appt.benhNhan?.soDienThoai}</p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {appt.benhNhan?.hoTen || "—"}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {appt.benhNhan?.soDienThoai}
+                        </p>
                       </div>
                     </div>
                     {renderStatusBadge(appt)}
                   </div>
                   <div className="flex items-center gap-1 text-xs text-slate-500">
-                    <span className="material-symbols-outlined text-sm text-primary">schedule</span>
-                    Giờ khám: <span className="font-bold">{formatTime(appt.gioBatDau)}</span>
+                    <span className="material-symbols-outlined text-sm text-primary">
+                      schedule
+                    </span>
+                    Giờ khám:{" "}
+                    <span className="font-bold">
+                      {formatTime(appt.gioBatDau)}
+                    </span>
                   </div>
-                  <p className="text-xs text-slate-500 truncate italic">Lý do: {appt.lyDoKham}</p>
+                  <p className="text-xs text-slate-500 truncate italic">
+                    Lý do: {appt.lyDoKham}
+                  </p>
                   <div className="pt-1">{renderActions(appt)}</div>
                 </div>
               ))}
@@ -310,17 +355,32 @@ function DoctorDashboardPage() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-50/80">
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Giờ khám</th>
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Bệnh nhân</th>
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Số điện thoại</th>
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Lý do khám</th>
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Trạng thái</th>
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Thao tác</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
+                      Giờ khám
+                    </th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
+                      Bệnh nhân
+                    </th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
+                      Số điện thoại
+                    </th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
+                      Lý do khám
+                    </th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
+                      Trạng thái
+                    </th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
+                      Thao tác
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 italic md:not-italic">
                   {todayAppointments.map((appt) => (
-                    <tr key={appt.id} className="hover:bg-slate-50 transition-colors group">
+                    <tr
+                      key={appt.id}
+                      className="hover:bg-slate-50 transition-colors group"
+                    >
                       <td className="px-6 py-4 text-sm text-primary font-bold whitespace-nowrap">
                         {formatTime(appt.gioBatDau)}
                       </td>
@@ -330,7 +390,9 @@ function DoctorDashboardPage() {
                             {getInitials(appt.benhNhan?.hoTen)}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-slate-800">{appt.benhNhan?.hoTen || "—"}</p>
+                            <p className="text-sm font-bold text-slate-800">
+                              {appt.benhNhan?.hoTen || "—"}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -364,4 +426,3 @@ function DoctorDashboardPage() {
 }
 
 export default DoctorDashboardPage;
-
