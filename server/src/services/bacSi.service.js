@@ -108,23 +108,58 @@ const create = async (data) => {
   return result;
 };
 
-// Cập nhật từng field tùy body; parse giaKham / chuyenKhoaId
+// Cập nhật từng field tùy body; parse giaKham / chuyenKhoaId + Cập nhật Email/Mật khẩu
 const update = async (id, data) => {
-  const existing = await prisma.bacSi.findUnique({ where: { id: BigInt(id) } });
+  const existing = await prisma.bacSi.findUnique({
+    where: { id: BigInt(id) },
+    include: { taiKhoan: true },
+  });
   if (!existing) throw new AppError("Không tìm thấy bác sĩ", 404);
 
-  return prisma.bacSi.update({
-    where: { id: BigInt(id) },
-    data: {
-      tenBacSi: data.tenBacSi,
-      hocViChucDanh: data.hocViChucDanh,
-      moTaNgan: data.moTaNgan,
-      moTaChiTiet: data.moTaChiTiet,
-      giaKham:
-        data.giaKham !== undefined ? parseFloat(data.giaKham) : undefined,
-      chuyenKhoaId:
-        data.chuyenKhoaId !== undefined ? BigInt(data.chuyenKhoaId) : undefined,
-    },
+  return await prisma.$transaction(async (tx) => {
+    // 1. Cập nhật tài khoản nếu có email/mật khẩu
+    if (data.email || data.matKhau) {
+      const accountUpdate = {};
+
+      if (data.email && data.email !== existing.taiKhoan?.email) {
+        const emailExists = await tx.taiKhoan.findUnique({
+          where: { email: data.email },
+        });
+        if (emailExists) throw new AppError("Email này đã được sử dụng", 409);
+        accountUpdate.email = data.email;
+      }
+
+      if (data.matKhau && data.matKhau.trim() !== "") {
+        accountUpdate.matKhau = await bcrypt.hash(data.matKhau, 10);
+      }
+
+      if (Object.keys(accountUpdate).length > 0 && existing.taiKhoanId) {
+        await tx.taiKhoan.update({
+          where: { id: existing.taiKhoanId },
+          data: accountUpdate,
+        });
+      }
+    }
+
+    // 2. Cập nhật bác sĩ
+    return tx.bacSi.update({
+      where: { id: BigInt(id) },
+      data: {
+        tenBacSi: data.tenBacSi,
+        hocViChucDanh: data.hocViChucDanh,
+        moTaNgan: data.moTaNgan,
+        moTaChiTiet: data.moTaChiTiet,
+        giaKham:
+          data.giaKham !== undefined ? parseFloat(data.giaKham) : undefined,
+        chuyenKhoaId:
+          data.chuyenKhoaId !== undefined ? BigInt(data.chuyenKhoaId) : undefined,
+      },
+      include: {
+        taiKhoan: {
+          select: { id: true, email: true },
+        },
+      },
+    });
   });
 };
 

@@ -10,6 +10,7 @@ function AdminEditDoctorPage() {
   const [specialties, setSpecialties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     tenBacSi: "",
     chuyenKhoaId: "",
@@ -17,6 +18,8 @@ function AdminEditDoctorPage() {
     giaKham: "",
     moTaNgan: "",
     moTaChiTiet: "",
+    email: "",
+    matKhau: "",
   });
 
   useEffect(() => {
@@ -37,6 +40,8 @@ function AdminEditDoctorPage() {
             giaKham: doc.giaKham || "",
             moTaNgan: doc.moTaNgan || "",
             moTaChiTiet: doc.moTaChiTiet || "",
+            email: doc.taiKhoan?.email || "",
+            matKhau: "", // Mật khẩu luôn để trống khi load, chỉ nhập nếu muốn đổi
           });
         }
 
@@ -59,17 +64,23 @@ function AdminEditDoctorPage() {
   };
 
   const handleSave = async () => {
-    if (!form.tenBacSi.trim() || !form.chuyenKhoaId) {
-      toast.warn("Vui lòng nhập đầy đủ: Họ tên và Chuyên khoa.");
+    if (!form.tenBacSi.trim() || !form.chuyenKhoaId || !form.email.trim()) {
+      toast.warn("Vui lòng nhập đầy đủ: Họ tên, Chuyên khoa và Email.");
       return;
     }
 
     setSaving(true);
     try {
-      await doctorService.update(id, {
+      // Chuẩn bị dữ liệu gửi đi, chỉ gửi mật khẩu nếu có nhập nội dung mới
+      const updateData = {
         ...form,
         giaKham: form.giaKham ? Number(form.giaKham) : null,
-      });
+      };
+      if (!form.matKhau.trim()) {
+        delete updateData.matKhau;
+      }
+
+      await doctorService.update(id, updateData);
       toast.success(`Cập nhật bác sĩ "${form.tenBacSi}" thành công!`);
       navigate("/admin/doctors");
     } catch (error) {
@@ -101,8 +112,8 @@ function AdminEditDoctorPage() {
 
       <div className="mb-10 flex flex-col sm:flex-row items-end justify-between gap-4">
         <div className="text-center sm:text-left">
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Chỉnh sửa hồ sơ</h2>
-          <p className="text-slate-500 text-sm mt-2">Cập nhật thông tin chuyên môn và chi phí cho bác sĩ mã BS{id}.</p>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Chỉnh sửa bác sĩ</h2>
+          <p className="text-slate-500 text-sm mt-2">Cập nhật thông tin chuyên môn và tài khoản đăng nhập cho BS{id}.</p>
         </div>
         <span className="px-4 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest border border-slate-200">
           Chế độ chỉnh sửa
@@ -112,7 +123,55 @@ function AdminEditDoctorPage() {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-8 sm:p-12 space-y-10">
           
-          {/* Section: Thông tin cơ bản */}
+          {/* Section: Tài khoản đăng nhập */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span className="size-2 rounded-full bg-slate-400 ring-4 ring-slate-100"></span>
+              Thông tin tài khoản
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Email đăng nhập <span className="text-rose-500">*</span></label>
+                <input
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="VD: doctor@example.com"
+                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Mật khẩu mới (Tùy chọn)</label>
+                <div className="relative">
+                  <input
+                    name="matKhau"
+                    type={showPassword ? "text" : "password"}
+                    value={form.matKhau}
+                    onChange={handleChange}
+                    placeholder="Để trống nếu không thay đổi"
+                    className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-xl">
+                      {showPassword ? "visibility_off" : "visibility"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm">info</span>
+              Thay đổi email sẽ thay đổi tên đăng nhập. Để trống ô mật khẩu nếu bạn muốn giữ nguyên mật khẩu cũ.
+            </p>
+          </div>
+
+          <hr className="border-slate-100" />
+          
+          {/* Section: Thông tin công tác */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="size-2 rounded-full bg-primary ring-4 ring-primary/10"></span>
