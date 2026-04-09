@@ -5,43 +5,38 @@
  * ============================================================
  *
  * Chức năng:
- * - Tabs lọc kỳ: Theo tháng / Theo quý / Theo năm
- * - 4 KPI cards: lịch khám tháng này, tỷ lệ hoàn thành, tỷ lệ hủy, BN mới
- *   (mỗi card có % thay đổi so với tháng trước, mũi tên lên/xuống)
- * - Biểu đồ cột: lượt đặt lịch khám theo 12 tháng (hover hiện tooltip số liệu)
+ * - Dropdown chọn năm thống kê (2024 → năm hiện tại)
+ * - 4 KPI cards: tổng lịch khám, tổng doanh thu, doanh thu thuốc, tổng bệnh nhân
+ * - Biểu đồ cột: doanh thu theo 12 tháng (phân tách phí khám + phí thuốc, hover tooltip)
  * - Biểu đồ donut: phân bổ trạng thái lịch khám (hoàn thành, xác nhận, chờ, hủy)
- * - Biểu đồ thanh ngang: lượt khám theo chuyên khoa (progress bar)
- * - Biểu đồ thanh ngang: khung giờ đặt lịch phổ biến (màu theo mức độ)
- * - Biểu đồ cột: bệnh nhân đăng ký mới theo tháng
- * - Bảng Top 5 bác sĩ được đặt lịch nhiều nhất
+ * - Biểu đồ lịch khám theo ngày (14 ngày gần nhất)
+ * - Biểu đồ phân bổ doanh thu (phí khám vs phí thuốc)
+ * - Bảng Top 10 bác sĩ được đặt lịch nhiều nhất (kèm progress bar)
  *
  * State:
- * - period: kỳ thống kê đang chọn ("month" | "quarter" | "year")
+ * - selectedYear: năm thống kê đang chọn (mặc định năm hiện tại)
+ * - loading: trạng thái tải dữ liệu
  *
  * Component phụ:
- * - StatCard: card KPI tái sử dụng (icon, label, value, change, changeLabel)
+ * - StatCard: card KPI tái sử dụng (icon, label, value, subLabel, iconBg)
  *
- * Dữ liệu: STATS_OVERVIEW, MONTHLY_APPOINTMENTS, APPOINTMENT_STATUS_STATS,
- *           SPECIALTY_APPOINTMENT_STATS, PEAK_HOURS, PATIENT_GROWTH,
- *           TOP_DOCTORS_STATS, DOCTOR_STATUS_CONFIG từ mockAdminData.js
+ * Dữ liệu API:
+ * - GET /api/thong-ke/tong-quan → tongBenhNhan, tongBacSi, tongLichHen,
+ *     tongChuyenKhoa, doanhThuKham, doanhThuThuoc, tongDoanhThu, lichHenTheoTrangThai[]
+ * - GET /api/thong-ke/doanh-thu?nam=YYYY → thongKeThang[] (12 tháng: doanhThuKham, doanhThuThuoc, tongDoanhThu)
+ * - GET /api/thong-ke/lich-hen?tuNgay=&denNgay= → lichHenTheoNgay[], lichHenTheoBacSi[]
  * ============================================================
  */
 import { useState, useEffect, useMemo } from "react";
 import { adminStatsService } from "../../services/adminStatsService";
-import { DOCTOR_STATUS_CONFIG } from "../../data/mockAdminData"; // Vẫn giữ config map trạng thái bác sĩ nếu cần
-import { getDoctorInitials } from "../../utils/formatters";
 
-/** Cấu hình tabs chọn kỳ thống kê */
-const PERIOD_TABS = [
-  { id: "month", label: "Theo tháng" },
-  { id: "quarter", label: "Theo quý" },
-  { id: "year", label: "Theo năm" },
-];
-
-function StatCard({ icon, iconBg, label, value, change, changeLabel }) {
-  const isPositive = change >= 0;
+/**
+ * StatCard — Card hiển thị một chỉ số KPI tổng quan.
+ * Nhận icon Material Symbols, nền icon, nhãn, giá trị chính, và nhãn phụ.
+ */
+function StatCard({ icon, iconBg, label, value, subLabel }) {
   return (
-    <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
+    <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm hover:border-primary/30 transition-colors">
       <div className="flex items-center gap-3 mb-3">
         <div
           className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}
@@ -53,61 +48,101 @@ function StatCard({ icon, iconBg, label, value, change, changeLabel }) {
         </p>
       </div>
       <p className="text-2xl font-bold text-slate-900">{value}</p>
-      <div className="flex items-center gap-1.5 mt-1">
-        <span
-          className={`inline-flex items-center gap-0.5 text-xs font-semibold ${
-            isPositive ? "text-emerald-600" : "text-rose-600"
-          }`}
-        >
-          <span className="material-symbols-outlined text-sm">
-            {isPositive ? "trending_up" : "trending_down"}
-          </span>
-          {isPositive ? "+" : ""}
-          {change}%
-        </span>
-        <span className="text-xs text-slate-400">{changeLabel}</span>
-      </div>
+      {subLabel && (
+        <p className="text-xs text-slate-400 mt-1">{subLabel}</p>
+      )}
     </div>
   );
 }
 
 function AdminStatsPage() {
-  const [period, setPeriod] = useState("year");
+  /**
+   * selectedYear: Năm thống kê hiện tại, mặc định = năm hiện tại.
+   * Được dùng để query doanh thu theo tháng & lịch hẹn theo ngày.
+   */
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [loading, setLoading] = useState(true);
 
-  // States
+  // ── State dữ liệu API ────────────────────────────────────
+  /** Tổng quan: tổng số bệnh nhân, bác sĩ, lịch hẹn, doanh thu, phân bổ trạng thái */
   const [overview, setOverview] = useState({
     tongLichHen: 0,
+    tongBacSi: 0,
+    tongBenhNhan: 0,
+    tongChuyenKhoa: 0,
     lichHenTheoTrangThai: [],
     doanhThuKham: 0,
     doanhThuThuoc: 0,
     tongDoanhThu: 0,
-    tongBenhNhan: 0
   });
-  
+
+  /** Doanh thu 12 tháng trong năm (từ API /thong-ke/doanh-thu) */
   const [revenueStats, setRevenueStats] = useState([]);
+
+  /** Top bác sĩ được đặt lịch nhiều nhất (từ API /thong-ke/lich-hen) */
   const [topDoctors, setTopDoctors] = useState([]);
 
+  /** Lịch khám theo ngày (14 ngày gần nhất, từ API /thong-ke/lich-hen) */
+  const [dailyAppointments, setDailyAppointments] = useState([]);
+
+  // ── Fetch dữ liệu khi selectedYear thay đổi ──────────────
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
       try {
+        // Tính range 14 ngày gần nhất cho biểu đồ daily
+        const today = new Date();
+        const pastDate = new Date();
+        pastDate.setDate(today.getDate() - 13);
+        const tuNgay = pastDate.toISOString().split("T")[0];
+        const denNgay = today.toISOString().split("T")[0];
+
         const [tongQuanRes, doanhThuRes, lichHenRes] = await Promise.all([
           adminStatsService.getTongQuan(),
-          adminStatsService.getDoanhThuStats({ nam: new Date().getFullYear() }),
-          adminStatsService.getLichHenStats({})
+          adminStatsService.getDoanhThuStats({ nam: selectedYear }),
+          adminStatsService.getLichHenStats({ tuNgay, denNgay }),
         ]);
 
+        // Tổng quan
         if (tongQuanRes.data) {
           setOverview(tongQuanRes.data);
         }
 
+        // Doanh thu 12 tháng
         if (doanhThuRes.data?.thongKeThang) {
           setRevenueStats(doanhThuRes.data.thongKeThang);
         }
 
-        if (lichHenRes.data?.lichHenTheoBacSi) {
-          setTopDoctors(lichHenRes.data.lichHenTheoBacSi);
+        // Lịch hẹn theo bác sĩ + theo ngày
+        if (lichHenRes.data) {
+          if (lichHenRes.data.lichHenTheoBacSi) {
+            setTopDoctors(lichHenRes.data.lichHenTheoBacSi);
+          }
+          if (lichHenRes.data.lichHenTheoNgay) {
+            // Tạo mảng 14 ngày liên tục (fill 0 nếu thiếu)
+            const rawDays = lichHenRes.data.lichHenTheoNgay.map((d) => ({
+              ...d,
+              soLuong: Number(d.soLuong || 0),
+            }));
+            const formattedChart = [];
+            for (let i = 0; i < 14; i++) {
+              const d = new Date(pastDate);
+              d.setDate(d.getDate() + i);
+              const dateStr = d.toISOString().split("T")[0];
+              const dateLabel = `${d.getDate()}/${d.getMonth() + 1}`;
+              const match = rawDays.find((rd) => {
+                const rdDate = new Date(rd.ngay).toISOString().split("T")[0];
+                return rdDate === dateStr;
+              });
+              formattedChart.push({
+                label: dateLabel,
+                count: match ? match.soLuong : 0,
+                isToday: dateStr === today.toISOString().split("T")[0],
+              });
+            }
+            setDailyAppointments(formattedChart);
+          }
         }
       } catch (error) {
         console.error("Lỗi khi tải trang stats:", error);
@@ -116,19 +151,22 @@ function AdminStatsPage() {
       }
     };
     fetchStats();
-  }, [period]);
+  }, [selectedYear]);
 
+  // ── Tính toán phụ ──────────────────────────────────────────
 
-
-  // Tính toán Tỷ lệ theo trạng thái
+  /**
+   * statusStatsArr: Mảng trạng thái lịch khám (hoàn thành, xác nhận, chờ, hủy)
+   * với số lượng, phần trăm, và màu sắc tương ứng.
+   */
   const statusStatsArr = useMemo(() => {
-    const total = overview.tongLichHen || 1; 
+    const total = overview.tongLichHen || 1;
     let hoanThanh = 0;
     let xacNhan = 0;
     let choXacNhan = 0;
     let huy = 0;
 
-    overview.lichHenTheoTrangThai.forEach(item => {
+    overview.lichHenTheoTrangThai.forEach((item) => {
       if (item.trangThai === 0) choXacNhan = item.soLuong;
       if (item.trangThai === 1) xacNhan = item.soLuong;
       if (item.trangThai === 2) hoanThanh = item.soLuong;
@@ -136,21 +174,52 @@ function AdminStatsPage() {
     });
 
     return [
-      { status: 2, label: "Đã hoàn thành", count: hoanThanh, percent: Math.round((hoanThanh/total)*100), color: "bg-emerald-500" },
-      { status: 1, label: "Đã xác nhận", count: xacNhan, percent: Math.round((xacNhan/total)*100), color: "bg-blue-500" },
-      { status: 0, label: "Chờ xác nhận", count: choXacNhan, percent: Math.round((choXacNhan/total)*100), color: "bg-amber-500" },
-      { status: 3, label: "Đã hủy", count: huy, percent: Math.round((huy/total)*100), color: "bg-rose-500" }
+      { status: 2, label: "Đã hoàn thành", count: hoanThanh, percent: Math.round((hoanThanh / total) * 100), color: "bg-emerald-500" },
+      { status: 1, label: "Đã xác nhận", count: xacNhan, percent: Math.round((xacNhan / total) * 100), color: "bg-blue-500" },
+      { status: 0, label: "Chờ xác nhận", count: choXacNhan, percent: Math.round((choXacNhan / total) * 100), color: "bg-amber-500" },
+      { status: 3, label: "Đã hủy", count: huy, percent: Math.round((huy / total) * 100), color: "bg-rose-500" },
     ];
   }, [overview]);
 
-  const maxRevenue = Math.max(...revenueStats.map(s => s.tongDoanhThu || 0), 10000000); // Tránh chia 0
 
+
+  /** maxDailyCount: Số lịch hẹn lớn nhất trong 14 ngày, dùng để tính chiều cao cột biểu đồ daily. */
+  const maxDailyCount = Math.max(
+    ...dailyAppointments.map((d) => d.count),
+    1
+  );
+
+  /** Tỷ lệ phần trăm doanh thu khám vs thuốc cho biểu đồ phân bổ */
+  const revenueBreakdown = useMemo(() => {
+    const totalRev = overview.tongDoanhThu || 1;
+    const khamPercent = Math.round((overview.doanhThuKham / totalRev) * 100);
+    const thuocPercent = 100 - khamPercent;
+    return { khamPercent, thuocPercent };
+  }, [overview]);
+
+  /** Mảng năm để chọn trong dropdown (từ 2024 đến năm hiện tại) */
+  const yearOptions = useMemo(() => {
+    const years = [];
+    for (let y = 2024; y <= currentYear; y++) {
+      years.push(y);
+    }
+    return years;
+  }, [currentYear]);
+
+  // ── Loading state ──────────────────────────────────────────
   if (loading) {
-    return <div className="flex justify-center py-10"><span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span></div>;
+    return (
+      <div className="flex justify-center py-10">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
+          progress_activity
+        </span>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
+      {/* ── Header + Year Selector ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
@@ -160,106 +229,142 @@ function AdminStatsPage() {
             Tổng hợp dữ liệu hoạt động của hệ thống đặt lịch khám bệnh
           </p>
         </div>
-        <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
-          {PERIOD_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setPeriod(tab.id)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                period === tab.id
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Dropdown chọn năm */}
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-slate-400 text-lg">
+            calendar_today
+          </span>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                Năm {y}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* KPI Cards (API Data) */}
+      {/* ── 4 KPI Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon="calendar_month"
           iconBg="bg-primary/10 text-primary"
           label="Tổng lịch khám"
           value={overview.tongLichHen.toLocaleString("vi-VN")}
-          change={0}
-          changeLabel="(toàn thời gian)"
+          subLabel={`${overview.tongBacSi} bác sĩ · ${overview.tongChuyenKhoa} chuyên khoa`}
         />
         <StatCard
           icon="payments"
           iconBg="bg-emerald-500/10 text-emerald-600"
           label="Tổng doanh thu"
           value={`${(overview.tongDoanhThu / 1000000).toFixed(1)} Tr`}
-          change={0}
-          changeLabel="(VNĐ)"
+          subLabel={`${overview.tongDoanhThu.toLocaleString("vi-VN")}đ`}
         />
         <StatCard
           icon="vaccines"
           iconBg="bg-blue-500/10 text-blue-600"
           label="Doanh thu thuốc"
           value={`${(overview.doanhThuThuoc / 1000000).toFixed(1)} Tr`}
-          change={0}
-          changeLabel="(Tiền kê đơn)"
+          subLabel={`${overview.doanhThuThuoc.toLocaleString("vi-VN")}đ`}
         />
         <StatCard
           icon="person_add"
           iconBg="bg-violet-500/10 text-violet-600"
           label="Tổng bệnh nhân"
           value={overview.tongBenhNhan.toLocaleString("vi-VN")}
-          change={0}
-          changeLabel="(Người)"
+          subLabel="Bệnh nhân đã đăng ký"
         />
       </div>
 
-      {/* Row: Monthly revenue chart + Status breakdown */}
+      {/* ── Row: Biểu đồ doanh thu 12 tháng + Trạng thái lịch khám ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Monthly revenue bar chart */}
+        {/* Biểu đồ doanh thu cột 12 tháng */}
         <div className="xl:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
-          <h3 className="text-base font-bold text-slate-900 mb-5">
-            Doanh thu theo tháng (VNĐ)
-          </h3>
-          <div className="flex items-end gap-1 sm:gap-2 h-44 sm:h-52">
-            {revenueStats.length > 0 ? revenueStats.map((m) => {
-              const heightPercent = maxRevenue > 0 ? (m.tongDoanhThu / maxRevenue) * 100 : 0;
-              return (
-                <div
-                  key={m.thang}
-                  className="flex-1 flex flex-col items-center gap-1.5 group relative"
-                >
-                  {/* Tooltip */}
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-10 whitespace-nowrap">
-                    {m.tongDoanhThu.toLocaleString("vi-VN")}đ
-                  </div>
-                  <div
-                    className="w-full max-w-10 rounded-t-sm transition-all flex flex-col justify-end overflow-hidden bg-slate-100 group-hover:brightness-105"
-                    style={{ height: `${Math.max(heightPercent, 8)}%` }}
-                  >
-                    {/* Phần doanh thu khám (Xanh dương) */}
-                    <div style={{ height: `${(m.doanhThuKham / (m.tongDoanhThu || 1)) * 100}%` }} className="bg-linear-to-t from-blue-600 to-blue-400 w-full transition-colors" />
-                    {/* Phần doanh thu thuốc (Xanh lá) */}
-                    <div style={{ height: `${(m.doanhThuThuoc / (m.tongDoanhThu || 1)) * 100}%` }} className="bg-linear-to-t from-emerald-600 to-emerald-400 w-full transition-colors" />
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-400 group-hover:text-slate-900">
-                    T{m.thang}
-                  </span>
-                </div>
-              );
-            }) : <p className="text-slate-400 text-sm">Chưa có dữ liệu</p>}
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-base font-bold text-slate-900">
+              Doanh thu theo tháng
+            </h3>
+            <span className="text-xs text-slate-400 font-medium">
+              Năm {selectedYear}
+            </span>
           </div>
+          <div className="flex items-end gap-2 h-44 sm:h-52 px-2 border-b border-slate-100">
+            {revenueStats.length > 0 ? (
+              revenueStats.map((m) => {
+                const revenue = Number(m.tongDoanhThu || 0);
+                const thuoc = Number(m.doanhThuThuoc || 0);
+                const hasRevenue = revenue > 0;
+                
+                // Tính toán max để làm mốc tỷ lệ
+                const maxRevenueVal = Math.max(...revenueStats.map(s => Number(s.tongDoanhThu || 0)), 1);
+                // Chiều cao thanh tính theo pixel để tuyệt đối hiển thị (max 100% của container)
+                const heightVal = hasRevenue ? Math.max((revenue / maxRevenueVal) * 100, 15) : 2;
+                
+                return (
+                  <div
+                    key={m.thang}
+                    className="flex-1 flex flex-col items-center justify-end group relative h-full"
+                  >
+                    {/* Tooltip */}
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 whitespace-nowrap">
+                      {hasRevenue ? `${revenue.toLocaleString("vi-VN")}đ` : "0đ"}
+                    </div>
+
+                    {/* Cột chính */}
+                    <div
+                      className="w-7 sm:w-8 rounded-t-sm transition-all duration-300 relative"
+                      style={{ 
+                        height: `${heightVal}%`, 
+                        backgroundColor: hasRevenue ? '#3b82f6' : '#e2e8f0',
+                        minHeight: hasRevenue ? '20px' : '4px'
+                      }}
+                    >
+                      {/* Màu xanh lá cho tiền thuốc (chồng lên từ đáy) */}
+                      {hasRevenue && thuoc > 0 && (
+                        <div 
+                          className="absolute bottom-0 left-0 right-0 bg-emerald-500 rounded-t-sm"
+                          style={{ height: `${(thuoc / revenue) * 100}%`, opacity: 0.9 }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Nhãn tháng */}
+                    <span className={`mt-2 text-[10px] sm:text-xs font-bold ${
+                      hasRevenue ? "text-blue-600" : "text-slate-400"
+                    }`}>
+                      T{m.thang}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex-1 flex items-center justify-center h-full text-slate-400 italic text-sm">
+                Đang tải dữ liệu doanh thu...
+              </div>
+            )}
+          </div>
+          {/* Legend */}
           <div className="mt-4 flex gap-4 justify-end text-xs text-slate-500">
-             <span className="flex items-center gap-2"><span className="w-3 h-3 bg-blue-400 rounded-sm"></span> Phí khám</span>
-             <span className="flex items-center gap-2"><span className="w-3 h-3 bg-emerald-400 rounded-sm"></span> Phí thuốc</span>
+            <span className="flex items-center gap-2">
+              <span className="w-3 h-3 bg-blue-400 rounded-sm" /> Phí khám
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="w-3 h-3 bg-emerald-400 rounded-sm" /> Phí thuốc
+            </span>
           </div>
         </div>
 
-        {/* Appointment status donut */}
+        {/* Biểu đồ donut: Trạng thái lịch khám */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
           <h3 className="text-base font-bold text-slate-900 mb-5">
             Trạng thái lịch khám
           </h3>
           <div className="flex flex-col items-center gap-5">
+            {/* Donut circle bằng CSS conic-gradient */}
             <div
               className="w-36 h-36 rounded-full relative"
               style={{
@@ -272,17 +377,24 @@ function AdminStatsPage() {
               }}
             >
               <div className="absolute inset-4 bg-white rounded-full flex flex-col items-center justify-center">
-                <span className="text-lg font-bold text-slate-900">{overview.tongLichHen.toLocaleString("vi-VN")}</span>
+                <span className="text-lg font-bold text-slate-900">
+                  {overview.tongLichHen.toLocaleString("vi-VN")}
+                </span>
                 <span className="text-[10px] text-slate-400 font-medium">
                   Tổng cộng
                 </span>
               </div>
             </div>
+            {/* Legend chi tiết mỗi trạng thái */}
             <div className="w-full space-y-2.5">
               {statusStatsArr.map((s) => (
                 <div key={s.status} className="flex items-center gap-2.5">
-                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.color}`} />
-                  <span className="text-sm text-slate-600 flex-1">{s.label}</span>
+                  <div
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.color}`}
+                  />
+                  <span className="text-sm text-slate-600 flex-1">
+                    {s.label}
+                  </span>
                   <span className="text-sm font-semibold text-slate-900">
                     {s.count.toLocaleString()}
                   </span>
@@ -296,42 +408,245 @@ function AdminStatsPage() {
         </div>
       </div>
 
-      {/* Tính năng phân tích sâu (Chưa có API) */}
-      <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-6 text-center shadow-inner">
-        <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">construction</span>
-        <h3 className="text-slate-600 font-semibold mb-1">Tính năng phân tích đang được xây dựng</h3>
-        <p className="text-sm text-slate-400">Các biểu đồ phân bổ thời gian và tăng trưởng chi tiết sẽ được cập nhật trong bản sau.</p>
+      {/* ── Row: Lịch khám 14 ngày qua + Phân bổ doanh thu ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Biểu đồ lịch khám theo ngày (14 ngày gần nhất) */}
+        <div className="xl:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                Lịch khám 14 ngày qua
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                Số lượng lịch hẹn được đặt theo ngày
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <span className="material-symbols-outlined text-sm">
+                bar_chart
+              </span>
+              {dailyAppointments.reduce((sum, d) => sum + d.count, 0)} lịch hẹn
+            </div>
+          </div>
+          <div className="p-4 sm:p-6 overflow-x-auto">
+            <div className="flex items-end justify-between gap-2 h-40 min-w-[500px] lg:min-w-0">
+              {dailyAppointments.length > 0 ? (
+                dailyAppointments.map((bar) => {
+                  let heightStyle;
+                  if (bar.count > 0) {
+                    heightStyle =
+                      Math.max(15, (bar.count / maxDailyCount) * 100) + "%";
+                  } else {
+                    heightStyle = "4px";
+                  }
+                  return (
+                    <div
+                      key={bar.label}
+                      className="flex-1 h-full flex flex-col justify-end items-center gap-2 group relative"
+                    >
+                      {/* Tooltip */}
+                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-medium px-2 py-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
+                        {bar.count} lịch hẹn
+                      </div>
+                      <div
+                        className={`w-full max-w-[24px] rounded-t-sm transition-all duration-300 ${
+                          bar.count > 0
+                            ? bar.isToday
+                              ? "bg-orange-500"
+                              : "bg-primary"
+                            : "bg-slate-200"
+                        }`}
+                        style={{ height: heightStyle }}
+                      />
+                      <span
+                        className={`text-[10px] font-semibold ${
+                          bar.isToday ? "text-orange-500" : "text-slate-400"
+                        }`}
+                      >
+                        {bar.label}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="w-full flex items-center justify-center text-slate-400 text-xs py-10">
+                  Chưa có dữ liệu
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Phân bổ doanh thu (Phí khám vs Phí thuốc) */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
+          <h3 className="text-base font-bold text-slate-900 mb-5">
+            Phân bổ doanh thu
+          </h3>
+          <div className="flex flex-col items-center gap-5">
+            {/* Donut: 2 phần (khám + thuốc) */}
+            <div
+              className="w-36 h-36 rounded-full relative"
+              style={{
+                background: `conic-gradient(
+                  #3b82f6 0% ${revenueBreakdown.khamPercent}%,
+                  #10b981 ${revenueBreakdown.khamPercent}% 100%
+                )`,
+              }}
+            >
+              <div className="absolute inset-4 bg-white rounded-full flex flex-col items-center justify-center">
+                <span className="text-base font-bold text-slate-900">
+                  {(overview.tongDoanhThu / 1000000).toFixed(1)}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Triệu VNĐ
+                </span>
+              </div>
+            </div>
+
+            {/* Chi tiết phân bổ */}
+            <div className="w-full space-y-3">
+              {/* Phí khám */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                    <span className="text-sm text-slate-600">Phí khám</span>
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900">
+                    {revenueBreakdown.khamPercent}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${revenueBreakdown.khamPercent}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {overview.doanhThuKham.toLocaleString("vi-VN")}đ
+                </p>
+              </div>
+              {/* Phí thuốc */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span className="text-sm text-slate-600">Phí thuốc</span>
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900">
+                    {revenueBreakdown.thuocPercent}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div
+                    className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${revenueBreakdown.thuocPercent}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {overview.doanhThuThuoc.toLocaleString("vi-VN")}đ
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Top doctors table */}
+      {/* ── Tổng hợp doanh thu theo quý ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: "Quý 1", months: [0, 1, 2] },
+          { label: "Quý 2", months: [3, 4, 5] },
+          { label: "Quý 3", months: [6, 7, 8] },
+          { label: "Quý 4", months: [9, 10, 11] },
+        ].map((q) => {
+          const total = revenueStats
+            .filter((_, idx) => q.months.includes(idx))
+            .reduce((sum, m) => sum + (m.tongDoanhThu || 0), 0);
+          return (
+            <div
+              key={q.label}
+              className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 text-center"
+            >
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                {q.label} / {selectedYear}
+              </p>
+              <p className="text-lg font-bold text-slate-900">
+                {(total / 1000000).toFixed(1)}{" "}
+                <span className="text-xs font-medium text-slate-400">Tr</span>
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {total.toLocaleString("vi-VN")}đ
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Bảng Top bác sĩ ── */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900">
-            Top 5 bác sĩ được đặt lịch nhiều nhất
-          </h3>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">
+              Top bác sĩ được đặt lịch nhiều nhất
+            </h3>
+            <p className="text-[11px] text-slate-500">
+              14 ngày gần nhất · Tối đa 10 bác sĩ
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+            <span className="material-symbols-outlined text-sm">
+              leaderboard
+            </span>
+            {topDoctors.length} bác sĩ
+          </div>
         </div>
 
         {/* Mobile cards */}
         <div className="block md:hidden divide-y divide-slate-100">
-          {topDoctors.length === 0 ? <p className="text-center p-4 text-sm text-slate-500">Chưa có dữ liệu</p> : topDoctors.map((doc, idx) => {
-            return (
-              <div key={doc.bacSiId} className="p-4 flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
-                  {idx + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">
-                    {doc.tenBacSi}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-3 mt-1 text-xs">
-                    <span className="text-slate-600 font-medium">
-                      {doc.soLuong} lượt khám
-                    </span>
+          {topDoctors.length === 0 ? (
+            <p className="text-center p-4 text-sm text-slate-500">
+              Chưa có dữ liệu
+            </p>
+          ) : (
+            topDoctors.map((doc, idx) => {
+              const maxDoc = topDoctors[0]?.soLuong || 1;
+              const barPercent = Math.round((doc.soLuong / maxDoc) * 100);
+              return (
+                <div key={doc.bacSiId} className="p-4 flex items-start gap-3">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                      idx === 0
+                        ? "bg-amber-100 text-amber-600"
+                        : idx === 1
+                          ? "bg-slate-200 text-slate-600"
+                          : idx === 2
+                            ? "bg-orange-100 text-orange-600"
+                            : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {doc.tenBacSi}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <div className="flex-1 bg-slate-100 rounded-full h-1.5">
+                        <div
+                          className="bg-primary h-1.5 rounded-full transition-all duration-500"
+                          style={{ width: `${barPercent}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-bold text-slate-700 shrink-0">
+                        {doc.soLuong}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
 
         {/* Desktop table */}
@@ -345,44 +660,74 @@ function AdminStatsPage() {
                 <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
                   Bác sĩ
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500 w-80">
                   Số lịch khám
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {topDoctors.length === 0 ? <tr><td colSpan={6} className="text-center p-4 text-sm text-slate-500">Chưa có dữ liệu</td></tr> : topDoctors.map((doc, idx) => {
-                return (
-                  <tr
-                    key={doc.bacSiId}
-                    className="hover:bg-slate-50 transition-colors"
+              {topDoctors.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={3}
+                    className="text-center p-4 text-sm text-slate-500"
                   >
-                    <td className="px-6 py-4">
-                      <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
-                        {idx + 1}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                          {getDoctorInitials(doc.tenBacSi)}
+                    Chưa có dữ liệu
+                  </td>
+                </tr>
+              ) : (
+                topDoctors.map((doc, idx) => {
+                  const maxDoc = topDoctors[0]?.soLuong || 1;
+                  const barPercent = Math.round(
+                    (doc.soLuong / maxDoc) * 100
+                  );
+                  return (
+                    <tr
+                      key={doc.bacSiId}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                            idx === 0
+                              ? "bg-amber-100 text-amber-600"
+                              : idx === 1
+                                ? "bg-slate-200 text-slate-600"
+                                : idx === 2
+                                  ? "bg-orange-100 text-orange-600"
+                                  : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          {idx + 1}
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
                         <div>
                           <p className="text-sm font-semibold text-slate-900">
                             {doc.tenBacSi}
                           </p>
-                          <p className="text-xs text-slate-400">ID: {doc.bacSiId}</p>
+                          <p className="text-xs text-slate-400">
+                            ID: {doc.bacSiId}
+                          </p>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-900">
-                        {doc.soLuong}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 bg-slate-100 rounded-full h-2">
+                            <div
+                              className="bg-primary h-2 rounded-full transition-all duration-500"
+                              style={{ width: `${barPercent}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold text-slate-900 w-8 text-right">
+                            {doc.soLuong}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
