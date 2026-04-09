@@ -30,6 +30,9 @@ const updateBacSiSchema = z.object({
   moTaChiTiet: z.string().optional(),
   giaKham: z.union([z.string(), z.number()]).optional(),
   chuyenKhoaId: z.union([z.string(), z.number()]).optional(),
+  email: z.string().email("Email không hợp lệ").optional(),
+  matKhau: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự").optional(),
+  trangThaiTaiKhoan: z.number().int().min(0).max(1).optional(),
 });
 
 module.exports = { createBacSiSchema, updateBacSiSchema };

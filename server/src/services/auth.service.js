@@ -137,8 +137,17 @@ const refreshAccessToken = async (refreshToken) => {
     where: { id: BigInt(decoded.id) },
   });
 
-  if (!taiKhoan || taiKhoan.refreshToken !== hashToken(refreshToken)) {
-    throw new AppError("Refresh token không hợp lệ", 401);
+  if (
+    !taiKhoan ||
+    taiKhoan.refreshToken !== hashToken(refreshToken) ||
+    taiKhoan.trangThaiTaiKhoan === 0
+  ) {
+    throw new AppError(
+      taiKhoan?.trangThaiTaiKhoan === 0
+        ? "Tài khoản đã bị khóa"
+        : "Refresh token không hợp lệ",
+      401
+    );
   }
 
   const tokens = generateTokens(Number(taiKhoan.id));

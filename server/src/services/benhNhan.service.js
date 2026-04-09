@@ -98,40 +98,55 @@ const update = async (id, data, requestUser) => {
     throw new AppError("Bạn không có quyền chỉnh sửa hồ sơ này", 403);
   }
 
-  const result = await prisma.$transaction(async (tx) => {
-    const benhNhan = await tx.benhNhan.update({
-      where: { id: BigInt(id) },
-      data: {
-        hoTen: data.hoTen,
-        soDienThoai: data.soDienThoai,
-        emailLienHe: data.emailLienHe,
-      },
-    });
+  return await prisma.$transaction(async (tx) => {
+    // 1. Cập nhật bảng BenhNhan (chỉ những trường có dữ liệu)
+    const updateData = {};
+    if (data.hoTen !== undefined) updateData.hoTen = data.hoTen;
+    if (data.soDienThoai !== undefined) updateData.soDienThoai = data.soDienThoai;
+    if (data.emailLienHe !== undefined) updateData.emailLienHe = data.emailLienHe;
 
-    if (
-      existing.taiKhoanId &&
-      (data.gioiTinh !== undefined ||
-        data.ngaySinh !== undefined ||
-        data.diaChi !== undefined ||
-        data.anhDaiDien !== undefined)
-    ) {
-      await tx.taiKhoan.update({
-        where: { id: existing.taiKhoanId },
-        data: {
-          gioiTinh: data.gioiTinh !== undefined ? data.gioiTinh : undefined,
-          ngaySinh:
-            data.ngaySinh !== undefined ? new Date(data.ngaySinh) : undefined,
-          diaChi: data.diaChi !== undefined ? data.diaChi : undefined,
-          anhDaiDien:
-            data.anhDaiDien !== undefined ? data.anhDaiDien : undefined,
-        },
+    if (Object.keys(updateData).length > 0) {
+      await tx.benhNhan.update({
+        where: { id: BigInt(id) },
+        data: updateData,
       });
     }
 
-    return benhNhan;
-  });
+    // 2. Cập nhật bảng TaiKhoan liên kết
+    if (existing.taiKhoanId) {
+      const accountUpdate = {};
 
-  return result;
+      if (data.trangThaiTaiKhoan !== undefined) {
+        accountUpdate.trangThaiTaiKhoan = Number(data.trangThaiTaiKhoan);
+      }
+      if (data.emailLienHe) accountUpdate.email = data.emailLienHe;
+      if (data.gioiTinh !== undefined) accountUpdate.gioiTinh = Number(data.gioiTinh);
+      if (data.ngaySinh !== undefined) accountUpdate.ngaySinh = new Date(data.ngaySinh);
+      if (data.diaChi !== undefined) accountUpdate.diaChi = data.diaChi;
+      if (data.anhDaiDien !== undefined) accountUpdate.anhDaiDien = data.anhDaiDien;
+
+      if (Object.keys(accountUpdate).length > 0) {
+        await tx.taiKhoan.update({
+          where: { id: existing.taiKhoanId },
+          data: accountUpdate,
+        });
+      }
+    }
+
+    // 3. Trả về kết quả mới nhất kèm trạng thái tài khoản
+    return tx.benhNhan.findUnique({
+      where: { id: BigInt(id) },
+      include: {
+        taiKhoan: {
+          select: {
+            id: true,
+            email: true,
+            trangThaiTaiKhoan: true,
+          },
+        },
+      },
+    });
+  });
 };
 
 // Không xóa nếu còn datLich; xóa benhNhan + taiKhoan liên kết

@@ -117,14 +117,12 @@ const update = async (id, data) => {
   if (!existing) throw new AppError("Không tìm thấy bác sĩ", 404);
 
   return await prisma.$transaction(async (tx) => {
-    // 1. Cập nhật tài khoản nếu có email/mật khẩu
-    if (data.email || data.matKhau) {
+    // 1. Cập nhật tài khoản liên kết
+    if (existing.taiKhoanId) {
       const accountUpdate = {};
 
       if (data.email && data.email !== existing.taiKhoan?.email) {
-        const emailExists = await tx.taiKhoan.findUnique({
-          where: { email: data.email },
-        });
+        const emailExists = await tx.taiKhoan.findUnique({ where: { email: data.email } });
         if (emailExists) throw new AppError("Email này đã được sử dụng", 409);
         accountUpdate.email = data.email;
       }
@@ -133,7 +131,11 @@ const update = async (id, data) => {
         accountUpdate.matKhau = await bcrypt.hash(data.matKhau, 10);
       }
 
-      if (Object.keys(accountUpdate).length > 0 && existing.taiKhoanId) {
+      if (data.trangThaiTaiKhoan !== undefined) {
+        accountUpdate.trangThaiTaiKhoan = Number(data.trangThaiTaiKhoan);
+      }
+
+      if (Object.keys(accountUpdate).length > 0) {
         await tx.taiKhoan.update({
           where: { id: existing.taiKhoanId },
           data: accountUpdate,
@@ -141,22 +143,26 @@ const update = async (id, data) => {
       }
     }
 
-    // 2. Cập nhật bác sĩ
-    return tx.bacSi.update({
+    // 2. Cập nhật bảng BacSi (chỉ chạy nếu có trường dữ liệu thay đổi)
+    const updateData = {};
+    if (data.tenBacSi !== undefined) updateData.tenBacSi = data.tenBacSi;
+    if (data.hocViChucDanh !== undefined) updateData.hocViChucDanh = data.hocViChucDanh;
+    if (data.moTaNgan !== undefined) updateData.moTaNgan = data.moTaNgan;
+    if (data.moTaChiTiet !== undefined) updateData.moTaChiTiet = data.moTaChiTiet;
+    if (data.giaKham !== undefined) updateData.giaKham = parseFloat(data.giaKham);
+    if (data.chuyenKhoaId !== undefined) updateData.chuyenKhoaId = BigInt(data.chuyenKhoaId);
+
+    if (Object.keys(updateData).length > 0) {
+      await tx.bacSi.update({ where: { id: BigInt(id) }, data: updateData });
+    }
+
+    // 3. Trả về kết quả mới nhất
+    return tx.bacSi.findUnique({
       where: { id: BigInt(id) },
-      data: {
-        tenBacSi: data.tenBacSi,
-        hocViChucDanh: data.hocViChucDanh,
-        moTaNgan: data.moTaNgan,
-        moTaChiTiet: data.moTaChiTiet,
-        giaKham:
-          data.giaKham !== undefined ? parseFloat(data.giaKham) : undefined,
-        chuyenKhoaId:
-          data.chuyenKhoaId !== undefined ? BigInt(data.chuyenKhoaId) : undefined,
-      },
       include: {
+        chuyenKhoa: { select: { id: true, tenChuyenKhoa: true } },
         taiKhoan: {
-          select: { id: true, email: true },
+          select: { id: true, email: true, trangThaiTaiKhoan: true, anhDaiDien: true },
         },
       },
     });
