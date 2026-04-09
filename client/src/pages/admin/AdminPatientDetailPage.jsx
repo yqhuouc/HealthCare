@@ -58,18 +58,28 @@ function AdminPatientDetailPage() {
       <div className="flex items-center gap-2 text-sm text-slate-500">
         <Link to="/admin/patients" className="hover:text-primary transition-colors italic">Quản lý bệnh nhân</Link>
         <span>/</span>
-        <span className="text-slate-900 font-medium">Chi tiết hồ sơ #{id}</span>
+        <span className="text-slate-900 font-medium">Chi tiết hồ sơ #BN{id}</span>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 sm:p-8 bg-linear-to-r from-primary to-primary-light text-white">
           <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="size-24 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center text-3xl font-bold">
-              {getInitials(patient.hoTen)}
+            <div className="size-24 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center overflow-hidden">
+              {patient.taiKhoan?.anhDaiDien ? (
+                <img 
+                  src={patient.taiKhoan.anhDaiDien} 
+                  alt={patient.hoTen} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-3xl font-bold">{getInitials(patient.hoTen)}</span>
+              )}
             </div>
             <div className="text-center sm:text-left flex-1">
               <h2 className="text-2xl font-bold">{patient.hoTen}</h2>
-              <p className="opacity-90 mt-1">Mã BN: {patient.id} | Ngày tham gia: {new Date(patient.taiKhoan?.ngayTao).toLocaleDateString("vi-VN")}</p>
+              <p className="opacity-90 mt-1 uppercase text-xs font-black tracking-widest">
+                Mã BN: BN{patient.id} | Tham gia: {new Date(patient.taiKhoan?.ngayTao).toLocaleDateString("vi-VN")}
+              </p>
               <div className="mt-4 flex flex-wrap gap-2 justify-center sm:justify-start">
                 <span className="px-3 py-1 bg-white/10 rounded-full text-xs font-medium border border-white/20">
                   {patient.taiKhoan?.email || patient.emailLienHe}
@@ -90,7 +100,7 @@ function AdminPatientDetailPage() {
             <div className="space-y-4">
               <div className="flex justify-between py-2 border-b border-slate-50">
                 <span className="text-slate-500">Giới tính:</span>
-                <span className="font-medium text-slate-900">{patient.taiKhoan?.gioiTinh === 1 ? "Nam" : patient.taiKhoan?.gioiTinh === 0 ? "Nữ" : "Chưa cập nhật"}</span>
+                <span className="font-medium text-slate-900">{patient.taiKhoan?.gioiTinh === 1 ? "Nam" : patient.taiKhoan?.gioiTinh === 2 ? "Nữ" : "Chưa cập nhật"}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-50">
                 <span className="text-slate-500">Ngày sinh:</span>
@@ -102,12 +112,20 @@ function AdminPatientDetailPage() {
               </div>
               <div className="flex justify-between py-2 border-b border-slate-50">
                 <span className="text-slate-500">Trạng thái tài khoản:</span>
-                <span className={`px-2 py-0.5 rounded text-xs font-bold ${patient.taiKhoan?.trangThaiTaiKhoan === 1 ? "text-emerald-600 bg-emerald-50" : "text-rose-600 bg-rose-50"}`}>
-                  {patient.taiKhoan?.trangThaiTaiKhoan === 1 ? "Đang hoạt động" : "Bị khóa"}
-                </span>
+                {patient.taiKhoan?.trangThaiTaiKhoan === 0 ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-wider border border-rose-100 shadow-sm shadow-rose-100/50">
+                    <span className="size-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                    Đã khóa tài khoản
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-wider border border-emerald-100 shadow-sm shadow-emerald-100/50">
+                    <span className="size-1.5 rounded-full bg-emerald-500"></span>
+                    Đang hoạt động
+                  </span>
+                )}
               </div>
             </div>
-          </div>
+          </div>  
 
           <div>
             <h3 className="font-bold text-slate-900 border-l-4 border-primary pl-3 mb-4 uppercase text-sm tracking-widest">
@@ -158,7 +176,7 @@ function AdminPatientDetailPage() {
                 const cfg = APPOINTMENT_STATUS_CONFIG[statusStr];
                 return (
                   <tr key={apt.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-slate-900">LK-{apt.id}</td>
+                    <td className="px-6 py-4 font-bold text-slate-900">LK{apt.id}</td>
                     <td className="px-6 py-4 text-slate-700">{apt.bacSi?.tenBacSi}</td>
                     <td className="px-6 py-4 text-slate-500">
                       {new Date(apt.ngayDat).toLocaleDateString("vi-VN")}

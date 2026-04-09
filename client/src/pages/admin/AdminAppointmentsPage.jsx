@@ -171,7 +171,7 @@ function AdminAppointmentsPage() {
                 
                 return (
                   <tr key={apt.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-4 font-medium text-slate-800">LK-{apt.id}</td>
+                    <td className="px-5 py-4 font-medium text-slate-800">LK{apt.id}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className={`size-9 rounded-full flex items-center justify-center text-xs font-bold bg-primary/10 text-primary`}>
@@ -219,7 +219,7 @@ function AdminAppointmentsPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-slate-800">{patientName}</p>
-                      <p className="text-xs text-slate-500">LK-{apt.id}</p>
+                      <p className="text-xs text-slate-500">LK{apt.id}</p>
                     </div>
                   </div>
                   {config && (

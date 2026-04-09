@@ -59,6 +59,7 @@ const getById = async (id) => {
           gioiTinh: true,
           ngaySinh: true,
           diaChi: true,
+          trangThaiTaiKhoan: true,
         },
       },
     },

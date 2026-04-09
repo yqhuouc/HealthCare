@@ -100,13 +100,13 @@ function AdminAppointmentDetailPage() {
           Quản lý lịch khám
         </Link>
         <span className="text-slate-300">/</span>
-        <span className="text-slate-900 font-medium">Chi tiết LK-{id}</span>
+        <span className="text-slate-900 font-medium">Chi tiết LK{id}</span>
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-            Chi tiết lịch khám #LK-{id}
+            Chi tiết lịch khám #LK{id}
             {statusCfg && (
               <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusCfg.className}`}>
                 {statusCfg.label}

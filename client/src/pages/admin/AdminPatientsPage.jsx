@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { patientService } from "../../services/patientService";
 import ConfirmModal from "../../components/ui/ConfirmModal";
@@ -7,6 +7,7 @@ import ConfirmModal from "../../components/ui/ConfirmModal";
 const ITEMS_PER_PAGE = 8;
 
 export default function AdminPatientsPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [patients, setPatients] = useState([]);
@@ -58,6 +59,10 @@ export default function AdminPatientsPage() {
     setSelectedPatient(patient);
     setModalMode(mode);
     setIsModalOpen(true);
+  };
+
+  const handleEdit = (id) => {
+    navigate(`/admin/patients/edit/${id}`);
   };
 
   const handleConfirmAction = async () => {
@@ -202,6 +207,15 @@ export default function AdminPatientsPage() {
                           CHI TIẾT
                         </Link>
                         
+                        <button
+                          onClick={() => handleEdit(p.id)}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-primary/5 transition-all text-[10px] font-bold border border-transparent hover:border-primary/10"
+                          title="Chỉnh sửa"
+                        >
+                          <span className="material-symbols-outlined text-base">edit</span>
+                          SỬA
+                        </button>
+
                         {p.taiKhoan?.trangThaiTaiKhoan === 0 ? (
                           <button
                             onClick={() => openActionModal(p, 'unlock')}

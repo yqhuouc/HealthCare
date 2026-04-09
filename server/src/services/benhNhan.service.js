@@ -57,6 +57,7 @@ const getById = async (id, requestUser) => {
           ngaySinh: true,
           diaChi: true,
           ngayTao: true,
+          trangThaiTaiKhoan: true,
         },
       },
     },

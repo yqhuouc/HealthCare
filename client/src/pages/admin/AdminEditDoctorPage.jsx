@@ -82,7 +82,6 @@ function AdminEditDoctorPage() {
 
       await doctorService.update(id, updateData);
       toast.success(`Cập nhật bác sĩ "${form.tenBacSi}" thành công!`);
-      navigate("/admin/doctors");
     } catch (error) {
       toast.error(error.response?.data?.message || "Có lỗi xảy ra khi cập nhật!");
     } finally {
