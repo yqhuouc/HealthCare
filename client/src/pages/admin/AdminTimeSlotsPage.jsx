@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
 import { scheduleService } from "../../services/scheduleService";
+import { formatTime } from "../../utils/formatters";
 
 function AdminTimeSlotsPage() {
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
   const [newSlot, setNewSlot] = useState({ gioBatDau: "", gioKetThuc: "" });
 
   const fetchSlots = useCallback(async () => {
@@ -40,16 +42,17 @@ function AdminTimeSlotsPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa khung giờ này?")) return;
+  const confirmDelete = async () => {
+    if (!deleteModal.id) return;
     try {
-      const res = await scheduleService.deleteKhungGio(id);
+      const res = await scheduleService.deleteKhungGio(deleteModal.id);
       if (res.success) {
         toast.success("Xóa thành công");
+        setDeleteModal({ open: false, id: null });
         fetchSlots();
       }
     } catch (error) {
-       toast.error(error.message || "Lỗi khi xóa khung giờ");
+       toast.error(error.message || "Lỗi khi xóa khung giờ (Có thể đang có lịch liên kết)");
     }
   };
 
@@ -64,7 +67,7 @@ function AdminTimeSlotsPage() {
           onClick={() => setShowAddModal(true)}
           className="px-4 py-2 bg-primary text-white rounded-xl font-semibold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center gap-2"
         >
-          <span className="material-symbols-outlined text-xl">add_time</span>
+          <span className="material-symbols-outlined text-xl">more_time</span>
           Thêm khung giờ
         </button>
       </div>
@@ -89,14 +92,14 @@ function AdminTimeSlotsPage() {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                      <span className="px-3 py-1 bg-primary/10 text-primary font-bold rounded-lg text-sm">
-                       {slot.gioBatDau} - {slot.gioKetThuc}
+                       {formatTime(slot.gioBatDau)} - {formatTime(slot.gioKetThuc)}
                      </span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <button
-                    onClick={() => handleDelete(slot.id)}
-                    className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                    onClick={() => setDeleteModal({ open: true, id: slot.id })}
+                    className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
                   >
                     <span className="material-symbols-outlined text-xl">delete</span>
                   </button>
@@ -156,6 +159,35 @@ function AdminTimeSlotsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRM MODAL */}
+      {deleteModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
+              <span className="material-symbols-outlined text-rose-500 text-3xl">delete_forever</span>
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Xác nhận xóa?</h3>
+            <p className="text-sm text-slate-500 mb-6 px-4">
+              Bạn có chắc chắn muốn xóa khung giờ này? Hành động không thể hoàn tác.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setDeleteModal({ open: false, id: null })} 
+                className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-all"
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="flex-1 py-3 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20"
+              >
+                Xóa khung giờ
+              </button>
+            </div>
           </div>
         </div>
       )}
