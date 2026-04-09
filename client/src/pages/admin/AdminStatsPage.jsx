@@ -4,35 +4,24 @@
  * Đường dẫn: /admin/stats
  * ============================================================
  *
- * Chức năng:
- * - Dropdown chọn năm thống kê (2024 → năm hiện tại)
- * - 4 KPI cards: tổng lịch khám, tổng doanh thu, doanh thu thuốc, tổng bệnh nhân
- * - Biểu đồ cột: doanh thu theo 12 tháng (phân tách phí khám + phí thuốc, hover tooltip)
- * - Biểu đồ donut: phân bổ trạng thái lịch khám (hoàn thành, xác nhận, chờ, hủy)
- * - Biểu đồ lịch khám theo ngày (14 ngày gần nhất)
- * - Biểu đồ phân bổ doanh thu (phí khám vs phí thuốc)
- * - Bảng Top 10 bác sĩ được đặt lịch nhiều nhất (kèm progress bar)
- *
- * State:
- * - selectedYear: năm thống kê đang chọn (mặc định năm hiện tại)
- * - loading: trạng thái tải dữ liệu
- *
- * Component phụ:
- * - StatCard: card KPI tái sử dụng (icon, label, value, subLabel, iconBg)
- *
- * Dữ liệu API:
- * - GET /api/thong-ke/tong-quan → tongBenhNhan, tongBacSi, tongLichHen,
- *     tongChuyenKhoa, doanhThuKham, doanhThuThuoc, tongDoanhThu, lichHenTheoTrangThai[]
- * - GET /api/thong-ke/doanh-thu?nam=YYYY → thongKeThang[] (12 tháng: doanhThuKham, doanhThuThuoc, tongDoanhThu)
- * - GET /api/thong-ke/lich-hen?tuNgay=&denNgay= → lichHenTheoNgay[], lichHenTheoBacSi[]
- * ============================================================
+ * Chức năng chính:
+ * - Theo dõi các chỉ số KPI trọng yếu: Tổng lịch khám, Doanh thu, Bệnh nhân.
+ * - Biểu đồ doanh thu 12 tháng phân tách theo phí khám và phí thuốc.
+ * - Biểu đồ phân bổ trạng thái lịch khám (Hoàn thành, Xác nhận, Chờ, Hủy).
+ * - Theo dõi xu hướng đặt lịch 14 ngày gần nhất.
+ * - Bảng vinh danh Top 10 bác sĩ có số lượng đặt lịch cao nhất.
+ * - Hỗ trợ lọc dữ liệu theo Năm.
  */
 import { useState, useEffect, useMemo } from "react";
 import { adminStatsService } from "../../services/adminStatsService";
 
 /**
- * StatCard — Card hiển thị một chỉ số KPI tổng quan.
- * Nhận icon Material Symbols, nền icon, nhãn, giá trị chính, và nhãn phụ.
+ * Thành phần StatCard — Card hiển thị một chỉ số KPI tổng quan.
+ * @param {string} icon - Tên icon từ Material Symbols.
+ * @param {string} iconBg - Class CSS cho màu nền icon.
+ * @param {string} label - Nhãn mô tả chỉ số.
+ * @param {string|number} value - Giá trị chính của chỉ số.
+ * @param {string} subLabel - Thông tin bổ trợ hoặc chi tiết bên dưới.
  */
 function StatCard({ icon, iconBg, label, value, subLabel }) {
   return (
@@ -57,15 +46,15 @@ function StatCard({ icon, iconBg, label, value, subLabel }) {
 
 function AdminStatsPage() {
   /**
-   * selectedYear: Năm thống kê hiện tại, mặc định = năm hiện tại.
-   * Được dùng để query doanh thu theo tháng & lịch hẹn theo ngày.
+   * Khởi tạo state cho năm được chọn, mặc định lấy năm hiện tại từ hệ thống.
    */
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [loading, setLoading] = useState(true);
 
-  // ── State dữ liệu API ────────────────────────────────────
-  /** Tổng quan: tổng số bệnh nhân, bác sĩ, lịch hẹn, doanh thu, phân bổ trạng thái */
+  // ── State lưu trữ dữ liệu từ các API ────────────────────────────────────
+  
+  // Dữ liệu tổng quan: đếm số lượng bản ghi và doanh thu tổng hợp
   const [overview, setOverview] = useState({
     tongLichHen: 0,
     tongBacSi: 0,
@@ -77,54 +66,56 @@ function AdminStatsPage() {
     tongDoanhThu: 0,
   });
 
-  /** Doanh thu 12 tháng trong năm (từ API /thong-ke/doanh-thu) */
+  // Dữ liệu doanh thu chi tiết theo từng tháng trong năm
   const [revenueStats, setRevenueStats] = useState([]);
 
-  /** Top bác sĩ được đặt lịch nhiều nhất (từ API /thong-ke/lich-hen) */
+  // Danh sách bác sĩ có thành tích tốt (đặt lịch nhiều)
   const [topDoctors, setTopDoctors] = useState([]);
 
-  /** Lịch khám theo ngày (14 ngày gần nhất, từ API /thong-ke/lich-hen) */
+  // Dữ liệu biến động số lượng lịch khám theo ngày trong 2 tuần qua
   const [dailyAppointments, setDailyAppointments] = useState([]);
 
-  // ── Fetch dữ liệu khi selectedYear thay đổi ──────────────
+  // ── Effect xử lý tải dữ liệu từ nhiều nguồn API đồng thời ──────────────
   useEffect(() => {
     const fetchStats = async () => {
-      setLoading(true);
+      setLoading(true); // Bắt đầu trạng thái tải
       try {
-        // Tính range 14 ngày gần nhất cho biểu đồ daily
+        // Thiết lập khoảng thời gian 14 ngày cho biểu đồ xu hướng
         const today = new Date();
         const pastDate = new Date();
         pastDate.setDate(today.getDate() - 13);
         const tuNgay = pastDate.toISOString().split("T")[0];
         const denNgay = today.toISOString().split("T")[0];
 
+        // Gọi đồng thời 3 API thống kê khác nhau bằng Promise.all
         const [tongQuanRes, doanhThuRes, lichHenRes] = await Promise.all([
           adminStatsService.getTongQuan(),
           adminStatsService.getDoanhThuStats({ nam: selectedYear }),
           adminStatsService.getLichHenStats({ tuNgay, denNgay }),
         ]);
 
-        // Tổng quan
+        // Cập nhật state cho phần Tổng quan
         if (tongQuanRes.data) {
           setOverview(tongQuanRes.data);
         }
 
-        // Doanh thu 12 tháng
+        // Cập nhật state cho phần Thống kê doanh thu tháng
         if (doanhThuRes.data?.thongKeThang) {
           setRevenueStats(doanhThuRes.data.thongKeThang);
         }
 
-        // Lịch hẹn theo bác sĩ + theo ngày
+        // Cập nhật state cho dữ liệu bác sĩ và lịch hẹn theo ngày
         if (lichHenRes.data) {
           if (lichHenRes.data.lichHenTheoBacSi) {
             setTopDoctors(lichHenRes.data.lichHenTheoBacSi);
           }
           if (lichHenRes.data.lichHenTheoNgay) {
-            // Tạo mảng 14 ngày liên tục (fill 0 nếu thiếu)
             const rawDays = lichHenRes.data.lichHenTheoNgay.map((d) => ({
               ...d,
               soLuong: Number(d.soLuong || 0),
             }));
+            
+            // Xử lý chuẩn hóa dữ liệu 14 ngày: đảm bảo có đủ 14 điểm dữ liệu (ngay cả khi ngày đó 0 lượt khám)
             const formattedChart = [];
             for (let i = 0; i < 14; i++) {
               const d = new Date(pastDate);
@@ -145,19 +136,19 @@ function AdminStatsPage() {
           }
         }
       } catch (error) {
-        console.error("Lỗi khi tải trang stats:", error);
+        console.error("Lỗi khi tải dữ liệu thống kê:", error);
       } finally {
-        setLoading(false);
+        setLoading(false); // Kết thúc trạng thái tải dữ liệu
       }
     };
     fetchStats();
   }, [selectedYear]);
 
-  // ── Tính toán phụ ──────────────────────────────────────────
+  // ── Logic xử lý dữ liệu ảo hóa cho UI Chart ──────────────────────────────────────────
 
   /**
-   * statusStatsArr: Mảng trạng thái lịch khám (hoàn thành, xác nhận, chờ, hủy)
-   * với số lượng, phần trăm, và màu sắc tương ứng.
+   * statusStatsArr: Xử lý mảng trạng thái lịch khám để hiển thị lên Donut Chart.
+   * Tính toán tỉ lệ phần trăm cho mỗi trạng thái (Hoàn thành, Chờ, Hủy...).
    */
   const statusStatsArr = useMemo(() => {
     const total = overview.tongLichHen || 1;
@@ -181,15 +172,13 @@ function AdminStatsPage() {
     ];
   }, [overview]);
 
-
-
-  /** maxDailyCount: Số lịch hẹn lớn nhất trong 14 ngày, dùng để tính chiều cao cột biểu đồ daily. */
+  /** maxDailyCount: Tìm giá trị cao nhất để thiết lập tỷ lệ chiều cao biểu đồ cột. */
   const maxDailyCount = Math.max(
     ...dailyAppointments.map((d) => d.count),
     1
   );
 
-  /** Tỷ lệ phần trăm doanh thu khám vs thuốc cho biểu đồ phân bổ */
+  /** revenueBreakdown: Tỷ lệ so sánh doanh thu từ Phí khám vs Phí thuốc */
   const revenueBreakdown = useMemo(() => {
     const totalRev = overview.tongDoanhThu || 1;
     const khamPercent = Math.round((overview.doanhThuKham / totalRev) * 100);
@@ -197,7 +186,7 @@ function AdminStatsPage() {
     return { khamPercent, thuocPercent };
   }, [overview]);
 
-  /** Mảng năm để chọn trong dropdown (từ 2024 đến năm hiện tại) */
+  /** Danh sách năm khả dụng để Admin có thể lựa chọn lọc (từ 2024 tới nay) */
   const yearOptions = useMemo(() => {
     const years = [];
     for (let y = 2024; y <= currentYear; y++) {
@@ -206,7 +195,7 @@ function AdminStatsPage() {
     return years;
   }, [currentYear]);
 
-  // ── Loading state ──────────────────────────────────────────
+  // UI khi đang chờ phản hồi từ API
   if (loading) {
     return (
       <div className="flex justify-center py-10">
@@ -219,7 +208,7 @@ function AdminStatsPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── Header + Year Selector ── */}
+      {/* ── HEADER & BỘ LỌC THEO NĂM ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
@@ -229,7 +218,6 @@ function AdminStatsPage() {
             Tổng hợp dữ liệu hoạt động của hệ thống đặt lịch khám bệnh
           </p>
         </div>
-        {/* Dropdown chọn năm */}
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-slate-400 text-lg">
             calendar_today
@@ -248,7 +236,7 @@ function AdminStatsPage() {
         </div>
       </div>
 
-      {/* ── 4 KPI Cards ── */}
+      {/* ── KPI CARDS: CÁC CHỈ SỐ QUAN TRỌNG NHẤT ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon="calendar_month"
@@ -280,9 +268,9 @@ function AdminStatsPage() {
         />
       </div>
 
-      {/* ── Row: Biểu đồ doanh thu 12 tháng + Trạng thái lịch khám ── */}
+      {/* ── BIỂU ĐỒ DOANH THU 12 THÁNG & CƠ CẤU TRẠNG THÁI LỊCH KHÁM ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Biểu đồ doanh thu cột 12 tháng */}
+        {/* Biểu đồ doanh thu dạng cột */}
         <div className="xl:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-base font-bold text-slate-900">
@@ -298,10 +286,7 @@ function AdminStatsPage() {
                 const revenue = Number(m.tongDoanhThu || 0);
                 const thuoc = Number(m.doanhThuThuoc || 0);
                 const hasRevenue = revenue > 0;
-                
-                // Tính toán max để làm mốc tỷ lệ
                 const maxRevenueVal = Math.max(...revenueStats.map(s => Number(s.tongDoanhThu || 0)), 1);
-                // Chiều cao thanh tính theo pixel để tuyệt đối hiển thị (max 100% của container)
                 const heightVal = hasRevenue ? Math.max((revenue / maxRevenueVal) * 100, 15) : 2;
                 
                 return (
@@ -309,12 +294,11 @@ function AdminStatsPage() {
                     key={m.thang}
                     className="flex-1 flex flex-col items-center justify-end group relative h-full"
                   >
-                    {/* Tooltip */}
+                    {/* Tooltip hiển thị giá trị khi hover */}
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 whitespace-nowrap">
                       {hasRevenue ? `${revenue.toLocaleString("vi-VN")}đ` : "0đ"}
                     </div>
 
-                    {/* Cột chính */}
                     <div
                       className="w-7 sm:w-8 rounded-t-sm transition-all duration-300 relative"
                       style={{ 
@@ -323,7 +307,7 @@ function AdminStatsPage() {
                         minHeight: hasRevenue ? '20px' : '4px'
                       }}
                     >
-                      {/* Màu xanh lá cho tiền thuốc (chồng lên từ đáy) */}
+                      {/* Phân bổ phí thuốc lồng trong cột doanh thu tổng */}
                       {hasRevenue && thuoc > 0 && (
                         <div 
                           className="absolute bottom-0 left-0 right-0 bg-emerald-500 rounded-t-sm"
@@ -331,8 +315,6 @@ function AdminStatsPage() {
                         />
                       )}
                     </div>
-
-                    {/* Nhãn tháng */}
                     <span className={`mt-2 text-[10px] sm:text-xs font-bold ${
                       hasRevenue ? "text-blue-600" : "text-slate-400"
                     }`}>
@@ -347,7 +329,7 @@ function AdminStatsPage() {
               </div>
             )}
           </div>
-          {/* Legend */}
+          {/* Chú giải biểu đồ */}
           <div className="mt-4 flex gap-4 justify-end text-xs text-slate-500">
             <span className="flex items-center gap-2">
               <span className="w-3 h-3 bg-blue-400 rounded-sm" /> Phí khám
@@ -358,19 +340,18 @@ function AdminStatsPage() {
           </div>
         </div>
 
-        {/* Biểu đồ donut: Trạng thái lịch khám */}
+        {/* Biểu đồ Donut: Trạng thái lịch khám */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
           <h3 className="text-base font-bold text-slate-900 mb-5">
             Trạng thái lịch khám
           </h3>
           <div className="flex flex-col items-center gap-5">
-            {/* Donut circle bằng CSS conic-gradient */}
             <div
               className="w-36 h-36 rounded-full relative"
               style={{
                 background: `conic-gradient(
                   #10b981 0% ${statusStatsArr[0].percent}%,
-                  #3b82f6 ${statusStatsArr[0].percent}% ${statusStatsArr[0].percent + statusStatsArr[1].percent}%,
+                  #3b82f6 ${statusStatsArr[0].percent} ${statusStatsArr[0].percent + statusStatsArr[1].percent}%,
                   #f59e0b ${statusStatsArr[0].percent + statusStatsArr[1].percent}% ${statusStatsArr[0].percent + statusStatsArr[1].percent + statusStatsArr[2].percent}%,
                   #f43f5e ${statusStatsArr[0].percent + statusStatsArr[1].percent + statusStatsArr[2].percent}% 100%
                 )`,
@@ -385,22 +366,13 @@ function AdminStatsPage() {
                 </span>
               </div>
             </div>
-            {/* Legend chi tiết mỗi trạng thái */}
             <div className="w-full space-y-2.5">
               {statusStatsArr.map((s) => (
                 <div key={s.status} className="flex items-center gap-2.5">
-                  <div
-                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.color}`}
-                  />
-                  <span className="text-sm text-slate-600 flex-1">
-                    {s.label}
-                  </span>
-                  <span className="text-sm font-semibold text-slate-900">
-                    {s.count.toLocaleString()}
-                  </span>
-                  <span className="text-xs text-slate-400 w-10 text-right">
-                    {s.percent}%
-                  </span>
+                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.color}`} />
+                  <span className="text-sm text-slate-600 flex-1">{s.label}</span>
+                  <span className="text-sm font-semibold text-slate-900">{s.count.toLocaleString()}</span>
+                  <span className="text-xs text-slate-400 w-10 text-right">{s.percent}%</span>
                 </div>
               ))}
             </div>
@@ -408,9 +380,9 @@ function AdminStatsPage() {
         </div>
       </div>
 
-      {/* ── Row: Lịch khám 14 ngày qua + Phân bổ doanh thu ── */}
+      {/* ── BIỂU ĐỒ BIẾN ĐỘNG LỊCH KHÁM & PHÂN BỔ LOẠI DOANH THU ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Biểu đồ lịch khám theo ngày (14 ngày gần nhất) */}
+        {/* Biểu đồ lịch khám 14 ngày qua */}
         <div className="xl:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
             <div>
@@ -421,69 +393,45 @@ function AdminStatsPage() {
                 Số lượng lịch hẹn được đặt theo ngày
               </p>
             </div>
-            <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              <span className="material-symbols-outlined text-sm">
-                bar_chart
-              </span>
-              {dailyAppointments.reduce((sum, d) => sum + d.count, 0)} lịch hẹn
-            </div>
           </div>
           <div className="p-4 sm:p-6 overflow-x-auto">
             <div className="flex items-end justify-between gap-2 h-40 min-w-[500px] lg:min-w-0">
               {dailyAppointments.length > 0 ? (
                 dailyAppointments.map((bar) => {
-                  let heightStyle;
-                  if (bar.count > 0) {
-                    heightStyle =
-                      Math.max(15, (bar.count / maxDailyCount) * 100) + "%";
-                  } else {
-                    heightStyle = "4px";
-                  }
+                  let heightStyle = bar.count > 0 ? Math.max(15, (bar.count / maxDailyCount) * 100) + "%" : "4px";
                   return (
                     <div
                       key={bar.label}
                       className="flex-1 h-full flex flex-col justify-end items-center gap-2 group relative"
                     >
-                      {/* Tooltip */}
                       <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-medium px-2 py-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
                         {bar.count} lịch hẹn
                       </div>
                       <div
                         className={`w-full max-w-[24px] rounded-t-sm transition-all duration-300 ${
-                          bar.count > 0
-                            ? bar.isToday
-                              ? "bg-orange-500"
-                              : "bg-primary"
-                            : "bg-slate-200"
+                          bar.count > 0 ? (bar.isToday ? "bg-orange-500" : "bg-primary") : "bg-slate-200"
                         }`}
                         style={{ height: heightStyle }}
                       />
-                      <span
-                        className={`text-[10px] font-semibold ${
-                          bar.isToday ? "text-orange-500" : "text-slate-400"
-                        }`}
-                      >
+                      <span className={`text-[10px] font-semibold ${bar.isToday ? "text-orange-500" : "text-slate-400"}`}>
                         {bar.label}
                       </span>
                     </div>
                   );
                 })
               ) : (
-                <div className="w-full flex items-center justify-center text-slate-400 text-xs py-10">
-                  Chưa có dữ liệu
-                </div>
+                <div className="w-full flex items-center justify-center text-slate-400 text-xs py-10">Chưa có dữ liệu</div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Phân bổ doanh thu (Phí khám vs Phí thuốc) */}
+        {/* Phân bổ doanh thu dạng tỉ lệ phần trăm */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
           <h3 className="text-base font-bold text-slate-900 mb-5">
             Phân bổ doanh thu
           </h3>
           <div className="flex flex-col items-center gap-5">
-            {/* Donut: 2 phần (khám + thuốc) */}
             <div
               className="w-36 h-36 rounded-full relative"
               style={{
@@ -497,62 +445,44 @@ function AdminStatsPage() {
                 <span className="text-base font-bold text-slate-900">
                   {(overview.tongDoanhThu / 1000000).toFixed(1)}
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Triệu VNĐ
-                </span>
+                <span className="text-[10px] text-slate-400 font-medium">Triệu VNĐ</span>
               </div>
             </div>
-
-            {/* Chi tiết phân bổ */}
             <div className="w-full space-y-3">
-              {/* Phí khám */}
+              {/* Thanh tỉ lệ Phí khám */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                     <span className="text-sm text-slate-600">Phí khám</span>
                   </div>
-                  <span className="text-sm font-semibold text-slate-900">
-                    {revenueBreakdown.khamPercent}%
-                  </span>
+                  <span className="text-sm font-semibold text-slate-900">{revenueBreakdown.khamPercent}%</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${revenueBreakdown.khamPercent}%` }}
-                  />
+                  <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${revenueBreakdown.khamPercent}%` }} />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {overview.doanhThuKham.toLocaleString("vi-VN")}đ
-                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">{overview.doanhThuKham.toLocaleString("vi-VN")}đ</p>
               </div>
-              {/* Phí thuốc */}
+              {/* Thanh tỉ lệ Phí thuốc */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                     <span className="text-sm text-slate-600">Phí thuốc</span>
                   </div>
-                  <span className="text-sm font-semibold text-slate-900">
-                    {revenueBreakdown.thuocPercent}%
-                  </span>
+                  <span className="text-sm font-semibold text-slate-900">{revenueBreakdown.thuocPercent}%</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2">
-                  <div
-                    className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${revenueBreakdown.thuocPercent}%` }}
-                  />
+                  <div className="bg-emerald-500 h-2 rounded-full transition-all duration-500" style={{ width: `${revenueBreakdown.thuocPercent}%` }} />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {overview.doanhThuThuoc.toLocaleString("vi-VN")}đ
-                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">{overview.doanhThuThuoc.toLocaleString("vi-VN")}đ</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Tổng hợp doanh thu theo quý ── */}
+      {/* ── TỔNG HỢP DOANH THU THEO QUÝ ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Quý 1", months: [0, 1, 2] },
@@ -564,83 +494,42 @@ function AdminStatsPage() {
             .filter((_, idx) => q.months.includes(idx))
             .reduce((sum, m) => sum + (m.tongDoanhThu || 0), 0);
           return (
-            <div
-              key={q.label}
-              className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 text-center"
-            >
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                {q.label} / {selectedYear}
-              </p>
-              <p className="text-lg font-bold text-slate-900">
-                {(total / 1000000).toFixed(1)}{" "}
-                <span className="text-xs font-medium text-slate-400">Tr</span>
-              </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {total.toLocaleString("vi-VN")}đ
-              </p>
+            <div key={q.label} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 text-center">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{q.label} / {selectedYear}</p>
+              <p className="text-lg font-bold text-slate-900">{(total / 1000000).toFixed(1)} <span className="text-xs font-medium text-slate-400">Tr</span></p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{total.toLocaleString("vi-VN")}đ</p>
             </div>
           );
         })}
       </div>
 
-      {/* ── Bảng Top bác sĩ ── */}
+      {/* ── BẢNG XẾP HẠNG TOP BÁC SĨ TẬP TRUNG ── */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900">
-              Top bác sĩ được đặt lịch nhiều nhất
-            </h3>
-            <p className="text-[11px] text-slate-500">
-              14 ngày gần nhất · Tối đa 10 bác sĩ
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-            <span className="material-symbols-outlined text-sm">
-              leaderboard
-            </span>
-            {topDoctors.length} bác sĩ
+            <h3 className="text-base font-bold text-slate-900">Top bác sĩ được đặt lịch nhiều nhất</h3>
+            <p className="text-[11px] text-slate-500">14 ngày gần nhất · Dữ liệu được tính dựa trên số lịch xác nhận/hoàn thành</p>
           </div>
         </div>
 
-        {/* Mobile cards */}
+        {/* View di động dạng danh sách tóm tắt */}
         <div className="block md:hidden divide-y divide-slate-100">
           {topDoctors.length === 0 ? (
-            <p className="text-center p-4 text-sm text-slate-500">
-              Chưa có dữ liệu
-            </p>
+            <p className="text-center p-4 text-sm text-slate-500">Chưa có dữ liệu</p>
           ) : (
             topDoctors.map((doc, idx) => {
               const maxDoc = topDoctors[0]?.soLuong || 1;
               const barPercent = Math.round((doc.soLuong / maxDoc) * 100);
               return (
                 <div key={doc.bacSiId} className="p-4 flex items-start gap-3">
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                      idx === 0
-                        ? "bg-amber-100 text-amber-600"
-                        : idx === 1
-                          ? "bg-slate-200 text-slate-600"
-                          : idx === 2
-                            ? "bg-orange-100 text-orange-600"
-                            : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    {idx + 1}
-                  </div>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx === 0 ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-500"}`}>{idx + 1}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">
-                      {doc.tenBacSi}
-                    </p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">{doc.tenBacSi}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <div className="flex-1 bg-slate-100 rounded-full h-1.5">
-                        <div
-                          className="bg-primary h-1.5 rounded-full transition-all duration-500"
-                          style={{ width: `${barPercent}%` }}
-                        />
+                        <div className="bg-primary h-1.5 rounded-full" style={{ width: `${barPercent}%` }} />
                       </div>
-                      <span className="text-xs font-bold text-slate-700 shrink-0">
-                        {doc.soLuong}
-                      </span>
+                      <span className="text-xs font-bold text-slate-700 shrink-0">{doc.soLuong}</span>
                     </div>
                   </div>
                 </div>
@@ -649,79 +538,40 @@ function AdminStatsPage() {
           )}
         </div>
 
-        {/* Desktop table */}
+        {/* View máy tính dạng bảng chi tiết kèm Progress Bar */}
         <div className="overflow-x-auto hidden md:block">
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500 w-12">
-                  #
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Bác sĩ
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500 w-80">
-                  Số lịch khám
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500 w-12">#</th>
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Bác sĩ</th>
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500 w-80">Số lịch khám</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {topDoctors.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={3}
-                    className="text-center p-4 text-sm text-slate-500"
-                  >
-                    Chưa có dữ liệu
-                  </td>
-                </tr>
+                <tr><td colSpan={3} className="text-center p-4 text-sm text-slate-500">Chưa có dữ liệu</td></tr>
               ) : (
                 topDoctors.map((doc, idx) => {
                   const maxDoc = topDoctors[0]?.soLuong || 1;
-                  const barPercent = Math.round(
-                    (doc.soLuong / maxDoc) * 100
-                  );
+                  const barPercent = Math.round((doc.soLuong / maxDoc) * 100);
                   return (
-                    <tr
-                      key={doc.bacSiId}
-                      className="hover:bg-slate-50 transition-colors"
-                    >
+                    <tr key={doc.bacSiId} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
-                        <div
-                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                            idx === 0
-                              ? "bg-amber-100 text-amber-600"
-                              : idx === 1
-                                ? "bg-slate-200 text-slate-600"
-                                : idx === 2
-                                  ? "bg-orange-100 text-orange-600"
-                                  : "bg-slate-100 text-slate-500"
-                          }`}
-                        >
-                          {idx + 1}
-                        </div>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? "bg-amber-100 text-amber-600" : (idx === 1 ? "bg-slate-200 text-slate-600" : "bg-slate-100 text-slate-500")}`}>{idx + 1}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">
-                            {doc.tenBacSi}
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            ID: {doc.bacSiId}
-                          </p>
+                          <p className="text-sm font-semibold text-slate-900">{doc.tenBacSi}</p>
+                          <p className="text-xs text-slate-400 font-mono italic">ID: {doc.bacSiId}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex-1 bg-slate-100 rounded-full h-2">
-                            <div
-                              className="bg-primary h-2 rounded-full transition-all duration-500"
-                              style={{ width: `${barPercent}%` }}
-                            />
+                            <div className="bg-primary h-2 rounded-full transition-all duration-500" style={{ width: `${barPercent}%` }} />
                           </div>
-                          <span className="text-sm font-bold text-slate-900 w-8 text-right">
-                            {doc.soLuong}
-                          </span>
+                          <span className="text-sm font-bold text-slate-900 w-8 text-right">{doc.soLuong}</span>
                         </div>
                       </td>
                     </tr>

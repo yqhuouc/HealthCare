@@ -22,20 +22,35 @@ import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { faqService } from "../../services/faqService";
 
+/**
+ * Component AdminAddFAQPage - Cho phép quản trị viên tạo câu hỏi thường gặp mới
+ */
 function AdminAddFAQPage() {
   const navigate = useNavigate();
+  
+  // Trạng thái chờ khi đang gửi yêu cầu lên server
   const [loading, setLoading] = useState(false);
+  
+  // State quản lý dữ liệu nhập liệu của form
   const [form, setForm] = useState({
     question: "",
     answer: "",
-    status: "1",
+    status: "1", // Mặc định là đang hoạt động (Hiển thị)
   });
 
+  /**
+   * Cập nhật state form khi người dùng nhập liệu
+   * @param {Object} e - Event thay đổi input
+   */
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  /**
+   * Gửi dữ liệu FAQ mới lên server để lưu trữ
+   */
   const handleSave = async () => {
+    // Validate dữ liệu đầu vào
     if (!form.question.trim()) {
       toast.warn("Vui lòng nhập câu hỏi.");
       return;
@@ -47,12 +62,14 @@ function AdminAddFAQPage() {
 
     setLoading(true);
     try {
+      // Gọi service để tạo mới FAQ
       await faqService.create({
         cauHoi: form.question,
         traLoi: form.answer,
         dangHoatDong: Number(form.status),
       });
       toast.success("Đã thêm FAQ mới thành công!");
+      // Chuyển hướng về trang danh sách FAQs
       navigate("/admin/faqs");
     } catch (error) {
       console.error(error);
@@ -64,6 +81,7 @@ function AdminAddFAQPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
+      {/* Breadcrumb điều hướng */}
       <div className="flex items-center gap-2 mb-6 text-sm">
         <Link
           to="/admin/faqs"
@@ -75,6 +93,7 @@ function AdminAddFAQPage() {
         <span className="text-slate-900 font-medium">Thêm câu hỏi mới</span>
       </div>
 
+      {/* Header trang */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-900">
           Thêm câu hỏi mới
@@ -86,6 +105,7 @@ function AdminAddFAQPage() {
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 sm:p-8 space-y-6">
+          {/* Nhập câu hỏi */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
               Câu hỏi <span className="text-red-500">*</span>
@@ -99,6 +119,7 @@ function AdminAddFAQPage() {
             />
           </div>
 
+          {/* Nhập câu trả lời */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
               Câu trả lời <span className="text-red-500">*</span>
@@ -113,6 +134,7 @@ function AdminAddFAQPage() {
             />
           </div>
 
+          {/* Chọn trạng thái hiển thị */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
@@ -131,6 +153,7 @@ function AdminAddFAQPage() {
           </div>
         </div>
 
+        {/* Nút hành động */}
         <div className="bg-slate-50 px-6 sm:px-8 py-4 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 border-t border-slate-200">
           <button
             onClick={() => navigate("/admin/faqs")}

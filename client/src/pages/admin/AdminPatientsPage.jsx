@@ -5,10 +5,17 @@ import { patientService } from "../../services/patientService";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
+// Cấu hình số lượng bệnh nhân hiển thị trên mỗi trang
 const ITEMS_PER_PAGE = 8;
 
+/**
+ * Trang AdminPatientsPage - Quản lý danh sách bệnh nhân (Admin)
+ * Chức năng: Tìm kiếm, phân trang, xem chi tiết, chỉnh sửa thông tin và quản lý trạng thái tài khoản (Khóa/Mở khóa/Xóa).
+ */
 export default function AdminPatientsPage() {
   const navigate = useNavigate();
+  
+  // State quản lý tìm kiếm và phân trang
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [patients, setPatients] = useState([]);
@@ -16,21 +23,24 @@ export default function AdminPatientsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalPatients, setTotalPatients] = useState(0);
 
-  // Modal states
+  // State quản lý Modal xác nhận (Dùng chung cho Xóa, Khóa, Mở khóa)
   const [modalMode, setModalMode] = useState(null); // 'delete' | 'lock' | 'unlock'
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Debounce search
+  // State quản lý giá trị tìm kiếm đã debounce (để tránh gọi API liên tục khi gõ)
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1);
+      setPage(1); // Reset về trang 1 khi từ khóa tìm kiếm thay đổi
     }, 500);
     return () => clearTimeout(timer);
   }, [search]);
 
+  /**
+   * Hàm lấy danh sách bệnh nhân từ Server dựa trên phân trang và từ khóa tìm kiếm
+   */
   const fetchPatients = useCallback(async () => {
     setLoading(true);
     try {
@@ -52,35 +62,51 @@ export default function AdminPatientsPage() {
     }
   }, [page, debouncedSearch]);
 
+  /**
+   * Tự động load lại dữ liệu khi page hoặc debouncedSearch thay đổi
+   */
   useEffect(() => {
     fetchPatients();
   }, [fetchPatients]);
 
+  /**
+   * Mở modal xác nhận cho các hành động nhạy cảm
+   * @param {Object} patient - Đối tượng bệnh nhân được chọn
+   * @param {String} mode - Chế độ hành động ('delete', 'lock', 'unlock')
+   */
   const openActionModal = (patient, mode) => {
     setSelectedPatient(patient);
     setModalMode(mode);
     setIsModalOpen(true);
   };
 
+  /**
+   * Chuyển hướng sang trang chỉnh sửa hồ sơ bệnh nhân
+   */
   const handleEdit = (id) => {
     navigate(`/admin/patients/edit/${id}`);
   };
 
+  /**
+   * Xử lý xác nhận hành động từ Modal (Thực hiện gọi API tương ứng)
+   */
   const handleConfirmAction = async () => {
     if (!selectedPatient) return;
 
     try {
       if (modalMode === 'delete') {
+        // Hành động Xóa hồ sơ
         await patientService.remove(selectedPatient.id);
         toast.success(`Đã xóa hồ sơ bệnh nhân ${selectedPatient.hoTen}`);
       } else {
+        // Hành động Khóa (0) hoặc Mở khóa (1) tài khoản
         const newStatus = modalMode === 'lock' ? 0 : 1;
         await patientService.update(selectedPatient.id, { 
           trangThaiTaiKhoan: newStatus 
         });
         toast.success(`${modalMode === 'lock' ? "Khóa" : "Mở khóa"} tài khoản thành công!`);
       }
-      // Đợi fetch lại dữ liệu mới nhất
+      // Sau khi thao tác thành công, tải lại danh sách để cập nhật UI
       await fetchPatients();
     } catch (err) {
       toast.error(err.message || "Thao tác thất bại");
@@ -92,7 +118,7 @@ export default function AdminPatientsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header section */}
+      {/* HEADER: Tiêu đề và Thẻ tổng hợp số lượng */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Quản lý bệnh nhân</h1>
@@ -101,6 +127,7 @@ export default function AdminPatientsPage() {
           </p>
         </div>
         
+        {/* Card hiển thị tổng số hồ sơ bệnh nhân */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex items-center gap-4 shrink-0 px-6">
           <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10">
             <span className="material-symbols-outlined text-primary text-2xl font-light">groups</span>
@@ -117,7 +144,7 @@ export default function AdminPatientsPage() {
         </div>
       </div>
 
-      {/* Filter bar */}
+      {/* SEARCH BAR: Bộ lọc tìm kiếm bệnh nhân */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3">
         <div className="relative group">
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl transition-colors group-focus-within:text-primary">
@@ -133,7 +160,7 @@ export default function AdminPatientsPage() {
         </div>
       </div>
 
-      {/* Main content - Table */}
+      {/* MAIN TABLE: Bảng danh sách bệnh nhân */}
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full text-left">
@@ -148,12 +175,14 @@ export default function AdminPatientsPage() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading ? (
+                // Hiển thị vòng xoay khi đang lấy dữ liệu
                 <tr>
                   <td colSpan="5" className="text-center py-24">
                     <LoadingSpinner size="size-12" />
                   </td>
                 </tr>
               ) : patients.length === 0 ? (
+                // Hiển thị trạng thái trống
                 <tr>
                   <td colSpan="5" className="text-center py-24">
                     <div className="flex flex-col items-center gap-3 text-slate-400">
@@ -163,19 +192,23 @@ export default function AdminPatientsPage() {
                   </td>
                 </tr>
               ) : (
+                // Render danh sách bệnh nhân
                 patients.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+                    {/* Mã số định danh */}
                     <td className="py-5 px-6">
                       <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-black font-mono">
                         BN{p.id}
                       </span>
                     </td>
+                    {/* Thông tin tên và ngày tham gia */}
                     <td className="py-5 px-6">
                       <p className="font-bold text-slate-900 text-sm">{p.hoTen}</p>
                       <p className="text-[10px] font-medium text-slate-400 mt-0.5 uppercase tracking-wider">
                         Tham gia: {p.taiKhoan?.ngayTao ? new Date(p.taiKhoan.ngayTao).toLocaleDateString("vi-VN") : "—"}
                       </p>
                     </td>
+                    {/* Thông tin liên lạc (SĐT & Email) */}
                     <td className="py-5 px-6">
                       <div className="space-y-0.5">
                         <p className="text-xs font-bold text-slate-700">{p.soDienThoai || "—"}</p>
@@ -184,6 +217,7 @@ export default function AdminPatientsPage() {
                         </p>
                       </div>
                     </td>
+                    {/* Trạng thái hoạt động tài khoản */}
                     <td className="py-5 px-6">
                       {p.taiKhoan?.trangThaiTaiKhoan === 0 ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-wider border border-rose-100 shadow-sm shadow-rose-100/50">
@@ -197,8 +231,10 @@ export default function AdminPatientsPage() {
                         </span>
                       )}
                     </td>
+                    {/* Cột Hành động điều khiển */}
                     <td className="py-5 px-6">
                       <div className="flex items-center justify-center gap-2">
+                        {/* Nút Xem Chi Tiết Hồ Sơ */}
                         <Link
                           to={`/admin/patients/${p.id}`}
                           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-primary/5 transition-all text-[10px] font-bold border border-transparent hover:border-primary/10"
@@ -208,6 +244,7 @@ export default function AdminPatientsPage() {
                           CHI TIẾT
                         </Link>
                         
+                        {/* Nút Chỉnh Sửa (Điều hướng) */}
                         <button
                           onClick={() => handleEdit(p.id)}
                           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-primary/5 transition-all text-[10px] font-bold border border-transparent hover:border-primary/10"
@@ -217,6 +254,7 @@ export default function AdminPatientsPage() {
                           SỬA
                         </button>
 
+                        {/* Nút Chuyển đổi trạng thái Khóa/Mở */}
                         {p.taiKhoan?.trangThaiTaiKhoan === 0 ? (
                           <button
                             onClick={() => openActionModal(p, 'unlock')}
@@ -235,6 +273,7 @@ export default function AdminPatientsPage() {
                           </button>
                         )}
                         
+                        {/* Nút Xóa hồ sơ (Dùng Material Icon xóa) */}
                         <button
                           onClick={() => openActionModal(p, 'delete')}
                           className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all"
@@ -251,7 +290,7 @@ export default function AdminPatientsPage() {
           </table>
         </div>
 
-        {/* Improved Pagination */}
+        {/* PHÂN TRANG: Điều khiển chuyển đổi các trang dữ liệu */}
         <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
             Trang {page} / {totalPages}
@@ -275,7 +314,7 @@ export default function AdminPatientsPage() {
         </div>
       </div>
 
-      {/* Confirm Action Modal */}
+      {/* MODAL XÁC NHẬN: Hiển thị khi Admin thực hiện các hành động quan trọng */}
       <ConfirmModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

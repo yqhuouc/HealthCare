@@ -4,46 +4,37 @@
  * Đường dẫn: /admin/faqs
  * ============================================================
  *
- * Chức năng:
- * - Danh sách câu hỏi thường gặp dạng bảng
- * - Tabs lọc: Tất cả / Đã xuất bản / Bản nháp / Lưu trữ
- * - Mỗi FAQ hiển thị: câu hỏi, chuyên mục (badge màu), trạng thái (dot), ngày tạo
- * - Nút Sửa/Xóa cho mỗi FAQ
- * - Nút "Thêm câu hỏi" → /admin/faqs/add
- * - Phân trang
- * - Responsive: mobile card view, desktop table view
- *
- * State:
- * - activeTab: tab đang active ("all", "published", "draft", "archived")
- * - currentPage: trang hiện tại
- *
- * Logic lọc:
- * - "all" → hiển thị tất cả
- * - "published" → status === "visible"
- * - "draft" → status === "draft"
- * - "archived" → status === "archived"
- *
- * Dữ liệu: ADMIN_FAQS từ mockAdminData.js
- * ============================================================
+ * Chức năng chính:
+ * - Hiển thị danh sách các câu hỏi thường gặp (FAQs) dưới dạng bảng (Desktop) hoặc thẻ (Mobile).
+ * - Quản lý trạng thái hiển thị (Hiển thị/Ẩn) của từng câu hỏi.
+ * - Cho phép thêm mới, chỉnh sửa và xóa câu hỏi.
+ * - Hỗ trợ phân trang dữ liệu từ Server.
  */
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { faqService } from "../../services/faqService";
 
+// Bản đồ trạng thái dùng để hiển thị nhãn và màu sắc tương ứng
 const STATUS_MAP = {
   1: { label: "Hiển thị", dotClass: "bg-emerald-500" },
   0: { label: "Ẩn", dotClass: "bg-slate-400" },
 };
 
+// Cấu hình số lượng bản ghi hiển thị trên mỗi trang
 const ITEMS_PER_PAGE = 5;
 
 function AdminFAQsPage() {
+  // State quản lý phân trang và dữ liệu danh sách
   const [page, setPage] = useState(1);
   const [faqs, setFaqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
 
+  /**
+   * Hàm lấy danh sách FAQ từ API Server
+   * Sử dụng useCallback để tránh việc hàm bị tạo lại vô ích khi component re-render
+   */
   const fetchFaqs = useCallback(async () => {
     setLoading(true);
     try {
@@ -60,21 +51,24 @@ function AdminFAQsPage() {
     }
   }, [page]);
 
+  /**
+   * Tự động tải lại danh sách mỗi khi trang (page) thay đổi
+   */
   useEffect(() => {
     fetchFaqs();
   }, [fetchFaqs]);
 
-  const handleEdit = (id) => {
-    toast.info(`Chức năng chỉnh sửa FAQ #${id} đang phát triển`);
-  };
-
+  /**
+   * Xử lý xóa một câu hỏi dựa trên ID
+   * Có yêu cầu xác nhận từ người dùng trước khi thực hiện
+   */
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa câu hỏi này không?")) return;
     
     try {
       await faqService.remove(id);
       toast.success("Đã xóa câu hỏi thành công");
-      fetchFaqs();
+      fetchFaqs(); // Tải lại danh sách sau khi xóa thành công
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Lỗi khi xóa câu hỏi");
@@ -83,6 +77,7 @@ function AdminFAQsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Phần tiêu đề và nút thêm mới */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Quản lý FAQs</h1>
@@ -97,9 +92,10 @@ function AdminFAQsPage() {
         </Link>
       </div>
 
-
-
+      {/* Container chính chứa bảng danh sách */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        
+        {/* VIEW: DESKTOP (Hiển thị dạng bảng Table) */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -113,12 +109,14 @@ function AdminFAQsPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
+                // Hiển thị trạng thái đang tải
                 <tr>
                   <td colSpan="5" className="text-center py-10">
                     <span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span>
                   </td>
                 </tr>
               ) : faqs.length === 0 ? (
+                // Hiển thị khi danh sách trống
                 <tr>
                   <td colSpan="5" className="text-center py-10 text-slate-500">
                     Chưa có câu hỏi nào được lưu trong hệ thống.
@@ -128,23 +126,28 @@ function AdminFAQsPage() {
                 const statusInfo = STATUS_MAP[item.dangHoatDong] || STATUS_MAP[0];
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                    {/* Cột Nội dung câu hỏi */}
                     <td className="px-5 py-4 max-w-[320px]">
-                      <p className="line-clamp-1 text-slate-800 font-medium">{item.cauHoi}</p>
+                      <p className="line-clamp-1 text-slate-800 font-medium" title={item.cauHoi}>{item.cauHoi}</p>
                     </td>
+                    {/* Cột Chuyên mục */}
                     <td className="px-5 py-4">
                       <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary`}>
                         {item.cauHoiThuongGap_ChuyenMuc?.tenChuyenMuc || "Hệ thống"}
                       </span>
                     </td>
+                    {/* Cột Ngày tạo */}
                     <td className="px-5 py-4 text-slate-600">
                       {new Date(item.ngayTao || Date.now()).toLocaleDateString("vi-VN")}
                     </td>
+                    {/* Cột Trạng thái dot color */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <span className={`size-2 rounded-full ${statusInfo.dotClass}`} />
                         <span className="text-slate-700">{statusInfo.label}</span>
                       </div>
                     </td>
+                    {/* Cột Nút hành động */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1">
                         <Link
@@ -168,12 +171,13 @@ function AdminFAQsPage() {
           </table>
         </div>
 
+        {/* VIEW: MOBILE (Hiển thị dạng thẻ Card dọc) */}
         <div className="block md:hidden divide-y divide-slate-100">
           {faqs.map((item) => {
             const statusInfo = STATUS_MAP[item.dangHoatDong] || STATUS_MAP[0];
             return (
               <div key={item.id} className="p-4 space-y-3">
-                <p className="line-clamp-1 font-medium text-slate-800">{item.cauHoi}</p>
+                <p className="line-clamp-2 font-medium text-slate-800">{item.cauHoi}</p>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary`}>
                     {item.cauHoiThuongGap_ChuyenMuc?.tenChuyenMuc || "Hệ thống"}
@@ -186,16 +190,17 @@ function AdminFAQsPage() {
                 <p className="text-xs text-slate-500">
                   {new Date(item.ngayTao || Date.now()).toLocaleDateString("vi-VN")}
                 </p>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleEdit(item.id)}
-                    className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100"
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/admin/faqs/edit/${item.id}`}
+                    className="flex-1 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center gap-1 hover:bg-primary/10 hover:text-primary transition-colors"
                   >
-                    <span className="material-symbols-outlined text-xl">edit</span>
-                  </button>
+                    <span className="material-symbols-outlined text-base">edit</span>
+                    Sửa nội dung
+                  </Link>
                   <button
                     onClick={() => handleDelete(item.id)}
-                    className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-500"
+                    className="size-9 rounded-lg flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-colors"
                   >
                     <span className="material-symbols-outlined text-xl">delete</span>
                   </button>
@@ -205,9 +210,10 @@ function AdminFAQsPage() {
           })}
         </div>
 
+        {/* PHẦN ĐIỀU KHIỂN PHÂN TRANG */}
         {totalPages > 1 && (
           <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 text-center sm:text-left">
               Trang {page} / {totalPages}
             </p>
             <div className="flex items-center gap-1">

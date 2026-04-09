@@ -4,17 +4,30 @@ import { toast } from "react-toastify";
 import { specialtyService } from "../../services/specialtyService";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 
+// Số lượng chuyên khoa hiển thị trên một trang (phân trang client-side)
 const ITEMS_PER_PAGE = 7;
 
+/**
+ * Trang AdminSpecialtiesPage - Quản lý danh mục chuyên khoa (Admin)
+ * Chức năng:
+ * - Hiển thị danh sách chuyên khoa với ảnh đại diện, icon và số lượng bác sĩ tương ứng.
+ * - Phân trang dữ liệu (Client-side).
+ * - Kiểm tra ràng buộc dữ liệu: Không cho phép xóa chuyên khoa đang có bác sĩ hoạt động.
+ * - Điều hướng thêm mới và chỉnh sửa chuyên khoa.
+ */
 function AdminSpecialtiesPage() {
+  // State quản lý dữ liệu và UI
   const [currentPage, setCurrentPage] = useState(1);
   const [specialties, setSpecialties] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // State cho Modal xác nhận xóa
+  // State quản lý Modal xác nhận xóa
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState(null);
 
+  /**
+   * Lấy toàn bộ danh sách chuyên khoa từ Server
+   */
   const fetchSpecialties = async () => {
     setLoading(true);
     try {
@@ -30,30 +43,43 @@ function AdminSpecialtiesPage() {
     }
   };
 
+  /**
+   * Hook khởi tạo: Gọi API lấy dữ liệu khi trang được tải
+   */
   useEffect(() => {
     fetchSpecialties();
   }, []);
 
+  // Tính toán các thông số phân trang
   const totalPages = Math.ceil(specialties.length / ITEMS_PER_PAGE);
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+  // Cắt mảng dữ liệu để hiển thị cho trang hiện tại
   const paginatedData = specialties.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
+  /**
+   * Kiểm tra điều kiện xóa chuyên khoa
+   * Rule: Không được xóa nếu có bác sĩ thuộc chuyên khoa này (ràng buộc toàn vẹn)
+   */
   const requestDelete = (specialty) => {
     const doctorCount = specialty._count?.bacSiList || 0;
     if (doctorCount > 0) {
       toast.error(`Không thể xóa vì chuyên khoa "${specialty.tenChuyenKhoa}" đang có ${doctorCount} bác sĩ!`);
       return;
     }
+    // Nếu thỏa mãn điều kiện, mở modal xác nhận
     setSelectedSpecialty(specialty);
     setIsDeleteModalOpen(true);
   };
 
+  /**
+   * Thực hiện xóa sau khi đã xác nhận qua Modal
+   */
   const confirmDelete = async () => {
     if (!selectedSpecialty) return;
     try {
       await specialtyService.remove(selectedSpecialty.id);
       toast.success(`Đã xóa chuyên khoa "${selectedSpecialty.tenChuyenKhoa}"`);
-      fetchSpecialties();
+      fetchSpecialties(); // Tải lại danh sách mới
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Có lỗi xảy ra khi xóa");
@@ -62,7 +88,7 @@ function AdminSpecialtiesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Modal xác nhận xóa */}
+      {/* MODAL: Xác nhận xóa (Chỉ hiển thị khi requestDelete thành công) */}
       <ConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
@@ -72,6 +98,7 @@ function AdminSpecialtiesPage() {
         confirmLabel="Xóa ngay"
       />
 
+      {/* HEADER: Tiêu đề trang và Nút thêm mới */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Quản lý chuyên khoa</h1>
@@ -86,7 +113,10 @@ function AdminSpecialtiesPage() {
         </Link>
       </div>
 
+      {/* CONTAINER CHÍNH: Chứa bảng dữ liệu */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        
+        {/* VIEW: DESKTOP (Dạng bảng chuẩn) */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -99,12 +129,14 @@ function AdminSpecialtiesPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
+                // Skeleton/Loading state
                 <tr>
                   <td colSpan="4" className="text-center py-20">
                     <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
                   </td>
                 </tr>
               ) : paginatedData.length === 0 ? (
+                // Empty state
                 <tr>
                   <td colSpan="4" className="text-center py-20 text-slate-400 font-medium">
                     <span className="material-symbols-outlined text-4xl mb-2 block">inventory_2</span>
@@ -113,9 +145,9 @@ function AdminSpecialtiesPage() {
                 </tr>
               ) : paginatedData.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                  {/* Cột: Chuyên khoa (Ảnh + Tên + Icon) */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
-                      {/* Thumbnail Image */}
                       <div className="size-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
                         {item.anhChuyenKhoa ? (
                           <img src={item.anhChuyenKhoa} alt={item.tenChuyenKhoa} className="w-full h-full object-cover" />
@@ -125,7 +157,6 @@ function AdminSpecialtiesPage() {
                       </div>
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-900 flex items-center gap-1.5">
-                          {/* Display saved icon */}
                           {item.icon && (
                             <span className="material-symbols-outlined text-primary text-xl">
                               {item.icon}
@@ -137,17 +168,20 @@ function AdminSpecialtiesPage() {
                       </div>
                     </div>
                   </td>
+                  {/* Cột: Mô tả rút gọn */}
                   <td className="px-6 py-4">
                     <p className="text-slate-600 line-clamp-2 max-w-xs text-xs leading-relaxed">
                       {item.moTaChuyenKhoa || "Không có mô tả"}
                     </p>
                   </td>
+                  {/* Cột: Thống kê số lượng bác sĩ */}
                   <td className="px-6 py-4 text-center">
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold">
                       <span className="material-symbols-outlined text-sm">groups</span>
                       {item._count?.bacSiList || 0}
                     </span>
                   </td>
+                  {/* Cột: Thao tác điều khiển */}
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
                       <Link 
@@ -172,7 +206,7 @@ function AdminSpecialtiesPage() {
           </table>
         </div>
 
-        {/* Mobile View */}
+        {/* VIEW: MOBILE (Hiển thị dạng danh sách Card dọc) */}
         <div className="block md:hidden divide-y divide-slate-100">
           {paginatedData.map((item) => (
             <div key={item.id} className="p-5 space-y-4">
@@ -214,7 +248,7 @@ function AdminSpecialtiesPage() {
           ))}
         </div>
 
-        {/* Phân trang */}
+        {/* PHÂN TRANG: Điều khiển người dùng */}
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -240,6 +274,7 @@ function AdminSpecialtiesPage() {
         )}
       </div>
 
+      {/* FOOTER: Ghi chú bảo mật dữ liệu */}
       <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 flex items-start gap-3">
         <span className="material-symbols-outlined text-slate-400 text-xl">info</span>
         <p className="text-xs text-slate-500 leading-relaxed font-medium">

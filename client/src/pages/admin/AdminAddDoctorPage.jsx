@@ -5,10 +5,20 @@ import { doctorService } from "../../services/doctorService";
 import { specialtyService } from "../../services/specialtyService";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
+/**
+ * Trang AdminAddDoctorPage - Quản trị viên thêm bác sĩ mới
+ * Cho phép tạo tài khoản và hồ sơ chuyên môn cho bác sĩ trong hệ thống.
+ */
 function AdminAddDoctorPage() {
   const navigate = useNavigate();
+  
+  // State lưu trữ danh sách chuyên khoa để hiển thị trong dropdown
   const [specialties, setSpecialties] = useState([]);
+  
+  // State quản lý trạng thái đang gửi dữ liệu (loading)
   const [loading, setLoading] = useState(false);
+  
+  // State lưu trữ dữ liệu form
   const [form, setForm] = useState({
     tenBacSi: "",
     email: "",
@@ -20,6 +30,7 @@ function AdminAddDoctorPage() {
     moTaChiTiet: "",
   });
 
+  // Effect lấy danh sách chuyên khoa khi component mount
   useEffect(() => {
     const fetchSpecialties = async () => {
       try {
@@ -35,11 +46,19 @@ function AdminAddDoctorPage() {
     fetchSpecialties();
   }, []);
 
+  /**
+   * Xử lý thay đổi giá trị trong các ô nhập liệu (input)
+   * @param {Object} e - Event object
+   */
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  /**
+   * Xử lý lưu thông tin bác sĩ mới vào hệ thống
+   */
   const handleSave = async () => {
+    // Kiểm tra các trường bắt buộc
     if (!form.tenBacSi.trim() || !form.chuyenKhoaId || !form.email || !form.matKhau) {
       toast.warn("Vui lòng nhập đầy đủ: Họ tên, Chuyên khoa, Email, Mật khẩu.");
       return;
@@ -47,11 +66,13 @@ function AdminAddDoctorPage() {
     
     setLoading(true);
     try {
+      // Gọi service để tạo bác sĩ
       await doctorService.create({
         ...form,
         giaKham: form.giaKham ? Number(form.giaKham) : null,
       });
       toast.success(`Đã thêm bác sĩ "${form.tenBacSi}" thành công!`);
+      // Quay lại danh sách bác sĩ sau khi thêm thành công
       navigate("/admin/doctors");
     } catch (error) {
       toast.error(error.response?.data?.message || "Có lỗi xảy ra khi thêm bác sĩ!");
@@ -62,6 +83,7 @@ function AdminAddDoctorPage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-10 font-sans">
+      {/* Breadcrumbs - Đường dẫn điều hướng */}
       <div className="flex items-center gap-2 mb-6 text-sm">
         <Link to="/admin/doctors" className="text-slate-500 hover:text-primary transition-colors font-medium">
           Quản lý bác sĩ
@@ -70,6 +92,7 @@ function AdminAddDoctorPage() {
         <span className="text-slate-900 font-bold tracking-tight">Thêm bác sĩ mới</span>
       </div>
 
+      {/* Header - Tiêu đề trang */}
       <div className="mb-10 text-center sm:text-left">
         <h2 className="text-3xl font-black text-slate-900 tracking-tight">Thêm bác sĩ mới</h2>
         <p className="text-slate-500 text-sm mt-2">Khởi tạo tài khoản và hồ sơ bác sĩ vào hệ thống chuyên môn.</p>
@@ -78,7 +101,7 @@ function AdminAddDoctorPage() {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-8 sm:p-12 space-y-10">
           
-          {/* Section: Thông tin cơ bản */}
+          {/* Section: Thông tin cơ bản (Họ tên, Chuyên khoa) */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="size-2 rounded-full bg-primary ring-4 ring-primary/10"></span>
@@ -116,7 +139,7 @@ function AdminAddDoctorPage() {
 
           <hr className="border-slate-100" />
 
-          {/* Section: Tài khoản */}
+          {/* Section: Tài khoản (Email, Mật khẩu) */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="size-2 rounded-full bg-amber-500 ring-4 ring-amber-100"></span>
@@ -150,7 +173,7 @@ function AdminAddDoctorPage() {
 
           <hr className="border-slate-100" />
 
-          {/* Section: Chuyên môn & Chi phí */}
+          {/* Section: Chuyên môn & Chi phí (Học vị, Giá khám, Mô tả) */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="size-2 rounded-full bg-green-500 ring-4 ring-green-100"></span>
@@ -205,7 +228,7 @@ function AdminAddDoctorPage() {
           </div>
         </div>
 
-        {/* Action bar */}
+        {/* Action bar - Các nút hành động phía dưới */}
         <div className="bg-slate-50/80 px-8 sm:px-12 py-6 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-100">
           <button
             onClick={() => navigate("/admin/doctors")}

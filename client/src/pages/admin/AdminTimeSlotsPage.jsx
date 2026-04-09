@@ -3,13 +3,30 @@ import { toast } from "react-toastify";
 import { scheduleService } from "../../services/scheduleService";
 import { formatTime } from "../../utils/formatters";
 
+/**
+ * Trang AdminTimeSlotsPage - Quản lý danh mục khung giờ (Admin)
+ * Chức năng:
+ * - Hiển thị danh sách các khung giờ (ca khám) mẫu của hệ thống.
+ * - Cho phép thêm mới khung giờ (Ví dụ: 08:00 - 09:00).
+ * - Xóa khung giờ khi không còn áp dụng.
+ * - Lưu ý: Các khung giờ này là "bản mẫu" để bác sĩ đăng ký lịch làm việc.
+ */
 function AdminTimeSlotsPage() {
+  // State quản lý danh sách khung giờ và trạng thái tải
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // State điều khiển các Modal (Thêm mới & Xác nhận xóa)
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
+  
+  // State quản lý dữ liệu form thêm mới
   const [newSlot, setNewSlot] = useState({ gioBatDau: "", gioKetThuc: "" });
 
+  /**
+   * Hàm lấy toàn bộ danh sách khung giờ từ server
+   * Sử dụng useCallback để tối ưu hiệu năng và tránh re-render vô ích
+   */
   const fetchSlots = useCallback(async () => {
     setLoading(true);
     try {
@@ -23,33 +40,42 @@ function AdminTimeSlotsPage() {
     }
   }, []);
 
+  /**
+   * Hook khởi tạo: Tự động gọi API khi component được gắn (mount)
+   */
   useEffect(() => {
     fetchSlots();
   }, [fetchSlots]);
 
+  /**
+   * Xử lý hành động tạo mới khung giờ
+   */
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
       const res = await scheduleService.createKhungGio(newSlot);
       if (res.success) {
         toast.success("Thêm khung giờ thành công");
-        setNewSlot({ gioBatDau: "", gioKetThuc: "" });
-        setShowAddModal(false);
-        fetchSlots();
+        setNewSlot({ gioBatDau: "", gioKetThuc: "" }); // Reset form
+        setShowAddModal(false); // Đóng modal
+        fetchSlots(); // Cập nhật lại danh sách hiển thị
       }
     } catch (error) {
       toast.error(error.message || "Lỗi khi tạo khung giờ");
     }
   };
 
+  /**
+   * Thực hiện xóa khung giờ sau khi đã xác nhận
+   */
   const confirmDelete = async () => {
     if (!deleteModal.id) return;
     try {
       const res = await scheduleService.deleteKhungGio(deleteModal.id);
       if (res.success) {
         toast.success("Xóa thành công");
-        setDeleteModal({ open: false, id: null });
-        fetchSlots();
+        setDeleteModal({ open: false, id: null }); // Đóng modal xác nhận
+        fetchSlots(); // Cập nhật lại danh sách
       }
     } catch (error) {
        toast.error(error.message || "Lỗi khi xóa khung giờ (Có thể đang có lịch liên kết)");
@@ -58,6 +84,7 @@ function AdminTimeSlotsPage() {
 
   return (
     <div className="space-y-6">
+      {/* HEADER: Tiêu đề và Nút hành động thêm mới */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Quản lý khung giờ</h2>
@@ -72,31 +99,36 @@ function AdminTimeSlotsPage() {
         </button>
       </div>
 
+      {/* TABLE: Hiển thị danh sách khung giờ */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">ID</th>
               <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Thời gian</th>
-              <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Hành động</th>
+              <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">Hành động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
+              // Trạng thái đang tải dữ liệu
               <tr><td colSpan="3" className="py-20 text-center"><span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span></td></tr>
             ) : slots.length === 0 ? (
+              // Trạng thái danh sách trống
               <tr><td colSpan="3" className="py-20 text-center text-slate-400 italic">Chưa có khung giờ nào</td></tr>
             ) : slots.map((slot) => (
               <tr key={slot.id} className="hover:bg-slate-50/50 transition-colors group">
                 <td className="px-6 py-4 text-slate-500 font-medium font-mono text-sm">#{slot.id}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
+                      {/* Hiển thị khoảng thời gian đã được định dạng (HH:mm) */}
                      <span className="px-3 py-1 bg-primary/10 text-primary font-bold rounded-lg text-sm">
                        {formatTime(slot.gioBatDau)} - {formatTime(slot.gioKetThuc)}
                      </span>
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 text-right">
+                  {/* Nút Kích hoạt Modal xóa */}
                   <button
                     onClick={() => setDeleteModal({ open: true, id: slot.id })}
                     className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
@@ -110,6 +142,7 @@ function AdminTimeSlotsPage() {
         </table>
       </div>
 
+      {/* MODAL: Form thêm khung giờ mới */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -163,7 +196,7 @@ function AdminTimeSlotsPage() {
         </div>
       )}
 
-      {/* DELETE CONFIRM MODAL */}
+      {/* MODAL: Xác nhận xóa khung giờ (Cảnh báo dữ liệu quan trọng) */}
       {deleteModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center animate-in fade-in zoom-in duration-200">
@@ -172,7 +205,7 @@ function AdminTimeSlotsPage() {
             </div>
             <h3 className="text-xl font-bold text-slate-900 mb-2">Xác nhận xóa?</h3>
             <p className="text-sm text-slate-500 mb-6 px-4">
-              Bạn có chắc chắn muốn xóa khung giờ này? Hành động không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa khung giờ này? Hành động không thể hoàn tác và có thể lỗi nếu đã có lịch khám gắn với khung giờ này.
             </p>
             <div className="flex gap-3">
               <button 

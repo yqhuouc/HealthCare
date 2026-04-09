@@ -25,14 +25,15 @@ import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData";
 import { appointmentService } from "../../services/appointmentService";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
-// Mapping from numeric status in DB to string keys in APPOINTMENT_STATUS_CONFIG
+// Chuyển đổi mã trạng thái số từ Database sang key chuỗi dùng cho config UI
 const STATUS_MAP = {
-  0: "pending",
-  1: "confirmed",
-  2: "completed",
-  3: "cancelled",
+  0: "pending",   // Chờ xác nhận
+  1: "confirmed", // Đã xác nhận
+  2: "completed", // Đã khám xong
+  3: "cancelled", // Đã hủy
 };
 
+// Danh sách các bộ lọc trạng thái để hiển thị các nút Pill
 const STATUS_FILTERS = [
   { value: "all", label: "Tất cả" },
   { value: "0", label: "Chờ xác nhận" },
@@ -41,29 +42,38 @@ const STATUS_FILTERS = [
   { value: "3", label: "Đã hủy" },
 ];
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 5; // Số bản ghi hiển thị trên mỗi trang
 
+/**
+ * Component AdminAppointmentsPage - Hiển thị danh sách và quản lý các lịch hẹn khám
+ */
 function AdminAppointmentsPage() {
+  // State quản lý bộ lọc và phân trang
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  
+  // State lưu trữ dữ liệu từ API
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
   const [totalAppointments, setTotalAppointments] = useState(0);
 
-  // Debounce search logic
+  // Xử lý Debounce cho ô tìm kiếm để tránh gọi API quá nhiều lần liên tục
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1);
+      setPage(1); // Reset về trang 1 khi tìm kiếm thay đổi
     }, 500);
     return () => clearTimeout(timer);
   }, [search]);
 
+  /**
+   * Hàm lấy danh sách lịch hẹn từ API dựa trên các bộ lọc hiện tại
+   */
   const fetchAppointments = useCallback(async () => {
     setLoading(true);
     try {
@@ -88,22 +98,31 @@ function AdminAppointmentsPage() {
     }
   }, [page, statusFilter, dateFrom, debouncedSearch]);
 
+  /**
+   * Xử lý cập nhật nhanh trạng thái của một lịch hẹn trực tiếp từ danh sách
+   * @param {number} id - ID lịch hẹn
+   * @param {number} newStatus - Trạng thái mới cần chuyển sang
+   */
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await appointmentService.updateTrangThai(id, newStatus);
       const labels = { 0: "Đã hoàn tác (về chờ)", 1: "Đã xác nhận lịch", 2: "Đã hoàn thành khám", 3: "Đã hủy lịch" };
       toast.success(labels[newStatus] || "Cập nhật thành công");
-      fetchAppointments(); // Tải lại danh sách
+      fetchAppointments(); // Gọi lại API để cập nhật dữ liệu hiển thị
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.message || "Lỗi cập nhật trạng thái");
     }
   };
 
+  // Tự động tải lại dữ liệu khi các tham số lọc thay đổi
   useEffect(() => {
     fetchAppointments();
   }, [fetchAppointments]);
 
+  /**
+   * Kích hoạt lọc dữ liệu theo các điều kiện đã chọn
+   */
   const handleFilter = () => {
     setPage(1);
     fetchAppointments();
@@ -111,6 +130,7 @@ function AdminAppointmentsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Khối thống kê đơn giản */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
           <p className="text-sm text-slate-500">Tổng lịch đang hiện thị</p>
@@ -118,6 +138,7 @@ function AdminAppointmentsPage() {
         </div>
       </div>
 
+      {/* Khu vực Bộ lọc và Tìm kiếm */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8 space-y-4">
         {/* Thanh tìm kiếm đa năng */}
         <div className="relative group">
@@ -134,7 +155,7 @@ function AdminAppointmentsPage() {
         </div>
 
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-          {/* Nhóm Filter bên trái */}
+          {/* Nhóm Filter bên trái: Các nút chuyển đổi trạng thái */}
           <div className="space-y-4 flex-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Bộ lọc trạng thái</p>
             <div className="flex flex-wrap gap-2">
@@ -154,7 +175,7 @@ function AdminAppointmentsPage() {
             </div>
           </div>
 
-          {/* Nhóm Filter Ngày bên phải */}
+          {/* Nhóm Filter Ngày bên phải: Chọn khoảng thời gian đặt lịch */}
           <div className="flex flex-wrap items-end gap-3 lg:border-l lg:border-slate-100 lg:pl-6">
             <div className="flex-1 min-w-[140px]">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Từ ngày</label>
@@ -190,7 +211,9 @@ function AdminAppointmentsPage() {
         </div>
       </div>
 
+      {/* HIỂN THỊ DANH SÁCH LỊCH HẸN */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {/* Chế độ bảng (Table View) - Cho màn hình Máy tính (Desktop) */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -243,6 +266,7 @@ function AdminAppointmentsPage() {
                       <Link to={`/admin/appointments/${apt.id}`} className="text-primary font-medium hover:underline text-sm">
                         Xem chi tiết
                       </Link>
+                      {/* Các nút xử lý nhanh dựa trên trạng thái hiện tại */}
                       {apt.trangThai === 0 && (
                         <>
                           <button onClick={() => handleUpdateStatus(apt.id, 1)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-100" title="Xác nhận">
@@ -281,6 +305,7 @@ function AdminAppointmentsPage() {
           </table>
         </div>
 
+        {/* Chế độ danh sách (Card View) - Cho màn hình Điện thoại (Mobile) */}
         <div className="block md:hidden divide-y divide-slate-100">
           {appointments.map((apt) => {
             const statusString = STATUS_MAP[apt.trangThai] || "pending";
@@ -347,6 +372,7 @@ function AdminAppointmentsPage() {
           })}
         </div>
 
+        {/* Thanh Phân trang (Pagination) */}
         {totalPages > 1 && (
           <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between">
             <p className="text-xs text-slate-500">

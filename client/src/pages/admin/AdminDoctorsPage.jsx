@@ -8,36 +8,46 @@ import { formatPrice } from "../../utils/formatters";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 8; // Số lượng bác sĩ hiển thị trên mỗi trang
 
+/**
+ * Trang AdminDoctorsPage - Quản lý danh sách bác sĩ dành cho Quản trị viên
+ * Chức năng: Tìm kiếm, Lọc theo chuyên khoa, Khóa/Mở khóa tài khoản, Xóa bác sĩ.
+ */
 export default function AdminDoctorsPage() {
   const navigate = useNavigate();
+  
+  // State quản lý bộ lọc và tìm kiếm
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [doctors, setDoctors] = useState([]);
-  const [specialties, setSpecialties] = useState([]);
-  const [selectedSpecialty, setSelectedSpecialty] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [selectedSpecialty, setSelectedSpecialty] = useState(""); // ID chuyên khoa đang lọc
+  
+  // State lưu trữ dữ liệu từ API
+  const [doctors, setDoctors] = useState([]);      // Danh sách bác sĩ hiển thị
+  const [specialties, setSpecialties] = useState([]); // Danh sách tất cả chuyên khoa để làm bộ lọc
+  const [loading, setLoading] = useState(true);      // Trạng thái đang tải dữ liệu
   const [totalPages, setTotalPages] = useState(1);
   const [totalDoctors, setTotalDoctors] = useState(0);
-  const [stats, setStats] = useState({ tongBacSi: 0, tongChuyenKhoa: 0 });
+  const [stats, setStats] = useState({ tongBacSi: 0, tongChuyenKhoa: 0 }); // Thống kê nhanh ở cuối trang
 
-  // Modal states
+  // State quản lý Modal xác nhận (Dùng chung cho Xóa, Khóa, Mở khóa)
   const [modalMode, setModalMode] = useState(null); // 'delete' | 'lock' | 'unlock'
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Debounce search
+  // Xử lý Debounce tìm kiếm: Chỉ tìm sau khi người dùng ngừng gõ 500ms
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1);
+      setPage(1); // Quay về trang 1 khi từ khóa tìm kiếm thay đổi
     }, 500);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Lấy danh sách chuyên khoa + Thống kê tổng quan
+  /**
+   * Lấy danh mục chuyên khoa và các thông số thống kê cơ bản
+   */
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -54,6 +64,9 @@ export default function AdminDoctorsPage() {
     fetchData();
   }, []);
 
+  /**
+   * Hàm lấy danh sách bác sĩ dựa trên phân trang, tìm kiếm và chuyên khoa
+   */
   const fetchDoctors = useCallback(async () => {
     setLoading(true);
     try {
@@ -76,31 +89,42 @@ export default function AdminDoctorsPage() {
     }
   }, [page, debouncedSearch, selectedSpecialty]);
 
+  // Tự động gọi fetch mỗi khi các tham số lọc thay đổi
   useEffect(() => {
     fetchDoctors();
   }, [fetchDoctors]);
 
+  /**
+   * Mở modal xác nhận hành động
+   * @param {Object} doc - Dữ liệu bác sĩ tương ứng
+   * @param {string} mode - Loại hành động ('delete', 'lock', 'unlock')
+   */
   const openActionModal = (doc, mode) => {
     setSelectedDoctor(doc);
     setModalMode(mode);
     setIsModalOpen(true);
   };
 
+  /**
+   * Xử lý thực hiện hành động sau khi người dùng bấm "Xác nhận" trong Modal
+   */
   const handleConfirmAction = async () => {
     if (!selectedDoctor) return;
 
     try {
       if (modalMode === 'delete') {
+        // Hành động XÓA bác sĩ
         await doctorService.remove(selectedDoctor.id);
         toast.success(`Đã xóa hồ sơ bác sĩ ${selectedDoctor.tenBacSi}`);
       } else {
-        const newStatus = modalMode === 'lock' ? 0 : 1;
+        // Hành động KHÓA hoặc MỞ KHÓA (Cập nhật trạng thái tài khoản)
+        const newStatus = modalMode === 'lock' ? 0 : 1; // 0: Khóa, 1: Hoạt động
         await doctorService.update(selectedDoctor.id, { 
           trangThaiTaiKhoan: newStatus 
         });
         toast.success(`${modalMode === 'lock' ? "Khóa" : "Mở khóa"} tài khoản bác sĩ thành công!`);
       }
-      // Đợi fetch lại dữ liệu để đảm bảo icon thay đổi
+      // Tải lại danh sách sau khi thao tác thành công
       await fetchDoctors();
     } catch (err) {
       toast.error(err.response?.data?.message || "Thao tác thất bại");
@@ -110,13 +134,14 @@ export default function AdminDoctorsPage() {
     }
   };
 
+  /** Chuyển hướng sang trang cập nhật thông tin bác sĩ */
   const handleEdit = (id) => {
     navigate(`/admin/doctors/edit/${id}`);
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* SECTION 1: Tiêu đề và Nút thêm bác sĩ */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Danh sách bác sĩ</h1>
@@ -133,8 +158,9 @@ export default function AdminDoctorsPage() {
         </Link>
       </div>
 
-      {/* Filters */}
+      {/* SECTION 2: Các bộ lọc (Tìm kiếm + Chuyên khoa) */}
       <div className="flex flex-col md:flex-row gap-4">
+        {/* Tìm kiếm theo tên */}
         <div className="flex-1 relative">
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
             search
@@ -148,6 +174,7 @@ export default function AdminDoctorsPage() {
           />
         </div>
         
+        {/* Lọc theo chuyên khoa */}
         <div className="w-full md:w-72 relative">
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
             filter_list
@@ -170,7 +197,7 @@ export default function AdminDoctorsPage() {
         </div>
       </div>
 
-      {/* Table Section */}
+      {/* SECTION 3: Bảng chính hiển thị danh sách */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -186,12 +213,14 @@ export default function AdminDoctorsPage() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading ? (
+                // Hiển thị loading khi đang gọi API
                 <tr>
                   <td colSpan="6" className="py-24 text-center">
                     <LoadingSpinner size="size-12" />
                   </td>
                 </tr>
               ) : doctors.length === 0 ? (
+                // Hiển thị khi danh sách trống
                 <tr>
                   <td colSpan="6" className="py-24 text-center">
                     <div className="flex flex-col items-center gap-3 text-slate-400">
@@ -201,6 +230,7 @@ export default function AdminDoctorsPage() {
                   </td>
                 </tr>
               ) : (
+                // Duyệt qua mảng doctors để hiển thị các dòng dữ liệu
                 doctors.map((doc) => (
                   <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="py-5 px-6">
@@ -228,6 +258,7 @@ export default function AdminDoctorsPage() {
                       </p>
                     </td>
                     <td className="py-5 px-6 text-center">
+                      {/* Trạng thái tài khoản: 0 là Đã khóa, 1 là Đang hoạt động */}
                       {doc.taiKhoan?.trangThaiTaiKhoan === 0 ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-wider border border-rose-100 shadow-sm shadow-rose-100/50">
                           <span className="size-1.5 rounded-full bg-rose-500 animate-pulse"></span>
@@ -242,6 +273,7 @@ export default function AdminDoctorsPage() {
                     </td>
                     <td className="py-5 px-6">
                       <div className="flex items-center justify-center gap-2">
+                        {/* Nút Chỉnh sửa */}
                         <button
                           onClick={() => handleEdit(doc.id)}
                           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-primary/5 transition-all text-[10px] font-bold border border-transparent hover:border-primary/10"
@@ -251,6 +283,7 @@ export default function AdminDoctorsPage() {
                           SỬA
                         </button>
                         
+                        {/* Nút Khóa / Mở khóa dựa trên trạng thái hiện tại */}
                         {doc.taiKhoan?.trangThaiTaiKhoan === 0 ? (
                           <button
                             onClick={() => openActionModal(doc, 'unlock')}
@@ -269,6 +302,7 @@ export default function AdminDoctorsPage() {
                           </button>
                         )}
 
+                        {/* Nút Xóa */}
                         <button
                           onClick={() => openActionModal(doc, 'delete')}
                           className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all"
@@ -285,7 +319,7 @@ export default function AdminDoctorsPage() {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Thanh Phân trang */}
         {totalPages > 1 && (
           <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -311,7 +345,7 @@ export default function AdminDoctorsPage() {
         )}
       </div>
 
-      {/* Footer Stats Summary */}
+      {/* SECTION 4: Các thẻ thống kê nhanh ở Footer */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex items-center gap-5 hover:border-primary/50 transition-colors">
           <div className="size-16 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10">
@@ -344,7 +378,7 @@ export default function AdminDoctorsPage() {
         </div>
       </div>
 
-      {/* Action Confirmation Modal */}
+      {/* MODAL XÁC NHẬN HÀNH ĐỘNG (Dùng thành phần ConfirmModal dùng chung) */}
       <ConfirmModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

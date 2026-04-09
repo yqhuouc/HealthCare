@@ -5,39 +5,51 @@ import { doctorService } from "../../services/doctorService";
 import { specialtyService } from "../../services/specialtyService";
 import { formatTime } from "../../utils/formatters";
 
+/**
+ * Trang AdminDoctorSchedulesPage - Quản lý lịch làm việc của Bác sĩ (Admin)
+ * Cho phép xem danh sách lịch, tạo lịch hộ bác sĩ, điều chỉnh số lượng bệnh nhân tối đa và xóa lịch.
+ */
 function AdminDoctorSchedulesPage() {
-  const [specialties, setSpecialties] = useState([]);
-  const [doctors, setDoctors] = useState([]);
-  const [slots, setSlots] = useState([]);
-  const [schedules, setSchedules] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // State lưu trữ dữ liệu danh mục
+  const [specialties, setSpecialties] = useState([]); // Danh sách chuyên khoa
+  const [doctors, setDoctors] = useState([]);       // Danh sách tất cả bác sĩ
+  const [slots, setSlots] = useState([]);           // Các khung giờ khám có sẵn (Ví dụ: 8:00 - 9:00...)
+  const [schedules, setSchedules] = useState([]);   // Danh sách lịch làm việc hiện có theo bộ lọc
+  const [loading, setLoading] = useState(true);      // Trạng thái đang tải dữ liệu
   
+  // State quản lý các bộ lọc ở đầu trang
   const [filters, setFilters] = useState({
     chuyenKhoaId: "all",
     bacSiId: "all",
-    ngayLamViec: new Date().toISOString().split("T")[0]
+    ngayLamViec: new Date().toISOString().split("T")[0] // Mặc định là ngày hôm nay
   });
 
+  // State quản lý Modal thêm mới lịch làm việc
   const [showAddModal, setShowAddModal] = useState(false);
   const [addModalChuyenKhoa, setAddModalChuyenKhoa] = useState("all");
   const [newSchedule, setNewSchedule] = useState({
     bacSiId: "",
     ngayBatDau: "",
     ngayKetThuc: "",
-    khungGioIds: []
+    khungGioIds: [] // Mảng chứa các ID khung giờ được chọn để tạo hàng loạt
   });
 
+  // State quản lý Modal chỉnh sửa tải trọng (số bệnh nhân tối đa) và Modal xóa
   const [editModal, setEditModal] = useState({ open: false, schedule: null, newLimit: 0 });
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
 
+  /**
+   * Hàm lấy toàn bộ dữ liệu từ API dựa trên các bộ lọc
+   */
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      // Gọi đồng thời nhiều API để tối ưu hiệu năng
       const [spRes, dRes, sRes, schRes] = await Promise.all([
         specialtyService.getAll(),
         doctorService.getAll(),
-        scheduleService.getAllKhungGio(),
-        scheduleService.getLichLamViec({ 
+        scheduleService.getAllKhungGio(), // Lấy danh sách khung giờ hệ thống
+        scheduleService.getLichLamViec({  // Lấy lịch làm việc thực tế của bác sĩ
           bacSiId: filters.bacSiId !== "all" ? filters.bacSiId : "",
           ngayLamViec: filters.ngayLamViec
         })
@@ -47,7 +59,7 @@ function AdminDoctorSchedulesPage() {
       if (dRes.success) setDoctors(dRes.data);
       if (sRes.success) setSlots(sRes.data);
       if (schRes.success) {
-        // If user filters by specialty but selected "all doctors", we filter schedules manually here
+        // Nếu admin lọc theo chuyên khoa nhưng để "Tất cả bác sĩ", ta cần thực hiện lọc thủ công ở client
         let currentSchedules = schRes.data;
         if (filters.chuyenKhoaId !== "all" && filters.bacSiId === "all") {
            currentSchedules = currentSchedules.filter(sch => sch.bacSi?.chuyenKhoaId === Number(filters.chuyenKhoaId));
@@ -62,10 +74,15 @@ function AdminDoctorSchedulesPage() {
     }
   }, [filters]);
 
+  // Gọi lại fetchData mỗi khi filters thay đổi
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  /**
+   * Xử lý tạo lịch làm việc hàng loạt theo khoảng ngày và nhiều khung giờ
+   * @param {Event} e - Sự kiện submit form
+   */
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!newSchedule.bacSiId || !newSchedule.ngayBatDau || newSchedule.khungGioIds.length === 0) {
@@ -73,7 +90,7 @@ function AdminDoctorSchedulesPage() {
       return;
     }
 
-    // Logic created for bulk dates: from Start to End
+    // Tính toán danh sách các ngày trong khoảng từ ngày bắt đầu đến ngày kết thúc
     const start = new Date(newSchedule.ngayBatDau);
     const end = new Date(newSchedule.ngayKetThuc || newSchedule.ngayBatDau);
     const dates = [];
@@ -86,6 +103,7 @@ function AdminDoctorSchedulesPage() {
 
     toast.info("Đang xử lý tạo lịch...");
 
+    // Lặp qua từng ngày và từng khung giờ để gửi yêu cầu tạo lịch
     for (const date of dates) {
       for (const slotId of newSchedule.khungGioIds) {
         try {
@@ -102,17 +120,21 @@ function AdminDoctorSchedulesPage() {
       }
     }
 
+    // Thông báo kết quả cho người dùng
     if (successCount > 0) {
       toast.success(`Đã tạo thành công ${successCount} ca làm việc.`);
       setShowAddModal(false);
       setNewSchedule({ bacSiId: "", ngayBatDau: "", ngayKetThuc: "", khungGioIds: [] });
-      fetchData();
+      fetchData(); // Tải lại danh sách để cập nhật hiển thị
     }
     if (failCount > 0) {
       toast.warning(`${failCount} ca bị trùng hoặc lỗi.`);
     }
   };
 
+  /**
+   * Thực hiện xóa ca làm việc sau khi đã xác nhận
+   */
   const confirmDelete = async () => {
     if (!deleteModal.id) return;
     try {
@@ -125,6 +147,10 @@ function AdminDoctorSchedulesPage() {
     }
   };
 
+  /**
+   * Cập nhật số lượng bệnh nhân tối đa cho một ca làm việc cụ thể
+   * @param {Event} e - Sự kiện submit form
+   */
   const submitEditCapacity = async (e) => {
     e.preventDefault();
     if (!editModal.schedule) return;
@@ -140,6 +166,10 @@ function AdminDoctorSchedulesPage() {
     }
   };
 
+  /**
+   * Chọn/Bỏ chọn một khung giờ trong Modal tạo lịch
+   * @param {number} id - ID của khung giờ
+   */
   const toggleSlotSelection = (id) => {
     setNewSchedule(prev => ({
       ...prev,
@@ -151,6 +181,7 @@ function AdminDoctorSchedulesPage() {
 
   return (
     <div className="space-y-6">
+      {/* Tiêu đề trang và Nút mở modal thêm mới */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Quản lý lịch làm việc</h2>
@@ -165,6 +196,7 @@ function AdminDoctorSchedulesPage() {
         </button>
       </div>
 
+      {/* THANH BỘ LỌC (Chuyên khoa, Bác sĩ, Ngày) */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap gap-4 items-end">
         <div className="space-y-1.5 flex-1 min-w-[200px]">
           <label className="text-xs font-bold text-slate-500 uppercase ml-1">Chuyên khoa</label>
@@ -201,6 +233,7 @@ function AdminDoctorSchedulesPage() {
         </div>
       </div>
 
+      {/* BẢNG HIỂN THỊ DANH SÁCH LỊCH LÀM VIỆC */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -245,6 +278,7 @@ function AdminDoctorSchedulesPage() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-1">
+                      {/* Nút mở modal chỉnh sửa tải trọng */}
                       <button
                         onClick={() => setEditModal({ open: true, schedule: sch, newLimit: sch.soBenhNhanToiDa })}
                         className="aspect-square size-8 flex justify-center items-center text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
@@ -252,6 +286,7 @@ function AdminDoctorSchedulesPage() {
                       >
                         <span className="material-symbols-outlined text-[18px]">edit</span>
                       </button>
+                      {/* Nút mở modal xác nhận xóa */}
                       <button
                         onClick={() => setDeleteModal({ open: true, id: sch.id })}
                         className="aspect-square size-8 flex justify-center items-center text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
@@ -268,6 +303,7 @@ function AdminDoctorSchedulesPage() {
         </div>
       </div>
 
+      {/* MODAL TẠO LỊCH HỘ BÁC SĨ (Hỗ trợ chọn nhiều ngày và nhiều ca) */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
@@ -384,7 +420,7 @@ function AdminDoctorSchedulesPage() {
         </div>
       )}
 
-      {/* EDIT CAPACITY MODAL */}
+      {/* MODAL ĐIỀU CHỈNH TẢI TRỌNG (SỐ BỆNH NHÂN TỐI ĐA) */}
       {editModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -416,7 +452,7 @@ function AdminDoctorSchedulesPage() {
         </div>
       )}
 
-      {/* DELETE CONFIRM MODAL */}
+      {/* MODAL XÁC NHẬN XÓA CA LÀM VIỆC */}
       {deleteModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center animate-in fade-in zoom-in duration-200">

@@ -5,13 +5,21 @@ import { doctorService } from "../../services/doctorService";
 import { specialtyService } from "../../services/specialtyService";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
+/**
+ * Trang AdminEditDoctorPage - Chỉnh sửa thông tin Bác sĩ (Admin)
+ * Chức năng: Tải dữ liệu cũ, cho phép sửa đổi thông tin cá nhân, chuyên môn và đổi mật khẩu tài khoản.
+ */
 function AdminEditDoctorPage() {
-  const { id } = useParams();
+  const { id } = useParams(); // Lấy ID bác sĩ từ URL
   const navigate = useNavigate();
-  const [specialties, setSpecialties] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  
+  // State quản lý danh sách và trạng thái hệ thống
+  const [specialties, setSpecialties] = useState([]); // Danh sách chuyên khoa để chọn
+  const [loading, setLoading] = useState(true);      // Trạng thái tải dữ liệu ban đầu
+  const [saving, setSaving] = useState(false);        // Trạng thái khi đang gửi yêu cầu lưu
+  const [showPassword, setShowPassword] = useState(false); // Trạng thái ẩn/hiện mật khẩu mới
+  
+  // State quản lý dữ liệu form
   const [form, setForm] = useState({
     tenBacSi: "",
     chuyenKhoaId: "",
@@ -19,10 +27,13 @@ function AdminEditDoctorPage() {
     giaKham: "",
     moTaNgan: "",
     moTaChiTiet: "",
-    email: "",
-    matKhau: "",
+    email: "",    // Email dùng làm tên đăng nhập
+    matKhau: "",  // Chỉ nhập nếu muốn đổi mật khẩu mới
   });
 
+  /**
+   * Lấy thông tin chi tiết của bác sĩ hiện tại và danh sách chuyên khoa
+   */
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -34,6 +45,7 @@ function AdminEditDoctorPage() {
 
         if (docRes.success) {
           const doc = docRes.data;
+          // Đổ dữ liệu cũ vào form
           setForm({
             tenBacSi: doc.tenBacSi || "",
             chuyenKhoaId: doc.chuyenKhoaId?.toString() || "",
@@ -42,7 +54,7 @@ function AdminEditDoctorPage() {
             moTaNgan: doc.moTaNgan || "",
             moTaChiTiet: doc.moTaChiTiet || "",
             email: doc.taiKhoan?.email || "",
-            matKhau: "", // Mật khẩu luôn để trống khi load, chỉ nhập nếu muốn đổi
+            matKhau: "", // Mật khẩu luôn để trống khi load để đảm bảo bảo mật
           });
         }
 
@@ -60,11 +72,18 @@ function AdminEditDoctorPage() {
     fetchData();
   }, [id, navigate]);
 
+  /**
+   * Cập nhật state form khi người dùng nhập liệu vào các ô input
+   */
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  /**
+   * Xử lý gửi yêu cầu cập nhật thông tin lên Server
+   */
   const handleSave = async () => {
+    // Kiểm tra các trường bắt buộc
     if (!form.tenBacSi.trim() || !form.chuyenKhoaId || !form.email.trim()) {
       toast.warn("Vui lòng nhập đầy đủ: Họ tên, Chuyên khoa và Email.");
       return;
@@ -72,17 +91,20 @@ function AdminEditDoctorPage() {
 
     setSaving(true);
     try {
-      // Chuẩn bị dữ liệu gửi đi, chỉ gửi mật khẩu nếu có nhập nội dung mới
+      // Chuẩn bị dữ liệu gửi đi
       const updateData = {
         ...form,
         giaKham: form.giaKham ? Number(form.giaKham) : null,
       };
+      
+      // Nếu không nhập mật khẩu mới, ta xóa trường matKhau khỏi payload để tránh ghi đè mật khẩu cũ bằng chuỗi rỗng
       if (!form.matKhau.trim()) {
         delete updateData.matKhau;
       }
 
       await doctorService.update(id, updateData);
       toast.success(`Cập nhật bác sĩ "${form.tenBacSi}" thành công!`);
+      // Lưu thành công có thể ở lại trang hoặc quay về danh sách tùy ý, ở đây giữ nguyên để xem lại
     } catch (error) {
       toast.error(error.response?.data?.message || "Có lỗi xảy ra khi cập nhật!");
     } finally {
@@ -90,6 +112,7 @@ function AdminEditDoctorPage() {
     }
   };
 
+  // Hiển thị vòng xoay nếu đang tải dữ liệu
   if (loading) {
     return (
       <div className="flex justify-center py-40">
@@ -100,6 +123,7 @@ function AdminEditDoctorPage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-10 font-sans">
+      {/* Breadcrumb dẫn hướng */}
       <div className="flex items-center gap-2 mb-6 text-sm">
         <Link to="/admin/doctors" className="text-slate-500 hover:text-primary transition-colors font-medium">
           Quản lý bác sĩ
@@ -108,6 +132,7 @@ function AdminEditDoctorPage() {
         <span className="text-slate-900 font-bold tracking-tight">Cập nhật hồ sơ bác sĩ</span>
       </div>
 
+      {/* Header trang */}
       <div className="mb-10 flex flex-col sm:flex-row items-end justify-between gap-4">
         <div className="text-center sm:text-left">
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Chỉnh sửa bác sĩ</h2>
@@ -121,7 +146,7 @@ function AdminEditDoctorPage() {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-8 sm:p-12 space-y-10">
           
-          {/* Section: Tài khoản đăng nhập */}
+          {/* SECTION: Tài khoản đăng nhập (Email & Mật khẩu) */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="size-2 rounded-full bg-slate-400 ring-4 ring-slate-100"></span>
@@ -169,7 +194,7 @@ function AdminEditDoctorPage() {
 
           <hr className="border-slate-100" />
           
-          {/* Section: Thông tin công tác */}
+          {/* SECTION: Thông tin công tác (Tên, Chuyên khoa) */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="size-2 rounded-full bg-primary ring-4 ring-primary/10"></span>
@@ -207,7 +232,7 @@ function AdminEditDoctorPage() {
 
           <hr className="border-slate-100" />
 
-          {/* Section: Chuyên môn & Chi phí */}
+          {/* SECTION: Chuyên môn & Chi phí khám */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="size-2 rounded-full bg-green-500 ring-4 ring-green-100"></span>
@@ -262,7 +287,7 @@ function AdminEditDoctorPage() {
           </div>
         </div>
 
-        {/* Action bar */}
+        {/* Action bar - Chứa các nút hủy và lưu */}
         <div className="bg-slate-50/80 px-8 sm:px-12 py-6 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-100">
           <button
             onClick={() => navigate("/admin/doctors")}

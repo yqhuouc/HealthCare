@@ -6,6 +6,7 @@ import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { getInitials } from "../../utils/formatters";
 
+// Map mã trạng thái từ DB sang key cấu hình UI
 const STATUS_MAP = {
   0: "pending",
   1: "confirmed",
@@ -13,19 +14,29 @@ const STATUS_MAP = {
   3: "cancelled",
 };
 
+// Các tùy chọn trạng thái thanh toán và màu sắc tương ứng
 const PAYMENT_STATUS_OPTIONS = [
   { value: 0, label: "Chưa thanh toán", color: "text-red-600 bg-red-50" },
   { value: 1, label: "Đã thanh toán cọc", color: "text-amber-600 bg-amber-50" },
   { value: 2, label: "Đã thanh toán xong", color: "text-emerald-600 bg-emerald-50" },
 ];
 
+/**
+ * Trang AdminAppointmentDetailPage - Xem chi tiết và quản lý một lịch hẹn cụ thể
+ * Cho phép cập nhật trạng thái lịch khám và trạng thái thanh toán.
+ */
 function AdminAppointmentDetailPage() {
-  const { id } = useParams();
+  const { id } = useParams(); // Lấy ID lịch hẹn từ URL
   const navigate = useNavigate();
+  
+  // State lưu trữ dữ liệu lịch hẹn
   const [appointment, setAppointment] = useState(null);
+  // Trạng thái tải dữ liệu ban đầu
   const [loading, setLoading] = useState(true);
+  // Trạng thái đang gọi API cập nhật
   const [updating, setUpdating] = useState(false);
 
+  // Lấy dữ liệu chi tiết lịch hẹn khi component mount hoặc ID thay đổi
   useEffect(() => {
     const fetchDetail = async () => {
       try {
@@ -44,12 +55,16 @@ function AdminAppointmentDetailPage() {
     fetchDetail();
   }, [id, navigate]);
 
+  /**
+   * Cập nhật trạng thái của lịch khám (Chờ duyệt, Đã xác nhận, Hoàn thành, Đã hủy)
+   * @param {number} newStatus - Mã trạng thái mới
+   */
   const handleUpdateStatus = async (newStatus) => {
     setUpdating(true);
     try {
       await appointmentService.updateTrangThai(id, newStatus);
       toast.success("Cập nhật trạng thái thành công!");
-      // Refresh data
+      // Tải lại dữ liệu sau khi cập nhật thành công
       const res = await appointmentService.getById(id);
       if (res.success) setAppointment(res.data);
     } catch (err) {
@@ -60,12 +75,16 @@ function AdminAppointmentDetailPage() {
     }
   };
 
+  /**
+   * Cập nhật trạng thái thanh toán của lịch khám
+   * @param {number} newPaymentStatus - Mã trạng thái thanh toán mới
+   */
   const handleUpdatePayment = async (newPaymentStatus) => {
     setUpdating(true);
     try {
       await appointmentService.updateThanhToan(id, newPaymentStatus);
       toast.success("Cập nhật thanh toán thành công!");
-      // Refresh data
+      // Tải lại dữ liệu sau khi cập nhật thành công
       const res = await appointmentService.getById(id);
       if (res.success) setAppointment(res.data);
     } catch (err) {
@@ -76,6 +95,7 @@ function AdminAppointmentDetailPage() {
     }
   };
 
+  // Hiển thị vòng xoay loading khi đang tải dữ liệu
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -86,6 +106,7 @@ function AdminAppointmentDetailPage() {
 
   if (!appointment) return null;
 
+  // Chuẩn bị thông tin hiển thị trạng thái
   const statusKey = STATUS_MAP[appointment.trangThai] || "pending";
   const statusCfg = APPOINTMENT_STATUS_CONFIG[statusKey];
   const patient = appointment.benhNhan || {};
@@ -94,6 +115,7 @@ function AdminAppointmentDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Đường dẫn Breadcrumb */}
       <div className="flex items-center gap-2 text-sm">
         <Link to="/admin/appointments" className="text-slate-500 hover:text-primary transition-colors">
           Quản lý lịch khám
@@ -102,7 +124,7 @@ function AdminAppointmentDetailPage() {
         <span className="text-slate-900 font-bold">Chi tiết LK{id}</span>
       </div>
 
-      {/* HEADER SECTION: Tiêu đề & Trạng thái */}
+      {/* SECTION ĐẦU TRANG: Tiêu đề và Các nút chuyển đổi trạng thái */}
       <div className="space-y-4 pb-6 border-b border-slate-100">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">Chi tiết lịch khám #LK{id}</h2>
@@ -126,9 +148,9 @@ function AdminAppointmentDetailPage() {
             </span>
           </div>
 
-          {/* ACTION BUTTONS GROUP */}
+          {/* NHÓM CÁC NÚT ĐIỀU KHIỂN TRẠNG THÁI (Duyệt, Hủy, Xong...) */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* LUỒNG CHỜ XÁC NHẬN (0) */}
+            {/* Nếu đang ở trạng thái CHỜ XÁC NHẬN (0) */}
             {appointment.trangThai === 0 && (
               <>
                 <button
@@ -150,7 +172,7 @@ function AdminAppointmentDetailPage() {
               </>
             )}
 
-            {/* LUỒNG ĐÃ XÁC NHẬN (1) */}
+            {/* Nếu đang ở trạng thái ĐÃ XÁC NHẬN (1) */}
             {appointment.trangThai === 1 && (
               <>
                 <button
@@ -180,7 +202,7 @@ function AdminAppointmentDetailPage() {
               </>
             )}
 
-            {/* LUỒNG ĐÃ HỦY (3) */}
+            {/* Nếu đang ở trạng thái ĐÃ HỦY (3) */}
             {appointment.trangThai === 3 && (
               <button
                 onClick={() => handleUpdateStatus(1)}
@@ -192,7 +214,7 @@ function AdminAppointmentDetailPage() {
               </button>
             )}
 
-            {/* LUỒNG ĐÃ KHÁM (2) */}
+            {/* Nếu đang ở trạng thái ĐÃ KHÁM (2) */}
             {appointment.trangThai === 2 && (
               <button
                 onClick={() => handleUpdateStatus(1)}
@@ -216,7 +238,7 @@ function AdminAppointmentDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Cột trái: Thông tin chính */}
+        {/* CỘT TRÁI: Dữ liệu chi tiết Bệnh nhân, Bác sĩ và Triệu chứng */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
@@ -257,6 +279,7 @@ function AdminAppointmentDetailPage() {
                 </div>
               </div>
 
+              {/* Mô tả Triệu chứng */}
               <div className="sm:col-span-2 pt-4 border-t border-slate-50">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">Lý do khám / Triệu chứng</p>
                 <div className="bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200 italic text-sm text-slate-600 leading-relaxed font-medium">
@@ -266,7 +289,7 @@ function AdminAppointmentDetailPage() {
             </div>
           </div>
 
-          {/* Đơn thuốc (Nếu có) */}
+          {/* HIỂN THỊ ĐƠN THUỐC (Nếu kết quả khám đã có đơn thuốc) */}
           {prescription && (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 bg-emerald-50/30 flex items-center justify-between">
@@ -315,7 +338,7 @@ function AdminAppointmentDetailPage() {
           )}
         </div>
 
-        {/* Cột phải: Trạng thái & Thanh toán */}
+        {/* CỘT PHẢI: Quản lý Thanh toán & Tóm tắt chi phí */}
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
             <h3 className="font-bold text-slate-800 mb-4">Quản lý thanh toán</h3>
@@ -356,6 +379,7 @@ function AdminAppointmentDetailPage() {
             </div>
           </div>
 
+          {/* TÓM TẮT CHI PHÍ (Phí khám + Phí thuốc) */}
           <div className="bg-slate-900 rounded-xl p-6 text-white shadow-lg">
             <h3 className="font-bold mb-4 opacity-80">Chi phí dịch vụ</h3>
             <div className="space-y-3">

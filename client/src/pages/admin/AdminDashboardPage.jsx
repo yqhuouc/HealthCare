@@ -5,71 +5,76 @@
  * ============================================================
  *
  * Chức năng:
- * - 4 card thống kê tổng quan: tổng BS, tổng BN, tổng lịch khám, lịch khám hôm nay
- *   (mỗi card có badge % tăng/giảm so với kỳ trước)
- * - Biểu đồ cột: thống kê lịch khám theo tháng (CSS bar chart)
- *   + Dropdown chọn năm (2023-2026)
- * - Bảng 5 lịch khám gần nhất: BN, BS, ngày, trạng thái
- *   + Link "Xem tất cả" → /admin/appointments
- * - Responsive: mobile card view, desktop table view
+ * - 4 card thống kê tổng quan: tổng BS, tổng BN, tổng lịch khám, tổng chuyên khoa
+ * - Biểu đồ cột: thống kê hoạt động đặt lịch trong 14 ngày gần nhất
+ * - Hoạt động gần đây: Danh sách 5 lịch hẹn khám mới nhất
+ * - Responsive: Hỗ trợ hiển thị tốt trên cả máy tính và điện thoại
  *
  * State:
- * - year: năm đang hiển thị trên biểu đồ (mặc định năm hiện tại)
+ * - stats: Dữ liệu tổng quan (số lượng BN, BS, Lịch hẹn, Chuyên khoa)
+ * - chartData: Dữ liệu được xử lý để hiển thị lên biểu đồ cột
+ * - recentAppointments: Danh sách các lịch hẹn mới nhất
  *
- * Dữ liệu: ADMIN_STATS, RECENT_APPOINTMENTS, APPOINTMENT_STATUS_CONFIG,
- *           CHART_DATA từ mockAdminData.js
+ * Dữ liệu: Lấy từ adminStatsService và appointmentService
  * ============================================================
  */
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { adminStatsService } from "../../services/adminStatsService";
 import { appointmentService } from "../../services/appointmentService";
-import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData"; // Vẫn giữ config màu sắc
+import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData"; // Cấu hình màu sắc trạng thái
 
 function AdminDashboardPage() {
   
-  // States cho dữ liệu API
+  // State lưu trữ dữ liệu thống kê tổng quan
   const [stats, setStats] = useState({
     tongBenhNhan: 0,
     tongBacSi: 0,
     tongLichHen: 0,
     tongChuyenKhoa: 0,
   });
+  
+  // State lưu trữ dữ liệu biểu đồ 14 ngày
   const [chartData, setChartData] = useState([]);
+  // State lưu trữ danh sách lịch hẹn gần đây
   const [recentAppointments, setRecentAppointments] = useState([]);
+  // Trạng thái đang tải dữ liệu
   const [loading, setLoading] = useState(true);
 
+  // Effect lấy toàn bộ dữ liệu cần thiết cho Dashboard khi component mount
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Lấy dải ngày: 14 ngày gần nhất
+        // Xác định khoảng thời gian 14 ngày gần nhất cho biểu đồ
         const today = new Date();
         const pastDate = new Date();
-        pastDate.setDate(today.getDate() - 13); // Lấy 14 ngày (bao gồm hôm nay)
+        pastDate.setDate(today.getDate() - 13); // Lấy từ 13 ngày trước đến nay
 
         const tuNgay = pastDate.toISOString().split("T")[0];
         const denNgay = today.toISOString().split("T")[0];
 
+        // Gọi đồng thời các API để tối ưu tốc độ tải trang
         const [tongQuanRes, lichHenRes, appointmentsRes] = await Promise.all([
           adminStatsService.getTongQuan(),
           adminStatsService.getLichHenStats({ tuNgay, denNgay }),
           appointmentService.getAllForAdmin({ page: 1, limit: 5 })
         ]);
 
+        // Cập nhật thống kê tổng quan
         if (tongQuanRes.data) setStats(tongQuanRes.data);
         
-        // Xử lý dữ liệu biểu đồ ngày
+        // XỬ LÝ DỮ LIỆU BIỂU ĐỒ (Hoạt động 14 ngày qua)
         if (lichHenRes.data && lichHenRes.data.lichHenTheoNgay) {
           const rawDays = lichHenRes.data.lichHenTheoNgay;
           
-          // Force Number trên dữ liệu để tránh lỗi BigInt từ API
+          // Chuyển đổi dữ liệu số lượng sang Number để đảm bảo tính toán chính xác
           const cleanDays = rawDays.map(d => ({
             ...d,
             soLuong: Number(d.soLuong || 0)
           }));
 
-          // Tạo mảng 14 ngày liên tục
+          // Chuẩn bị mảng 14 ngày liên tục (điền giá trị 0 cho những ngày không có dữ liệu từ API)
           const formattedChart = [];
           const maxCount = Math.max(...cleanDays.map(d => d.soLuong), 1);
 
@@ -79,6 +84,7 @@ function AdminDashboardPage() {
             const dateStr = d.toISOString().split("T")[0];
             const dateLabel = `${d.getDate()}/${d.getMonth() + 1}`;
             
+            // Tìm dữ liệu tương ứng trong kết quả API
             const match = cleanDays.find(rd => {
               const rdDate = new Date(rd.ngay).toISOString().split("T")[0];
               return rdDate === dateStr;
@@ -86,13 +92,13 @@ function AdminDashboardPage() {
 
             const count = match ? match.soLuong : 0;
             
-            // Tính toán chiều cao
+            // Tính toán chiều cao tương đối của cột biểu đồ (%)
             let heightPercent = "0px";
             if (count > 0) {
-              // Có bệnh nhân: cao tối thiểu 15%, tối đa 100%
+              // Nếu có bệnh nhân: Cao tối thiểu 15% để tránh cột quá lùn
               heightPercent = Math.max(15, (count / maxCount) * 100) + "%";
             } else {
-              // Không có bệnh nhân: vạch kẻ mờ 4px
+              // Nếu không có: Hiển thị một vạch nhỏ 4px đánh dấu
               heightPercent = "4px";
             }
 
@@ -106,6 +112,7 @@ function AdminDashboardPage() {
           setChartData(formattedChart);
         }
 
+        // Cập nhật danh sách hoạt động gần đây
         if (appointmentsRes.data) {
           setRecentAppointments(appointmentsRes.data || []);
         }
@@ -119,7 +126,7 @@ function AdminDashboardPage() {
     fetchData();
   }, []);
 
-  /** Cấu hình 4 card thống kê tổng quan hiển thị trên đầu trang */
+  /** Cấu hình hiển thị cho 4 thẻ thống kê trên cùng */
   const dynamicStatsCards = [
     {
       label: "Tổng số bác sĩ",
@@ -151,13 +158,14 @@ function AdminDashboardPage() {
     },
   ];
 
+  // Hiển thị trạng thái Loading
   if (loading) {
     return <div className="flex justify-center py-10"><span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span></div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* 4 Cards thống kê tổng quan */}
+      {/* KHỐI 1: 4 Cards thống kê nhanh */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {dynamicStatsCards.map((card) => (
           <div
@@ -169,7 +177,7 @@ function AdminDashboardPage() {
                 className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${card.iconBg}`}
               >
                 <span className={`material-symbols-outlined text-2xl ${card.iconColor}`}>
-                  {card.icon}
+                   {card.icon}
                 </span>
               </div>
               
@@ -186,7 +194,7 @@ function AdminDashboardPage() {
         ))}
       </div>
 
-      {/* Biểu đồ hoạt động */}
+      {/* KHỐI 2: Biểu đồ cột thể hiện hoạt động đặt lịch 14 ngày gần đây */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/30">
           <div>
@@ -207,7 +215,7 @@ function AdminDashboardPage() {
                 key={bar.label}
                 className="flex-1 h-full flex flex-col justify-end items-center gap-2 group relative"
               >
-                {/* Custom Tooltip */}
+                {/* Tooltip hiển thị khi di chuột vào cột */}
                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-medium px-2 py-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
                   {bar.count} bệnh nhân
                 </div>
@@ -236,7 +244,7 @@ function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Lịch sử hoạt động (Activity Feed) */}
+      {/* KHỐI 3: Danh sách các hoạt động gần đây (Lịch hẹn mới) */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
           <div>
@@ -260,12 +268,14 @@ function AdminDashboardPage() {
               <p className="text-xs">Chưa có hoạt động nào</p>
             </div>
           ) : (
+            // Hiển thị dưới dạng Timeline
             <div className="space-y-0 relative before:absolute before:inset-y-0 before:left-5 before:w-[1px] before:bg-slate-200">
               {recentAppointments.map((apt) => {
                 const pName = apt.benhNhan?.hoTen || "Ẩn danh";
                 const dName = apt.bacSi?.tenBacSi || "Không rõ";
                 const aptDate = new Date(apt.ngayDat).toLocaleDateString("vi-VN");
                 
+                // Cấu hình Icon và Màu sắc dựa trên trạng thái lịch hẹn
                 const statusIcons = {
                   0: { icon: "pending_actions", color: "text-amber-500", bg: "bg-amber-50" },
                   1: { icon: "check_circle", color: "text-blue-500", bg: "bg-blue-50" },

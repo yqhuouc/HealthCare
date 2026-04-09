@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { specialtyService } from "../../services/specialtyService";
 
+// Danh sách các biểu tượng (icon) được hỗ trợ cho chuyên khoa
 const ICON_OPTIONS = [
   { value: "medical_services", label: "Dịch vụ y tế (Mặc định)" },
   { value: "ecg", label: "Tim mạch (ecg)" },
@@ -20,38 +21,61 @@ const ICON_OPTIONS = [
   { value: "emergency", label: "Cấp cứu (emergency)" },
 ];
 
+/**
+ * Trang AdminAddSpecialtyPage - Thêm mới một chuyên khoa khám bệnh
+ * Cho phép nhập tên, icon, mô tả và tải lên ảnh đại diện cho chuyên khoa.
+ */
 function AdminAddSpecialtyPage() {
   const navigate = useNavigate();
+  // Ref để tham chiếu đến thẻ input file ẩn
   const fileInputRef = useRef(null);
+  
+  // Trạng thái xử lý gửi dữ liệu
   const [loading, setLoading] = useState(false);
+  
+  // State quản lý thông tin cơ bản của chuyên khoa
   const [form, setForm] = useState({
     name: "",
     icon: "medical_services",
     description: "",
-    duration: 20,
+    duration: 20, // Thời gian khám mặc định là 20 phút
   });
   
-  // State cho ảnh upload
+  // State quản lý tệp tin ảnh và URL xem trước
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
+  /**
+   * Cập nhật state form khi các trường input thay đổi
+   * @param {Object} e - Event thay đổi
+   */
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  /**
+   * Xử lý khi người dùng chọn tệp tin ảnh
+   * @param {Object} e - Event chọn file
+   */
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Kiểm tra dung lượng file (tối đa 2MB)
       if (file.size > 2 * 1024 * 1024) {
         toast.error("Ảnh không được vượt quá 2MB");
         return;
       }
       setSelectedFile(file);
+      // Tạo URL tạm thời để hiển thị ảnh xem trước
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
+  /**
+   * Gửi dữ liệu chuyên khoa mới lên server
+   */
   const handleSave = async () => {
+    // Validate tên chuyên khoa
     if (!form.name.trim()) {
       toast.warn("Vui lòng nhập tên chuyên khoa.");
       return;
@@ -59,7 +83,7 @@ function AdminAddSpecialtyPage() {
     
     setLoading(true);
     try {
-      // 1. Tạo record chuyên khoa trước
+      // 1. Tạo record chuyên khoa trong cơ sở dữ liệu
       const createRes = await specialtyService.create({
         tenChuyenKhoa: form.name.trim(),
         icon: form.icon,
@@ -67,13 +91,14 @@ function AdminAddSpecialtyPage() {
         thoiLuongKham: Number(form.duration) || 20,
       });
 
-      // 2. Nếu có chọn ảnh, tiến hành upload
+      // 2. Nếu tạo thành công và có chọn ảnh, tiến hành tải ảnh lên server
       if (selectedFile && createRes.success) {
         const specialtyId = createRes.data.id;
         await specialtyService.uploadAnh(specialtyId, selectedFile);
       }
 
       toast.success(`Đã thêm chuyên khoa "${form.name}" thành công!`);
+      // Quay lại trang danh sách chuyên khoa
       navigate("/admin/specialties");
     } catch (error) {
       console.error(error);
@@ -85,6 +110,7 @@ function AdminAddSpecialtyPage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-10">
+      {/* Breadcrumb điều hướng */}
       <div className="flex items-center gap-2 mb-6 text-sm">
         <Link to="/admin/specialties" className="text-slate-500 hover:text-primary transition-colors">
           Quản lý chuyên khoa
@@ -93,16 +119,18 @@ function AdminAddSpecialtyPage() {
         <span className="text-slate-900 font-medium">Thêm chuyên khoa mới</span>
       </div>
 
+      {/* Tiêu đề trang */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Thêm chuyên khoa mới</h2>
         <p className="text-slate-500 text-sm mt-1">Khởi tạo danh mục chuyên khoa mới vào hệ thống quản lý.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Cột trái: Thông tin chính */}
+        {/* Cột trái: Form nhập thông tin chi tiết */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
             <div className="grid grid-cols-1 gap-6">
+              {/* Tên chuyên khoa */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
                   Tên chuyên khoa <span className="text-rose-500">*</span>
@@ -116,6 +144,7 @@ function AdminAddSpecialtyPage() {
                 />
               </div>
 
+              {/* Thời gian khám */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
                   Thời lượng khám trung bình (Phút)
@@ -132,6 +161,7 @@ function AdminAddSpecialtyPage() {
                 />
               </div>
 
+              {/* Mô tả */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả chuyên khoa</label>
                 <textarea
@@ -147,9 +177,9 @@ function AdminAddSpecialtyPage() {
           </div>
         </div>
 
-        {/* Cột phải: Media (Icon & Ảnh) */}
+        {/* Cột phải: Chọn Icon và Tải ảnh */}
         <div className="space-y-6">
-          {/* Section: Icon */}
+          {/* Section: Chọn Icon */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 overflow-hidden">
             <label className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-xl text-primary">category</span>
@@ -170,6 +200,7 @@ function AdminAddSpecialtyPage() {
                 ))}
               </select>
 
+              {/* Hiển thị icon xem trước */}
               <div className="flex items-center justify-center p-6 bg-slate-50 border border-slate-100 rounded-2xl border-dashed">
                 <div className="flex flex-col items-center gap-2">
                   <div className="size-16 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-slate-100">
@@ -183,7 +214,7 @@ function AdminAddSpecialtyPage() {
             </div>
           </div>
 
-          {/* Section: Ảnh đại diện */}
+          {/* Section: Khu vực tải ảnh chuyên khoa */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 overflow-hidden">
             <label className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-xl text-primary">image</span>
@@ -208,6 +239,7 @@ function AdminAddSpecialtyPage() {
                 </>
               )}
             </div>
+            {/* Input file ẩn bên dưới để kích hoạt khi click vào khung preview */}
             <input
               type="file"
               ref={fileInputRef}
@@ -220,6 +252,7 @@ function AdminAddSpecialtyPage() {
         </div>
       </div>
 
+      {/* Khu vực nút bấm Hủy và Lưu */}
       <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-3">
         <button
           onClick={() => navigate("/admin/specialties")}
