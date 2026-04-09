@@ -15,13 +15,13 @@
  * - statusFilter: trạng thái đang lọc ("all" hoặc cụ thể)
  * - currentPage: trang hiện tại
  *
- * Dữ liệu: ADMIN_APPOINTMENT_LIST, APPOINTMENT_STATUS_CONFIG từ mockAdminData.js
+ * Dữ liệu: APPOINTMENT_STATUS_CONFIG từ appointmentConstants.js
  * ============================================================
  */
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData";
+import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants";
 import { appointmentService } from "../../services/appointmentService";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 

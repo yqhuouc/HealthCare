@@ -22,7 +22,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { adminStatsService } from "../../services/adminStatsService";
 import { appointmentService } from "../../services/appointmentService";
-import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData"; // Cấu hình màu sắc trạng thái
+import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants"; // Cấu hình màu sắc trạng thái
 
 function AdminDashboardPage() {
   

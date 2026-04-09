@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { patientService } from "../../services/patientService";
 import { appointmentService } from "../../services/appointmentService";
-import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData";
+import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants";
 import { getInitials } from "../../utils/formatters";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 

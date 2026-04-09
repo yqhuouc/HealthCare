@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { appointmentService } from "../../services/appointmentService";
-import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData";
+import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { getInitials } from "../../utils/formatters";
 
