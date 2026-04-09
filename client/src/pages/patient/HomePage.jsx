@@ -17,8 +17,7 @@ import { Link } from "react-router-dom";
 import { formatPrice } from "../../utils/formatters";
 import { specialtyService } from "../../services/specialtyService";
 import { doctorService } from "../../services/doctorService";
-
-/** Hàm format giá tiền sang dạng VND: 150000 → "150.000đ" */
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 // Icon mặc định cho chuyên khoa nếu không có dữ liệu trong DB
 const DEFAULT_ICON = "medical_services";
@@ -158,8 +157,8 @@ function SpecialtiesSection({ specialties, loading }) {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+          <div className="flex justify-center py-12">
+            <LoadingSpinner size="size-10" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -240,8 +239,8 @@ function FeaturedDoctorsSection({ doctors, loading }) {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+          <div className="flex justify-center py-12">
+            <LoadingSpinner size="size-10" />
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">

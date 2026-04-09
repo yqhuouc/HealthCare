@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { doctorService } from "../../services/doctorService";
 import { specialtyService } from "../../services/specialtyService";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 function AdminAddDoctorPage() {
   const navigate = useNavigate();
@@ -220,7 +221,7 @@ function AdminAddDoctorPage() {
             }`}
           >
             {loading ? (
-              <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+              <LoadingSpinner size="size-5" color="text-white" />
             ) : (
               <span className="material-symbols-outlined text-sm">how_to_reg</span>
             )}

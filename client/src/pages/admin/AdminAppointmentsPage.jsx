@@ -23,7 +23,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData";
 import { appointmentService } from "../../services/appointmentService";
-import { getInitials } from "../../utils/formatters";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 // Mapping from numeric status in DB to string keys in APPOINTMENT_STATUS_CONFIG
 const STATUS_MAP = {
@@ -47,11 +47,22 @@ function AdminAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
   const [totalAppointments, setTotalAppointments] = useState(0);
+
+  // Debounce search logic
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const fetchAppointments = useCallback(async () => {
     setLoading(true);
@@ -59,6 +70,7 @@ function AdminAppointmentsPage() {
       const params = {
         page,
         limit: ITEMS_PER_PAGE,
+        search: debouncedSearch,
         ...(statusFilter !== "all" && { trangThai: statusFilter }),
         ...(dateFrom && { ngayDat: dateFrom }),
       };
@@ -74,7 +86,19 @@ function AdminAppointmentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, dateFrom]);
+  }, [page, statusFilter, dateFrom, debouncedSearch]);
+
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      await appointmentService.updateTrangThai(id, newStatus);
+      const labels = { 0: "Đã hoàn tác (về chờ)", 1: "Đã xác nhận lịch", 2: "Đã hoàn thành khám", 3: "Đã hủy lịch" };
+      toast.success(labels[newStatus] || "Cập nhật thành công");
+      fetchAppointments(); // Tải lại danh sách
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Lỗi cập nhật trạng thái");
+    }
+  };
 
   useEffect(() => {
     fetchAppointments();
@@ -94,41 +118,72 @@ function AdminAppointmentsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex flex-wrap gap-2">
-            {STATUS_FILTERS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setStatusFilter(f.value)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  statusFilter === f.value ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8 space-y-4">
+        {/* Thanh tìm kiếm đa năng */}
+        <div className="relative group">
+          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+            search
+          </span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm kiếm theo Mã lịch (VD: LK25), tên bác sĩ hoặc tên bệnh nhân..."
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-sm font-medium"
+          />
+        </div>
+
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          {/* Nhóm Filter bên trái */}
+          <div className="space-y-4 flex-1">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Bộ lọc trạng thái</p>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setStatusFilter(f.value)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                    statusFilter === f.value 
+                      ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
+                      : "bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-700 shadow-sm"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div>
-              <label className="text-xs text-slate-500 block mb-1">Từ ngày</label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-              />
+
+          {/* Nhóm Filter Ngày bên phải */}
+          <div className="flex flex-wrap items-end gap-3 lg:border-l lg:border-slate-100 lg:pl-6">
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Từ ngày</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">calendar_today</span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-slate-500 block mb-1">Đến ngày</label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-              />
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Đến ngày</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">event</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm"
+                />
+              </div>
             </div>
-            <button onClick={handleFilter} className="mt-6 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
+            <button 
+              onClick={handleFilter} 
+              className="h-[42px] px-6 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+            >
               Lọc
             </button>
           </div>
@@ -152,7 +207,7 @@ function AdminAppointmentsPage() {
               {loading ? (
                 <tr>
                   <td colSpan="6" className="text-center py-10">
-                    <span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span>
+                    <LoadingSpinner size="size-10" />
                   </td>
                 </tr>
               ) : appointments.length === 0 ? (
@@ -173,12 +228,7 @@ function AdminAppointmentsPage() {
                   <tr key={apt.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-5 py-4 font-medium text-slate-800">LK{apt.id}</td>
                     <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`size-9 rounded-full flex items-center justify-center text-xs font-bold bg-primary/10 text-primary`}>
-                          {getInitials(patientName)}
-                        </div>
-                        <span className="font-medium text-slate-800">{patientName}</span>
-                      </div>
+                      <span className="font-bold text-slate-900">{patientName}</span>
                     </td>
                     <td className="px-5 py-4 text-slate-600">{doctorName}</td>
                     <td className="px-5 py-4 text-slate-600">{timeString} - {formattedDate}</td>
@@ -189,10 +239,40 @@ function AdminAppointmentsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 flex items-center gap-2">
                       <Link to={`/admin/appointments/${apt.id}`} className="text-primary font-medium hover:underline text-sm">
                         Xem chi tiết
                       </Link>
+                      {apt.trangThai === 0 && (
+                        <>
+                          <button onClick={() => handleUpdateStatus(apt.id, 1)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-100" title="Xác nhận">
+                            <span className="material-symbols-outlined text-sm">check</span>
+                          </button>
+                          <button onClick={() => handleUpdateStatus(apt.id, 3)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-rose-100" title="Hủy lịch">
+                            <span className="material-symbols-outlined text-sm">close</span>
+                          </button>
+                        </>
+                      )}
+                      {apt.trangThai === 1 && (
+                        <>
+                          <button onClick={() => handleUpdateStatus(apt.id, 2)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-100" title="Hoàn tất khám">
+                            <span className="material-symbols-outlined text-sm">task_alt</span>
+                          </button>
+                          <button onClick={() => handleUpdateStatus(apt.id, 0)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200" title="Hoàn tác về chờ">
+                            <span className="material-symbols-outlined text-sm">undo</span>
+                          </button>
+                        </>
+                      )}
+                      {apt.trangThai === 2 && (
+                        <button onClick={() => handleUpdateStatus(apt.id, 1)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200" title="Hoàn tác khám (về xác nhận)">
+                          <span className="material-symbols-outlined text-sm">undo</span>
+                        </button>
+                      )}
+                      {apt.trangThai === 3 && (
+                        <button onClick={() => handleUpdateStatus(apt.id, 1)} className="p-1.5 text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/10" title="Khôi phục lịch">
+                          <span className="material-symbols-outlined text-sm">history</span>
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -211,28 +291,57 @@ function AdminAppointmentsPage() {
             const timeString = apt.gioBatDau ? new Date(apt.gioBatDau).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "";
             
             return (
-              <div key={apt.id} className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`size-9 rounded-full flex items-center justify-center text-xs font-bold bg-primary/10 text-primary`}>
-                      {getInitials(patientName)}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-800">{patientName}</p>
-                      <p className="text-xs text-slate-500">LK{apt.id}</p>
+              <div key={apt.id} className="p-5 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="font-black text-slate-900 leading-none">{patientName}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-widest">LK{apt.id}</span>
+                      <span className="text-[10px] text-slate-300">•</span>
+                      <span className="text-[10px] font-bold text-slate-400">{timeString} - {formattedDate}</span>
                     </div>
                   </div>
                   {config && (
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${config.className}`}>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${config.className}`}>
                       {config.label}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-600">{doctorName}</p>
-                <p className="text-xs text-slate-500">{timeString} - {formattedDate}</p>
-                <Link to={`/admin/appointments/${apt.id}`} className="inline-block text-primary font-medium text-sm hover:underline">
-                  Xem chi tiết
-                </Link>
+                
+                <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-sm text-slate-400">person_filled</span>
+                    <p className="text-xs font-bold text-slate-600">{doctorName}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm text-slate-400">medical_services</span>
+                    <p className="text-[11px] font-medium text-slate-500 italic truncate opacity-80">"{apt.trieuChung || "—"}"</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Link to={`/admin/appointments/${apt.id}`} className="flex-1 text-center py-2.5 bg-white text-slate-500 text-[10px] font-black uppercase rounded-xl border border-slate-200 hover:bg-slate-50 transition-all shadow-sm tracking-widest">
+                    Hồ sơ
+                  </Link>
+                  {apt.trangThai === 0 && (
+                    <>
+                      <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-[1.5] py-2.5 bg-primary text-white text-[10px] font-black uppercase rounded-xl shadow-lg shadow-primary/20 tracking-widest">Duyệt</button>
+                      <button onClick={() => handleUpdateStatus(apt.id, 3)} className="aspect-square flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl border border-rose-100"><span className="material-symbols-outlined text-lg">close</span></button>
+                    </>
+                  )}
+                  {apt.trangThai === 1 && (
+                    <>
+                      <button onClick={() => handleUpdateStatus(apt.id, 2)} className="flex-[1.5] py-2.5 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-xl shadow-lg shadow-emerald-200 tracking-widest">Xong</button>
+                      <button onClick={() => handleUpdateStatus(apt.id, 0)} className="aspect-square flex items-center justify-center bg-slate-100 text-slate-500 rounded-xl"><span className="material-symbols-outlined text-lg font-bold">undo</span></button>
+                    </>
+                  )}
+                  {apt.trangThai === 2 && (
+                    <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-1 py-2.5 bg-slate-100 text-slate-400 text-[10px] font-black uppercase rounded-xl tracking-widest hover:text-slate-600">Hoàn tác xong</button>
+                  )}
+                  {apt.trangThai === 3 && (
+                    <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-1 py-2.5 bg-primary/5 text-primary text-[10px] font-black uppercase rounded-xl border border-primary/10 tracking-widest">Khôi phục</button>
+                  )}
+                </div>
               </div>
             );
           })}

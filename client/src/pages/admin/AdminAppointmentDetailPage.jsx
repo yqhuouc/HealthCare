@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { appointmentService } from "../../services/appointmentService";
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { getInitials } from "../../utils/formatters";
 
 const STATUS_MAP = {
@@ -78,9 +79,7 @@ function AdminAppointmentDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
-          progress_activity
-        </span>
+        <LoadingSpinner size="size-12" />
       </div>
     );
   }
@@ -100,43 +99,119 @@ function AdminAppointmentDetailPage() {
           Quản lý lịch khám
         </Link>
         <span className="text-slate-300">/</span>
-        <span className="text-slate-900 font-medium">Chi tiết LK{id}</span>
+        <span className="text-slate-900 font-bold">Chi tiết LK{id}</span>
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-            Chi tiết lịch khám #LK{id}
-            {statusCfg && (
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusCfg.className}`}>
-                {statusCfg.label}
-              </span>
-            )}
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Ngày đặt: {new Date(appointment.ngayDat).toLocaleDateString("vi-VN")} | 
-            Giờ: {appointment.gioBatDau ? new Date(appointment.gioBatDau).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "—"}
-          </p>
+      {/* HEADER SECTION: Tiêu đề & Trạng thái */}
+      <div className="space-y-4 pb-6 border-b border-slate-100">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Chi tiết lịch khám #LK{id}</h2>
+          {statusCfg && (
+            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${statusCfg.className}`}>
+              {statusCfg.label}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          {appointment.trangThai === 0 && (
+        
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
+            <span className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm">calendar_month</span>
+              {new Date(appointment.ngayDat).toLocaleDateString("vi-VN")}
+            </span>
+            <span className="text-slate-200">|</span>
+            <span className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm">schedule</span>
+              {appointment.gioBatDau ? new Date(appointment.gioBatDau).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "—"}
+            </span>
+          </div>
+
+          {/* ACTION BUTTONS GROUP */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* LUỒNG CHỜ XÁC NHẬN (0) */}
+            {appointment.trangThai === 0 && (
+              <>
+                <button
+                  onClick={() => handleUpdateStatus(1)}
+                  disabled={updating}
+                  className="px-4 py-2 bg-primary text-white text-[10px] font-black rounded-xl hover:bg-primary/90 transition shadow-md shadow-primary/10 flex items-center gap-2 uppercase tracking-widest"
+                >
+                  <span className="material-symbols-outlined text-base">check_circle</span>
+                  Duyệt lịch
+                </button>
+                <button
+                  onClick={() => handleUpdateStatus(3)}
+                  disabled={updating}
+                  className="px-4 py-2 bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-black rounded-xl hover:bg-rose-100 transition flex items-center gap-2 uppercase tracking-widest"
+                >
+                  <span className="material-symbols-outlined text-base">cancel</span>
+                  Hủy
+                </button>
+              </>
+            )}
+
+            {/* LUỒNG ĐÃ XÁC NHẬN (1) */}
+            {appointment.trangThai === 1 && (
+              <>
+                <button
+                  onClick={() => handleUpdateStatus(2)}
+                  disabled={updating}
+                  className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-xl hover:bg-emerald-700 transition shadow-md shadow-emerald-100 flex items-center gap-2 uppercase tracking-widest"
+                >
+                  <span className="material-symbols-outlined text-base">task_alt</span>
+                  Xong
+                </button>
+                <button
+                  onClick={() => handleUpdateStatus(0)}
+                  disabled={updating}
+                  className="px-4 py-2 bg-slate-100 text-slate-500 text-[10px] font-black rounded-xl hover:bg-slate-200 transition flex items-center gap-2 uppercase tracking-widest"
+                >
+                  <span className="material-symbols-outlined text-base">undo</span>
+                  Hoàn tác
+                </button>
+                <button
+                  onClick={() => handleUpdateStatus(3)}
+                  disabled={updating}
+                  className="px-4 py-2 bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-black rounded-xl hover:bg-rose-100 transition flex items-center gap-2 uppercase tracking-widest"
+                >
+                  <span className="material-symbols-outlined text-base">cancel</span>
+                  Hủy
+                </button>
+              </>
+            )}
+
+            {/* LUỒNG ĐÃ HỦY (3) */}
+            {appointment.trangThai === 3 && (
+              <button
+                onClick={() => handleUpdateStatus(1)}
+                disabled={updating}
+                className="px-4 py-2 bg-primary text-white text-[10px] font-black rounded-xl hover:bg-primary/90 transition shadow-md shadow-primary/10 flex items-center gap-2 uppercase tracking-widest"
+              >
+                <span className="material-symbols-outlined text-base">history</span>
+                Khôi phục
+              </button>
+            )}
+
+            {/* LUỒNG ĐÃ KHÁM (2) */}
+            {appointment.trangThai === 2 && (
+              <button
+                onClick={() => handleUpdateStatus(1)}
+                disabled={updating}
+                className="px-4 py-2 bg-slate-100 text-slate-500 text-[10px] font-black rounded-xl hover:bg-slate-200 transition flex items-center gap-2 uppercase tracking-widest"
+              >
+                <span className="material-symbols-outlined text-base">undo</span>
+                Hoàn tác xong
+              </button>
+            )}
+            
             <button
-              onClick={() => handleUpdateStatus(1)}
-              disabled={updating}
-              className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition shadow-sm"
+              onClick={() => navigate(-1)}
+              className="flex items-center justify-center gap-2 px-4 py-2 text-[10px] font-black bg-white border border-slate-200 text-slate-400 rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest"
             >
-              Xác nhận lịch
+              <span className="material-symbols-outlined text-sm">close</span>
+              Thoát
             </button>
-          )}
-          {appointment.trangThai < 3 && (
-            <button
-              onClick={() => handleUpdateStatus(3)}
-              disabled={updating}
-              className="px-4 py-2 bg-rose-50 text-rose-600 border border-rose-200 text-sm font-semibold rounded-lg hover:bg-rose-100 transition"
-            >
-              Hủy lịch
-            </button>
-          )}
+          </div>
         </div>
       </div>
 
@@ -147,36 +222,46 @@ function AdminAppointmentDetailPage() {
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
               <h3 className="font-bold text-slate-800">Thông tin khám bệnh</h3>
             </div>
-            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-8">
+              {/* Thông tin Bệnh nhân */}
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Bệnh nhân</p>
-                <div className="flex items-center gap-3 mt-2">
-                  <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Thông tin Bệnh nhân</p>
+                <div className="flex items-center gap-4 group">
+                  <div className="size-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary font-black text-lg border border-primary/10 group-hover:bg-primary transition-colors group-hover:text-white">
                     {getInitials(patient.hoTen || "??")}
                   </div>
                   <div>
-                    <p className="font-bold text-slate-900">{patient.hoTen}</p>
-                    <p className="text-sm text-slate-500">{patient.soDienThoai}</p>
+                    <p className="font-black text-slate-800 text-base leading-tight">{patient.hoTen}</p>
+                    <p className="text-xs font-bold text-slate-400 mt-1 flex items-center gap-1.5 cursor-default">
+                      <span className="material-symbols-outlined text-[10px] text-primary font-black">call</span>
+                      {patient.soDienThoai}
+                    </p>
                   </div>
                 </div>
               </div>
+              
+              {/* Bác sĩ phụ trách */}
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Bác sĩ phụ trách</p>
-                <div className="flex items-center gap-3 mt-2">
-                  <div className="size-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold">
-                    <span className="material-symbols-outlined">person</span>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Bác sĩ phụ trách</p>
+                <div className="flex items-center gap-4 group">
+                  <div className="size-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100 group-hover:bg-slate-800 group-hover:text-white transition-colors">
+                    <span className="material-symbols-outlined text-2xl">medical_services</span>
                   </div>
                   <div>
-                    <p className="font-bold text-slate-900">{doctor.tenBacSi}</p>
-                    <p className="text-sm text-slate-500">{doctor.chuyenKhoa?.tenChuyenKhoa}</p>
+                    <p className="font-black text-slate-800 text-base leading-tight">{doctor.tenBacSi}</p>
+                    <p className="text-xs font-bold text-primary mt-1 flex items-center gap-1.5 cursor-default uppercase tracking-tighter">
+                      <span className="material-symbols-outlined text-[10px] font-black">stethoscope</span>
+                      {doctor.chuyenKhoa?.tenChuyenKhoa}
+                    </p>
                   </div>
                 </div>
               </div>
-              <div className="sm:col-span-2">
-                <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Triệu chứng / Ghi chú đặt lịch</p>
-                <p className="mt-2 text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100 italic">
-                  "{appointment.trieuChung || "Bệnh nhân không để lại ghi chú."}"
-                </p>
+
+              <div className="sm:col-span-2 pt-4 border-t border-slate-50">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">Lý do khám / Triệu chứng</p>
+                <div className="bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200 italic text-sm text-slate-600 leading-relaxed font-medium">
+                  "{appointment.trieuChung || "Bệnh nhân không để lại ghi chú triệu chứng."}"
+                </div>
               </div>
             </div>
           </div>

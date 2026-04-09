@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
+import LoadingSpinner from "./components/common/LoadingSpinner";
 /* Layout */
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
@@ -34,9 +34,11 @@ function App() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background-light">
-        <div className="text-center">
-          <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
-          <p className="mt-4 text-slate-500">Đang tải...</p>
+        <div className="flex flex-col items-center gap-4">
+          <LoadingSpinner size="size-12" color="text-primary" />
+          <p className="text-slate-400 font-medium text-sm tracking-wide animate-pulse uppercase">
+            Đang khởi tạo hệ thống...
+          </p>
         </div>
       </div>
     );

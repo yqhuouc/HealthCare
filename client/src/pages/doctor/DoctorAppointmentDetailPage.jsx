@@ -47,7 +47,24 @@ function DoctorAppointmentDetailPage() {
   // State quản lý dữ liệu chính
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const handleUpdateStatus = async (newStatus) => {
+    setUpdating(true);
+    try {
+      await appointmentService.updateTrangThai(id, newStatus);
+      toast.success("Cập nhật trạng thái thành công!");
+      // Refresh data
+      const res = await appointmentService.getById(id);
+      if (res.success) setAppointment(res.data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Lỗi khi cập nhật trạng thái");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   // State quản lý Form khám bệnh & đơn thuốc
   const [chanDoan, setChanDoan] = useState("");
@@ -229,15 +246,90 @@ function DoctorAppointmentDetailPage() {
             Bác sĩ vui lòng kiểm tra thông tin và kê đơn thuốc chính xác
           </p>
         </div>
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-black bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm"
-        >
-          <span className="material-symbols-outlined text-sm font-bold">
-            arrow_back
-          </span>
-          Quay lại
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* LUỒNG CHỜ XÁC NHẬN (0) */}
+          {appointment.trangThai === 0 && (
+            <>
+              <button
+                onClick={() => handleUpdateStatus(1)}
+                disabled={updating}
+                className="px-5 py-2.5 bg-blue-600 text-white text-xs font-black rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center gap-2 uppercase tracking-widest"
+              >
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+                Xác nhận lịch
+              </button>
+              <button
+                onClick={() => handleUpdateStatus(3)}
+                disabled={updating}
+                className="px-5 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 text-xs font-black rounded-xl hover:bg-rose-100 transition flex items-center gap-2 uppercase tracking-widest"
+              >
+                <span className="material-symbols-outlined text-lg">cancel</span>
+                Hủy lịch
+              </button>
+            </>
+          )}
+
+          {/* LUỒNG ĐÃ XÁC NHẬN (1) */}
+          {appointment.trangThai === 1 && (
+            <>
+              <button
+                onClick={() => handleUpdateStatus(0)}
+                disabled={updating}
+                className="px-5 py-2.5 bg-slate-100 text-slate-500 text-xs font-black rounded-xl hover:bg-slate-200 transition flex items-center gap-2 uppercase tracking-widest"
+              >
+                <span className="material-symbols-outlined text-lg">undo</span>
+                Hoàn tác
+              </button>
+              <button
+                onClick={() => handleUpdateStatus(3)}
+                disabled={updating}
+                className="px-5 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 text-xs font-black rounded-xl hover:bg-rose-100 transition flex items-center gap-2 uppercase tracking-widest"
+              >
+                <span className="material-symbols-outlined text-lg">cancel</span>
+                Hủy lịch
+              </button>
+            </>
+          )}
+
+          {/* LUỒNG ĐÃ HỦY (3) */}
+          {appointment.trangThai === 3 && (
+            <button
+              onClick={() => handleUpdateStatus(1)}
+              disabled={updating}
+              className="px-5 py-2.5 bg-primary text-white text-xs font-black rounded-xl hover:bg-primary/90 transition shadow-lg shadow-primary/20 flex items-center gap-2 uppercase tracking-widest"
+            >
+              <span className="material-symbols-outlined text-lg">history</span>
+              Khôi phục lịch
+            </button>
+          )}
+
+          <div className="h-8 w-px bg-slate-200 mx-2 hidden sm:block" />
+
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-black bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm font-bold">
+              arrow_back
+            </span>
+            Quay lại
+          </button>
+        </div>
+      </div>
+
+      {/* HIỂN THỊ TRẠNG THÁI HIỆN TẠI (Current Status Badge) */}
+      <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 w-fit">
+        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trạng thái hiện tại:</span>
+        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
+          appointment.trangThai === 0 ? "bg-amber-100 text-amber-600" :
+          appointment.trangThai === 1 ? "bg-blue-100 text-blue-600" :
+          appointment.trangThai === 2 ? "bg-emerald-100 text-emerald-600" :
+          "bg-rose-100 text-rose-600"
+        }`}>
+          {appointment.trangThai === 0 ? "Chờ xác nhận" :
+           appointment.trangThai === 1 ? "Đã xác nhận" :
+           appointment.trangThai === 2 ? "Đã khám hoàn tất" : "Đã hủy"}
+        </span>
       </div>
 
       {/* THÔNG TIN BỆNH NHÂN (Patient Info Section) */}
@@ -506,8 +598,8 @@ function DoctorAppointmentDetailPage() {
       <div className="pt-6 pb-20">
         <button
           onClick={handleSubmit}
-          disabled={submitting}
-          className="w-full flex items-center justify-center gap-3 py-5 bg-primary text-white text-base font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none"
+          disabled={submitting || (appointment.trangThai !== 1 && appointment.trangThai !== 2)}
+          className="w-full flex items-center justify-center gap-3 py-5 bg-emerald-600 text-white text-base font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-200 hover:shadow-emerald-300 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none"
         >
           {submitting ? (
             <span className="material-symbols-outlined animate-spin font-bold">
@@ -515,14 +607,16 @@ function DoctorAppointmentDetailPage() {
             </span>
           ) : (
             <span className="material-symbols-outlined font-bold">
-              check_circle
+              {appointment.trangThai === 2 ? "edit_note" : "task_alt"}
             </span>
           )}
           {submitting
             ? "Đang xử lý dữ liệu..."
-            : hasPrescription
+            : appointment.trangThai === 2
               ? "Cập nhật hồ sơ bệnh án"
-              : "Hoàn tất & Gửi kết quả cho bệnh nhân"}
+              : appointment.trangThai === 1
+                ? "Hoàn tất khám & Gửi kết quả"
+                : "Vui lòng xác nhận lịch trước khi khám"}
         </button>
         <div className="flex items-center justify-center gap-2 mt-6 text-slate-400 text-[10px] font-bold uppercase tracking-tighter italic">
           <span className="material-symbols-outlined text-xs">

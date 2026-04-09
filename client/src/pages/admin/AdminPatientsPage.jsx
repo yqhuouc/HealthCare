@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { patientService } from "../../services/patientService";
 import ConfirmModal from "../../components/ui/ConfirmModal";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -149,7 +150,7 @@ export default function AdminPatientsPage() {
               {loading ? (
                 <tr>
                   <td colSpan="5" className="text-center py-24">
-                    <span className="material-symbols-outlined animate-spin text-primary/30 text-5xl">progress_activity</span>
+                    <LoadingSpinner size="size-12" />
                   </td>
                 </tr>
               ) : patients.length === 0 ? (

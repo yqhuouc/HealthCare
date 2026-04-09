@@ -6,6 +6,7 @@ import { specialtyService } from "../../services/specialtyService";
 import { adminStatsService } from "../../services/adminStatsService";
 import { formatPrice } from "../../utils/formatters";
 import ConfirmModal from "../../components/ui/ConfirmModal";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -187,7 +188,7 @@ export default function AdminDoctorsPage() {
               {loading ? (
                 <tr>
                   <td colSpan="6" className="py-24 text-center">
-                    <span className="material-symbols-outlined animate-spin text-5xl text-primary/30">progress_activity</span>
+                    <LoadingSpinner size="size-12" />
                   </td>
                 </tr>
               ) : doctors.length === 0 ? (

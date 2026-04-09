@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { patientService } from "../../services/patientService";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 function AdminEditPatientPage() {
   const { id } = useParams();
@@ -76,10 +77,8 @@ function AdminEditPatientPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
-          progress_activity
-        </span>
+      <div className="flex justify-center items-center h-64">
+        <LoadingSpinner size="size-12" />
       </div>
     );
   }
@@ -258,11 +257,9 @@ function AdminEditPatientPage() {
               className="flex-1 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {submitting ? (
-                <span className="material-symbols-outlined animate-spin">
-                  progress_activity
-                </span>
+                <LoadingSpinner size="size-5" color="text-white" />
               ) : (
-                <span className="material-symbols-outlined">save</span>
+                <span className="material-symbols-outlined text-sm">save</span>
               )}
               Lưu thay đổi
             </button>

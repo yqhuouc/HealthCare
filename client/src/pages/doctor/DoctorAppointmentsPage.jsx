@@ -143,7 +143,7 @@ function DoctorAppointmentsPage() {
       setAppointments((prev) =>
         prev.map((a) => (a.id === id ? { ...a, trangThai: newStatus } : a))
       );
-      const labels = { 0: "Đã khôi phục", 1: "Đã xác nhận", 2: "Đã hoàn thành", 3: "Đã hủy" };
+      const labels = { 0: "Đã hoàn tác (về chờ)", 1: "Đã xác nhận lịch", 2: "Đã hoàn thành khám", 3: "Đã hủy lịch" };
       toast.success(labels[newStatus] || "Cập nhật thành công");
     } catch (err) {
       toast.error(err.response?.data?.message || "Lỗi cập nhật trạng thái");
@@ -283,21 +283,21 @@ function DoctorAppointmentsPage() {
                     <div className="flex items-center gap-2 pt-1">
                       {apt.trangThai === 0 && (
                         <>
-                          <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 border border-emerald-100">Xác nhận</button>
+                          <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-blue-600 bg-blue-50 border border-blue-100">Xác nhận</button>
                           <button onClick={() => handleUpdateStatus(apt.id, 3)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-rose-500 bg-rose-50 border border-rose-100">Hủy</button>
                         </>
                       )}
                       {apt.trangThai === 1 && (
                         <>
-                          <button onClick={() => handleUpdateStatus(apt.id, 2)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-blue-600 bg-blue-50 border border-blue-100">Hoàn thành</button>
-                          <button onClick={() => handleUpdateStatus(apt.id, 3)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-rose-500 bg-rose-50 border border-rose-100">Hủy</button>
+                          <Link to={`/doctor/appointments/${apt.id}`} className="flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 border border-emerald-100">Khám bệnh</Link>
+                          <button onClick={() => handleUpdateStatus(apt.id, 0)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-slate-500 bg-slate-50 border border-slate-100">Hoàn tác</button>
                         </>
                       )}
                       {apt.trangThai === 2 && (
-                        <Link to={`/doctor/appointments/${apt.id}`} className="flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase text-primary bg-primary/5 border border-primary/10">Kết quả</Link>
+                        <Link to={`/doctor/appointments/${apt.id}`} className="flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase text-primary bg-primary/5 border border-primary/10 tracking-widest">Xem hồ sơ</Link>
                       )}
                       {apt.trangThai === 3 && (
-                        <button onClick={() => handleUpdateStatus(apt.id, 0)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-slate-600 bg-slate-100 border border-slate-200">Khôi phục</button>
+                        <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase text-primary bg-primary/5 border border-primary/10">Khôi phục</button>
                       )}
                     </div>
                   </div>
@@ -368,40 +368,44 @@ function DoctorAppointmentsPage() {
                           {/* Case: Đang chờ xác nhận */}
                           {apt.trangThai === 0 && (
                             <>
-                              <button onClick={() => handleUpdateStatus(apt.id, 1)} title="Xác nhận"
-                                className="size-8 rounded-lg flex items-center justify-center text-emerald-500 hover:bg-emerald-50 transition-all">
-                                <span className="material-symbols-outlined text-lg font-bold">check</span>
+                              <button onClick={() => handleUpdateStatus(apt.id, 1)} title="Xác nhận lịch"
+                                className="size-8 rounded-lg flex items-center justify-center text-blue-500 hover:bg-blue-50 transition-all">
+                                <span className="material-symbols-outlined text-lg font-bold">check_circle</span>
                               </button>
-                              <button onClick={() => handleUpdateStatus(apt.id, 3)} title="Từ chối"
+                              <button onClick={() => handleUpdateStatus(apt.id, 3)} title="Hủy lịch"
                                 className="size-8 rounded-lg flex items-center justify-center text-rose-400 hover:bg-rose-50 transition-all">
-                                <span className="material-symbols-outlined text-lg font-bold">close</span>
+                                <span className="material-symbols-outlined text-lg font-bold">cancel</span>
                               </button>
                             </>
                           )}
                           {/* Case: Đã xác nhận - Chờ khám */}
                           {apt.trangThai === 1 && (
                             <>
-                              <button onClick={() => handleUpdateStatus(apt.id, 2)} title="Hoàn thành"
-                                className="size-8 rounded-lg flex items-center justify-center text-blue-500 hover:bg-blue-50 transition-all">
-                                <span className="material-symbols-outlined text-lg font-bold">verified</span>
+                              <Link to={`/doctor/appointments/${apt.id}`} title="Bắt đầu khám bệnh"
+                                className="size-8 rounded-lg flex items-center justify-center text-emerald-600 hover:bg-emerald-50 transition-all">
+                                <span className="material-symbols-outlined text-lg font-bold">medical_services</span>
+                              </Link>
+                              <button onClick={() => handleUpdateStatus(apt.id, 0)} title="Hoàn tác về chờ"
+                                className="size-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all">
+                                <span className="material-symbols-outlined text-lg font-bold">undo</span>
                               </button>
-                              <button onClick={() => handleUpdateStatus(apt.id, 3)} title="Hủy"
+                              <button onClick={() => handleUpdateStatus(apt.id, 3)} title="Hủy lịch"
                                 className="size-8 rounded-lg flex items-center justify-center text-rose-400 hover:bg-rose-50 transition-all">
-                                <span className="material-symbols-outlined text-lg font-bold">close</span>
+                                <span className="material-symbols-outlined text-lg font-bold">cancel</span>
                               </button>
                             </>
                           )}
                           {/* Case: Đã khám xong */}
                           {apt.trangThai === 2 && (
                             <Link to={`/doctor/appointments/${apt.id}`}
-                              className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-primary/5 text-primary hover:bg-primary/10 transition-all border border-primary/10">
-                              Chi tiết
+                              className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-primary/5 text-primary hover:bg-primary/10 transition-all border border-primary/10 tracking-widest">
+                              Xem hồ sơ
                             </Link>
                           )}
                           {/* Case: Đã hủy lịch */}
                           {apt.trangThai === 3 && (
-                            <button onClick={() => handleUpdateStatus(apt.id, 0)}
-                              className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-slate-50 text-slate-400 hover:bg-slate-100 transition-all">
+                            <button onClick={() => handleUpdateStatus(apt.id, 1)} title="Khôi phục lịch"
+                              className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-slate-50 text-primary hover:bg-primary/5 transition-all border border-slate-200">
                               Khôi phục
                             </button>
                           )}

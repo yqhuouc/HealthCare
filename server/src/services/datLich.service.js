@@ -122,14 +122,47 @@ const defaultInclude = {
 
 /**
  * Lấy danh sách toàn bộ lịch hẹn có phân trang (Chủ yếu dành cho Admin).
- * Hỗ trợ lọc theo trạng thái và ngày đặt.
+ * Hỗ trợ lọc theo trạng thái, ngày đặt và tìm kiếm đa năng.
  */
-const getAll = async ({ trangThai, ngayDat, page = 1, limit = 10 }) => {
+const getAll = async ({ trangThai, ngayDat, search, page = 1, limit = 10 }) => {
   const skip = (Number(page) - 1) * Number(limit);
   const where = {};
 
   if (trangThai !== undefined) where.trangThai = Number(trangThai);
   if (ngayDat) where.ngayDat = new Date(ngayDat);
+
+  // Logic tìm kiếm đa năng (Mã lịch, Tên bác sĩ, Tên bệnh nhân)
+  if (search) {
+    let searchId = null;
+    let searchString = search.trim();
+
+    // Nếu bắt đầu bằng LK, ví dụ: LK25 -> lấy 25
+    if (/^LK/i.test(searchString)) {
+      const match = searchString.match(/^LK(\d+)$/i);
+      if (match) searchId = match[1];
+    } else if (/^\d+$/.test(searchString)) {
+      // Nếu chỉ nhập số 25 -> searchId = 25
+      searchId = searchString;
+    }
+
+    where.OR = [
+      {
+        bacSi: {
+          tenBacSi: { contains: searchString, mode: "insensitive" },
+        },
+      },
+      {
+        benhNhan: {
+          hoTen: { contains: searchString, mode: "insensitive" },
+        },
+      },
+    ];
+
+    // Chỉ thêm tìm kiếm theo ID nếu có giá trị ID hợp lệ
+    if (searchId) {
+      where.OR.push({ id: BigInt(searchId) });
+    }
+  }
 
   const [datLichs, total] = await Promise.all([
     prisma.datLich.findMany({

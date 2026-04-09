@@ -5,6 +5,7 @@ import { patientService } from "../../services/patientService";
 import { appointmentService } from "../../services/appointmentService";
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/mockAdminData";
 import { getInitials } from "../../utils/formatters";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 const STATUS_MAP = {
   0: "pending",
@@ -44,9 +45,7 @@ function AdminPatientDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
-          progress_activity
-        </span>
+        <LoadingSpinner size="size-12" />
       </div>
     );
   }

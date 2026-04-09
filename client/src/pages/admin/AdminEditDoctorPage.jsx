@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { doctorService } from "../../services/doctorService";
 import { specialtyService } from "../../services/specialtyService";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 function AdminEditDoctorPage() {
   const { id } = useParams();
@@ -92,9 +93,7 @@ function AdminEditDoctorPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-40">
-        <span className="material-symbols-outlined animate-spin text-5xl text-primary/30">
-          progress_activity
-        </span>
+        <LoadingSpinner size="size-12" />
       </div>
     );
   }
@@ -279,7 +278,7 @@ function AdminEditDoctorPage() {
             }`}
           >
             {saving ? (
-              <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+              <LoadingSpinner size="size-5" color="text-white" />
             ) : (
               <span className="material-symbols-outlined text-sm">save</span>
             )}
