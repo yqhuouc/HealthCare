@@ -34,3 +34,10 @@ Dưới đây là danh sách các công nghệ chính được áp dụng trong 
 *   **Kiểm thử API:** [Postman](https://www.postman.com/) / [Thunder Client](https://www.thunderclient.com/).
 *   **Runtime:** `npm` (Node Package Manager).
 *   **Môi trường phát triển:** VS Code.
+
+---
+
+> [!TIP]
+> **Tài liệu chuyên sâu phục vụ bảo vệ đồ án:**
+> *   [Phân tích kiến trúc & Lựa chọn công nghệ chi tiết](./TECH_STACK_EXPLANATION.md)
+> *   [Chi tiết luồng dữ liệu API & Mô hình phân tầng](./API_DATA_FLOW.md)

@@ -14,50 +14,42 @@
 
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
+const { dayjs, vnDay } = require("../utils/dateUtils");
 
 // ============================================================================
 // 1. TIỆN ÍCH XỬ LÝ THỜI GIAN VÀ DỮ LIỆU
 // ============================================================================
 
 /**
- * Chuyển đổi chuỗi "HH:mm" thành đối tượng Date với múi giờ tĩnh (UTC+7).
- * Cố định mốc ngày 01/01/2000 để chuẩn hóa việc so sánh giờ.
+ * Chuyển đổi chuỗi "HH:mm" thành đối tượng Date thông qua Day.js.
+ * Cố định mốc ngày 2000-01-01 để chuẩn hóa việc so sánh giờ.
  *
  * @param {string} timeStr - Chuỗi thời gian định dạng "HH:mm"
  * @returns {Date} Đối tượng Date
  */
-const parseTime = (timeStr) => new Date(`2000-01-01T${timeStr}:00.000+07:00`);
+const parseTime = (timeStr) => {
+  return vnDay(`2000-01-01T${timeStr}:00`).toDate();
+};
 
 /**
  * Định dạng đối tượng Date thành chuỗi "HH:mm" chuẩn theo múi giờ Việt Nam.
- * Ép về năm 2000 trước khi định dạng để tránh các lỗi sai lệch múi giờ lịch sử.
  *
  * @param {Date|string|number} date - Thời gian cần định dạng
  * @returns {string} Chuỗi hiển thị thời gian "HH:mm"
  */
 const formatTime = (date) => {
-  const d = new Date(date);
-  d.setFullYear(2000);
-  return new Intl.DateTimeFormat("vi-VN", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(d);
+  return vnDay(date).format("HH:mm");
 };
 
 /**
- * Bình chuẩn hóa Date thành timestamp (milliseconds) chỉ dựa trên giờ và phút,
- * bỏ qua mọi khác biệt về ngày/tháng/năm để dùng cho việc so sánh.
+ * Bình chuẩn hóa Date thành chuỗi "HH:mm" để so sánh,
+ * bỏ qua mọi khác biệt về ngày/tháng/năm.
  *
  * @param {Date|string|number} date - Thời gian cần chuẩn hóa
- * @returns {number} Timestamp đại diện cho giờ và phút
+ * @returns {string} Chuỗi "HH:mm"
  */
 const normalizeTime = (date) => {
-  const d = new Date(date);
-  d.setFullYear(2000, 0, 1);
-  d.setSeconds(0, 0);
-  return d.getTime();
+  return vnDay(date).format("HH:mm");
 };
 
 /**
@@ -309,9 +301,7 @@ const create = async (data, requestUser = null) => {
   // 2. Tính toán khung giờ
   const thoiLuongKham = bacSi.chuyenKhoa?.thoiLuongKham || 20;
   const gioBatDauDate = parseTime(data.gioBatDau);
-  const gioKetThucDate = new Date(
-    gioBatDauDate.getTime() + thoiLuongKham * 60_000,
-  );
+  const gioKetThucDate = dayjs(gioBatDauDate).add(thoiLuongKham, "minute").toDate();
 
   // 3. Lấy danh sách ca làm việc hợp lệ trong ngày của bác sĩ
   const availableShifts = await prisma.lichLamViecBacSi.findMany({
@@ -330,16 +320,16 @@ const create = async (data, requestUser = null) => {
   for (const shift of availableShifts) {
     if (!shift.khungGio) continue;
 
-    let cursor = shift.khungGio.gioBatDau.getTime();
+    let cursor = dayjs(shift.khungGio.gioBatDau);
     let sloted = 0;
 
     // Quét slot dựa trên sức chứa (soBenhNhanToiDa)
     while (sloted < shift.soBenhNhanToiDa) {
-      if (normalizeTime(cursor) === normalizeTime(gioBatDauDate)) {
+      if (cursor.format("HH:mm") === dayjs(gioBatDauDate).format("HH:mm")) {
         lichLamViec = shift;
         break;
       }
-      cursor += slotMs;
+      cursor = cursor.add(slotMs, "millisecond");
       sloted++;
     }
     if (lichLamViec) break;
@@ -577,24 +567,24 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
     const caEnd = llv.khungGio.gioKetThuc.getTime();
     const slotMs = thoiLuongKham * 60_000;
 
-    let cursor = caStart;
+    let cursor = dayjs(llv.khungGio.gioBatDau);
     let sloted = 0;
 
     // Sinh các danh sách Slot linh động theo mức tối đa cho phép
     while (sloted < llv.soBenhNhanToiDa) {
-      const slotStart = new Date(cursor);
-      const slotEnd = new Date(cursor + slotMs);
+      const slotStart = cursor.toDate();
+      const slotEnd = cursor.add(slotMs, "millisecond").toDate();
 
       allSlots.push({
         gioBatDau: formatTime(slotStart),
         gioKetThuc: formatTime(slotEnd),
-        daDat: bookedTimes.has(cursor),
+        daDat: bookedTimes.has(cursor.valueOf()),
         lichLamViecId: llv.id,
         conTrong: llv.soBenhNhanHienTai < llv.soBenhNhanToiDa,
-        isOvertime: cursor + slotMs > caEnd, // Cờ báo làm thêm giờ
+        isOvertime: cursor.add(slotMs, "millisecond").isAfter(dayjs(llv.khungGio.gioKetThuc)), // Cờ báo làm thêm giờ
       });
 
-      cursor += slotMs;
+      cursor = cursor.add(slotMs, "millisecond");
       sloted++;
     }
   }

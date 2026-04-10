@@ -18,17 +18,19 @@
 
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
+const { dayjs, vnDay } = require("../utils/dateUtils");
 
 /**
  * Hàm parseTime:
- * Chuyển chuỗi "HH:mm" thành kiểu Date. Do Backend ở các máy chủ cloud
- * thường dùng múi giờ UTC, ta sử dụng thẳng "+07:00" để ép tạo Date theo
- * đúng múi giờ VN (khi DB lưu dưới dạng chuẩn UTC 00 thì sẽ tự lùi đi 7 tiếng).
+ * Chuyển chuỗi "HH:mm" thành kiểu Date thông qua Day.js.
+ * Sử dụng vnDay để đảm bảo quy chiếu đúng múi giờ Việt Nam.
  *
  * @param {string} timeStr Chuỗi giờ phút, ví dụ: "13:00"
- * @returns {Date} Object Date quy chiếu theo 01/01/1970
+ * @returns {Date} Object Date chuẩn của JS (được sinh ra từ Day.js)
  */
-const parseTime = (timeStr) => new Date(`1970-01-01T${timeStr}:00.000+07:00`);
+const parseTime = (timeStr) => {
+  return vnDay(`1970-01-01T${timeStr}:00`).toDate();
+};
 
 // ============================================================================
 // PHẦN 1: QUẢN LÝ KHUNG GIỜ (CA LÀM VIỆC TỔNG)
@@ -162,9 +164,9 @@ const createLichLamViec = async (data, requestUser = null) => {
   let soBenhNhanToiDa = data.soBenhNhanToiDa;
   if (!soBenhNhanToiDa) {
     const thoiLuongKham = bacSi.chuyenKhoa?.thoiLuongKham || 20;
-    const caStart = khungGio.gioBatDau.getTime();
-    const caEnd = khungGio.gioKetThuc.getTime();
-    const caLengthMinutes = (caEnd - caStart) / 60000;
+    const caStart = dayjs(khungGio.gioBatDau);
+    const caEnd = dayjs(khungGio.gioKetThuc);
+    const caLengthMinutes = caEnd.diff(caStart, "minute");
     soBenhNhanToiDa = Math.floor(caLengthMinutes / thoiLuongKham);
   }
 

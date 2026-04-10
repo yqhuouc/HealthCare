@@ -8,11 +8,12 @@ Tài liệu này giải thích chi tiết cách thức hoạt động của lu�
 
 Kiến trúc client của dự án được chia thành 5 tầng rõ rệt:
 
-1. **Pages/Components (UI Layer):** Nơi chứa giao diện người dùng, nhận tương tác (click, submit form) và hiển thị dữ liệu. Khởi nguồn gốc rễ là Component `App.jsx`.
-2. **Hooks (TanStack Query):** Quản lý Server State. Cung cấp các Custom Hooks (`useQuery`, `useMutation`) giúp tự động hoá việc gọi API, lưu cache, quản lý trạng thái `loading/error/success` và tự động cập nhật lại giao diện ngay khi data thay đổi.
-3. **Stores (Zustand):** Quản lý Client State (trạng thái UI, biến nhớ toàn cục) như thông tin session Auth (User đã đăng nhập chưa). *Lưu ý: Không dùng State này để lưu trữ dữ liệu tải từ server về (nhạc, lịch hẹn, bệnh nhân...) vì đã có TanStack Query lo việc đó.*
-4. **Services:** Lớp trung gian đóng gói dữ liệu trước khi gửi đi, chuyển đổi payload từ Component thành format mà Backend chỉ định, đồng thời là nơi trực tiếp gọi các lệnh Axios.
-5. **API (Axios Interceptors):** Cấu hình lõi của thư viện HTTP (Axios), tự động đính kèm cookie hiện rải, xử lý lỗi chung toàn cục (ví dụ: Refresh token tự động khi mã bị lỗi 401).
+1. **Pages/Components (UI Layer):** Giao diện người dùng, nhận tương tác và hiển thị dữ liệu qua React.
+2. **Validation Layer (Zod Schemas):** Quy tắc kiểm tra dữ liệu tập trung (`client/src/validations/`). Dùng chung cho cả Auth, Admin và Patient.
+3. **Hooks (TanStack Query):** Quản lý Server State (fetching, caching, invalidation).
+4. **Stores (Zustand):** Quản lý Client State toàn cục (Auth session).
+5. **Services:** Đóng gói Logic gọi API và định dạng Payload.
+6. **API (Axios Interceptors):** Cấu hình HTTP lõi, xử lý Token/Cookies.
 
 ---
 
@@ -102,7 +103,35 @@ Service map `id` và `trangThai` thành Payload JSON, quăng cho Axios gửi HTT
 
 ---
 
-## 4. Tóm Tắt Quy Trình Khái Quát
+## 4. Luồng Xử Lý Form: React Hook Form + Zod
+
+Mô hình hiện đại giúp tách biệt logic kiểm tra dữ liệu ra khỏi giao diện, đảm bảo dữ liệu "sạch" trước khi gửi tới Server.
+
+### Bước 1: Khai báo Schema (`validations/adminSchema.js`)
+Định nghĩa các quy tắc kiểm tra (ví dụ: Tên không bỏ trống, email đúng định dạng).
+```javascript
+export const specialtySchema = z.object({
+  tenChuyenKhoa: z.string().min(1, "Vui lòng nhập tên chuyên khoa"),
+  // ...
+});
+```
+
+### Bước 2: Ràng buộc vào Form (`Component.jsx`)
+Sử dụng `useForm` với `zodResolver` để tự động kiểm tra lỗi khi người dùng nhấn Submit.
+```javascript
+const { register, handleSubmit, formState: { errors } } = useForm({
+  resolver: zodResolver(specialtySchema)
+});
+
+// data chỉ được gửi đi khi đã vượt qua toàn bộ bước kiểm tra của Zod
+const onSubmit = (data) => {
+  createMutation.mutate(data);
+};
+```
+
+---
+
+## 5. Tóm Tắt Quy Trình Khái Quát
 
 Dù là luồng tải danh sách hay thay đổi trạng thái, dữ liệu luôn luân chuyển 1 chiều đi xuống và nảy phản ứng lên giao diện:
 
