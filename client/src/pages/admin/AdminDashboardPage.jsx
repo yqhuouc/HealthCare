@@ -25,7 +25,6 @@ import { appointmentService } from "../../services/appointmentService";
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants"; // Cấu hình màu sắc trạng thái
 
 function AdminDashboardPage() {
-  
   // State lưu trữ dữ liệu thống kê tổng quan
   const [stats, setStats] = useState({
     tongBenhNhan: 0,
@@ -33,7 +32,7 @@ function AdminDashboardPage() {
     tongLichHen: 0,
     tongChuyenKhoa: 0,
   });
-  
+
   // State lưu trữ dữ liệu biểu đồ 14 ngày
   const [chartData, setChartData] = useState([]);
   // State lưu trữ danh sách lịch hẹn gần đây
@@ -58,40 +57,40 @@ function AdminDashboardPage() {
         const [tongQuanRes, lichHenRes, appointmentsRes] = await Promise.all([
           adminStatsService.getTongQuan(),
           adminStatsService.getLichHenStats({ tuNgay, denNgay }),
-          appointmentService.getAllForAdmin({ page: 1, limit: 5 })
+          appointmentService.getAllForAdmin({ page: 1, limit: 5 }),
         ]);
 
         // Cập nhật thống kê tổng quan
         if (tongQuanRes.data) setStats(tongQuanRes.data);
-        
+
         // XỬ LÝ DỮ LIỆU BIỂU ĐỒ (Hoạt động 14 ngày qua)
         if (lichHenRes.data && lichHenRes.data.lichHenTheoNgay) {
           const rawDays = lichHenRes.data.lichHenTheoNgay;
-          
+
           // Chuyển đổi dữ liệu số lượng sang Number để đảm bảo tính toán chính xác
-          const cleanDays = rawDays.map(d => ({
+          const cleanDays = rawDays.map((d) => ({
             ...d,
-            soLuong: Number(d.soLuong || 0)
+            soLuong: Number(d.soLuong || 0),
           }));
 
           // Chuẩn bị mảng 14 ngày liên tục (điền giá trị 0 cho những ngày không có dữ liệu từ API)
           const formattedChart = [];
-          const maxCount = Math.max(...cleanDays.map(d => d.soLuong), 1);
+          const maxCount = Math.max(...cleanDays.map((d) => d.soLuong), 1);
 
           for (let i = 0; i < 14; i++) {
             const d = new Date(pastDate);
             d.setDate(d.getDate() + i);
             const dateStr = d.toISOString().split("T")[0];
             const dateLabel = `${d.getDate()}/${d.getMonth() + 1}`;
-            
+
             // Tìm dữ liệu tương ứng trong kết quả API
-            const match = cleanDays.find(rd => {
+            const match = cleanDays.find((rd) => {
               const rdDate = new Date(rd.ngay).toISOString().split("T")[0];
               return rdDate === dateStr;
             });
 
             const count = match ? match.soLuong : 0;
-            
+
             // Tính toán chiều cao tương đối của cột biểu đồ (%)
             let heightPercent = "0px";
             if (count > 0) {
@@ -106,7 +105,7 @@ function AdminDashboardPage() {
               label: dateLabel,
               height: heightPercent,
               count: count,
-              isToday: dateStr === today.toISOString().split("T")[0]
+              isToday: dateStr === today.toISOString().split("T")[0],
             });
           }
           setChartData(formattedChart);
@@ -160,7 +159,13 @@ function AdminDashboardPage() {
 
   // Hiển thị trạng thái Loading
   if (loading) {
-    return <div className="flex justify-center py-10"><span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span></div>;
+    return (
+      <div className="flex justify-center py-10">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
+          progress_activity
+        </span>
+      </div>
+    );
   }
 
   return (
@@ -176,11 +181,13 @@ function AdminDashboardPage() {
               <div
                 className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${card.iconBg}`}
               >
-                <span className={`material-symbols-outlined text-2xl ${card.iconColor}`}>
-                   {card.icon}
+                <span
+                  className={`material-symbols-outlined text-2xl ${card.iconColor}`}
+                >
+                  {card.icon}
                 </span>
               </div>
-              
+
               <div className="mt-4">
                 <p className="text-2xl font-bold text-slate-900 tracking-tight">
                   {card.value}
@@ -201,41 +208,51 @@ function AdminDashboardPage() {
             <h2 className="text-base font-bold text-slate-900">
               Hoạt động đặt lịch 14 ngày qua
             </h2>
-            <p className="text-[11px] text-slate-500">Thống kê số lượng bệnh nhân đặt lịch theo ngày</p>
+            <p className="text-[11px] text-slate-500">
+              Thống kê số lượng bệnh nhân đặt lịch theo ngày
+            </p>
           </div>
           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest sm:hidden">
-            <span className="material-symbols-outlined text-sm">swipe_left</span>
+            <span className="material-symbols-outlined text-sm">
+              swipe_left
+            </span>
             Vuốt để xem
           </div>
         </div>
         <div className="p-6 overflow-x-auto custom-scrollbar-horizontal">
           <div className="flex items-end justify-between gap-3 h-52 min-w-[600px] lg:min-w-0">
-            {chartData.length > 0 ? chartData.map((bar) => (
-              <div
-                key={bar.label}
-                className="flex-1 h-full flex flex-col justify-end items-center gap-2 group relative"
-              >
-                {/* Tooltip hiển thị khi di chuột vào cột */}
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-medium px-2 py-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
-                  {bar.count} bệnh nhân
-                </div>
-                
+            {chartData.length > 0 ? (
+              chartData.map((bar) => (
                 <div
-                  className={`w-full max-w-[28px] rounded-t-sm transition-all duration-300 relative ${
-                    bar.count > 0 
-                      ? (bar.isToday ? "bg-orange-500" : "bg-primary")
-                      : "bg-slate-200"
-                  }`}
-                  style={{ height: bar.height }}
-                />
-                
-                <span className={`text-[10px] font-semibold ${
-                  bar.isToday ? "text-orange-500" : "text-slate-400"
-                }`}>
-                  {bar.label}
-                </span>
-              </div>
-            )) : (
+                  key={bar.label}
+                  className="flex-1 h-full flex flex-col justify-end items-center gap-2 group relative"
+                >
+                  {/* Tooltip hiển thị khi di chuột vào cột */}
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-medium px-2 py-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
+                    {bar.count} bệnh nhân
+                  </div>
+
+                  <div
+                    className={`w-full max-w-[28px] rounded-t-sm transition-all duration-300 relative ${
+                      bar.count > 0
+                        ? bar.isToday
+                          ? "bg-orange-500"
+                          : "bg-primary"
+                        : "bg-slate-200"
+                    }`}
+                    style={{ height: bar.height }}
+                  />
+
+                  <span
+                    className={`text-[10px] font-semibold ${
+                      bar.isToday ? "text-orange-500" : "text-slate-400"
+                    }`}
+                  >
+                    {bar.label}
+                  </span>
+                </div>
+              ))
+            ) : (
               <div className="w-full flex items-center justify-center text-slate-400 text-xs py-10">
                 Đang tải dữ liệu biểu đồ...
               </div>
@@ -251,7 +268,9 @@ function AdminDashboardPage() {
             <h2 className="text-base font-bold text-slate-900">
               Hoạt động gần đây
             </h2>
-            <p className="text-[11px] text-slate-500">Các sự kiện mới nhất trong hệ thống</p>
+            <p className="text-[11px] text-slate-500">
+              Các sự kiện mới nhất trong hệ thống
+            </p>
           </div>
           <Link
             to="/admin/appointments"
@@ -264,30 +283,57 @@ function AdminDashboardPage() {
         <div className="p-6">
           {recentAppointments.length === 0 ? (
             <div className="flex flex-col items-center py-10 text-slate-400">
-              <span className="material-symbols-outlined text-3xl mb-1">history</span>
+              <span className="material-symbols-outlined text-3xl mb-1">
+                history
+              </span>
               <p className="text-xs">Chưa có hoạt động nào</p>
             </div>
           ) : (
             // Hiển thị dưới dạng Timeline
-            <div className="space-y-0 relative before:absolute before:inset-y-0 before:left-5 before:w-[1px] before:bg-slate-200">
+            <div className="space-y-0 relative before:absolute before:inset-y-0 before:left-5 before:w-px before:bg-slate-200">
               {recentAppointments.map((apt) => {
                 const pName = apt.benhNhan?.hoTen || "Ẩn danh";
                 const dName = apt.bacSi?.tenBacSi || "Không rõ";
-                const aptDate = new Date(apt.ngayDat).toLocaleDateString("vi-VN");
-                
+                const aptDate = new Date(apt.ngayDat).toLocaleDateString(
+                  "vi-VN",
+                );
+
                 // Cấu hình Icon và Màu sắc dựa trên trạng thái lịch hẹn
                 const statusIcons = {
-                  0: { icon: "pending_actions", color: "text-amber-500", bg: "bg-amber-50" },
-                  1: { icon: "check_circle", color: "text-blue-500", bg: "bg-blue-50" },
-                  2: { icon: "task_alt", color: "text-emerald-500", bg: "bg-emerald-50" },
-                  3: { icon: "cancel", color: "text-rose-500", bg: "bg-rose-50" },
+                  0: {
+                    icon: "pending_actions",
+                    color: "text-amber-500",
+                    bg: "bg-amber-50",
+                  },
+                  1: {
+                    icon: "check_circle",
+                    color: "text-blue-500",
+                    bg: "bg-blue-50",
+                  },
+                  2: {
+                    icon: "task_alt",
+                    color: "text-emerald-500",
+                    bg: "bg-emerald-50",
+                  },
+                  3: {
+                    icon: "cancel",
+                    color: "text-rose-500",
+                    bg: "bg-rose-50",
+                  },
                 };
                 const config = statusIcons[apt.trangThai] || statusIcons[0];
 
                 return (
-                  <div key={apt.id} className="relative pl-12 pb-6 last:pb-0 group">
-                    <div className={`absolute left-0 top-0 w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 border-white shadow-sm ${config.bg}`}>
-                      <span className={`material-symbols-outlined text-lg ${config.color}`}>
+                  <div
+                    key={apt.id}
+                    className="relative pl-12 pb-6 last:pb-0 group"
+                  >
+                    <div
+                      className={`absolute left-0 top-0 w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 border-white shadow-sm ${config.bg}`}
+                    >
+                      <span
+                        className={`material-symbols-outlined text-lg ${config.color}`}
+                      >
                         {config.icon}
                       </span>
                     </div>
@@ -296,24 +342,35 @@ function AdminDashboardPage() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <div>
                           <p className="text-sm text-slate-700">
-                            Bệnh nhân <span className="font-bold text-slate-900 text-[13px]">{pName}</span> đã đặt lịch khám
+                            Bệnh nhân{" "}
+                            <span className="font-bold text-slate-900 text-[13px]">
+                              {pName}
+                            </span>{" "}
+                            đã đặt lịch khám
                           </p>
                           <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[14px]">medical_services</span>
-                            Bác sĩ: <span className="font-medium text-slate-600">{dName}</span>
+                            <span className="material-symbols-outlined text-[14px]">
+                              medical_services
+                            </span>
+                            Bác sĩ:{" "}
+                            <span className="font-medium text-slate-600">
+                              {dName}
+                            </span>
                           </p>
                         </div>
                         <time className="text-[11px] font-medium text-slate-400 sm:self-center">
                           {aptDate}
                         </time>
                       </div>
-                      
-                      <Link 
+
+                      <Link
                         to={`/admin/appointments/${apt.id}`}
                         className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-blue-700 transition-colors"
                       >
                         Chi tiết lịch khám
-                        <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+                        <span className="material-symbols-outlined text-[14px]">
+                          chevron_right
+                        </span>
                       </Link>
                     </div>
                   </div>
