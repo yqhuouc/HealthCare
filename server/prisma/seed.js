@@ -186,9 +186,12 @@ async function main() {
   }
   console.log(`✅ Đã tạo ${lichMau.length} lịch làm việc mẫu cho bác sĩ`);
   // ===== 7. TẠO HÌNH THỨC THANH TOÁN & FAQ =====
-  const hinhThucData = ["Tiền mặt (tại quầy)", "Chuyển khoản (VNPay/Momo)"];
+  const hinhThucData = [
+    { tenHinhThuc: "Thanh toán tại quầy", maLoai: "OFFLINE" },
+    { tenHinhThuc: "Chuyển khoản online (VNPay)", maLoai: "VNPAY" },
+  ];
   for (const ht of hinhThucData) {
-    await prisma.hinhThucThanhToan.create({ data: { tenHinhThuc: ht } });
+    await prisma.hinhThucThanhToan.create({ data: ht });
   }
 
   const faqData = [

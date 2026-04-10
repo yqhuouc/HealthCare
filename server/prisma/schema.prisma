@@ -95,6 +95,7 @@ model LichLamViecBacSi {
 model HinhThucThanhToan {
   id          BigInt    @id @default(autoincrement())
   tenHinhThuc String    @db.VarChar(120)
+  maLoai      String    @default("OFFLINE") @db.VarChar(20)
   datLichs    DatLich[]
 
   @@map("HinhThucThanhToan")
@@ -118,9 +119,25 @@ model DatLich {
   hinhThucThanhToan   HinhThucThanhToan? @relation(fields: [hinhThucThanhToanId], references: [id])
   lichLamViec         LichLamViecBacSi?  @relation(fields: [lichLamViecId], references: [id])
   donThuoc            DonThuoc?
+  giaoDichs           GiaoDich[]
 
   @@unique([bacSiId, ngayDat, gioBatDau], name: "unique_lich")
   @@map("DatLich")
+}
+
+model GiaoDich {
+  id               BigInt   @id @default(autoincrement())
+  datLichId        BigInt
+  loaiGiaoDich     String   @db.VarChar(20) // "PHI_KHAM" | "DON_THUOC"
+  soTien           Decimal  @db.Decimal(10, 2)
+  maGiaoDichVNP    String?  @db.VarChar(100) // vnp_TransactionNo từ VNPay
+  maThamChieu      String?  @db.VarChar(100) // vnp_TxnRef (mã riêng của mình)
+  trangThai        Int      @default(0) // 0: Chờ, 1: Thành công, 2: Thất bại
+  ngayTao          DateTime @default(now())
+  ngayCapNhat      DateTime @updatedAt
+  datLich          DatLich  @relation(fields: [datLichId], references: [id])
+
+  @@map("GiaoDich")
 }
 
 model DonThuoc {

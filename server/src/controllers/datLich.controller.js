@@ -39,7 +39,12 @@ const getByBacSi = asyncHandler(async (req, res) => {
 // POST /api/dat-lich — tạo lịch mới
 const create = asyncHandler(async (req, res) => {
   const datLich = await datLichService.create(req.body, req.user);
-  res.status(201).json({ success: true, message: "Đặt lịch thành công", data: datLich });
+  res.status(201).json({
+    success: true,
+    message: "Đặt lịch thành công",
+    data: datLich,
+    maLoai: datLich._maLoai,
+  });
 });
 
 // PUT /api/dat-lich/:id/trang-thai — đổi trạng thái (admin, bác sĩ)

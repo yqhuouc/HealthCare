@@ -25,5 +25,6 @@ router.use("/don-thuoc", require("./donThuoc.routes"));
 router.use("/cau-hoi-thuong-gap", require("./cauHoiThuongGap.routes"));
 router.use("/hinh-thuc-thanh-toan", require("./hinhThucThanhToan.routes"));
 router.use("/thong-ke", require("./thongKe.routes"));
+router.use("/vnpay", require("./vnpay.routes"));
 
 module.exports = router;

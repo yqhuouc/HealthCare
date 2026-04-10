@@ -370,6 +370,11 @@ const create = async (data, requestUser = null) => {
 
   // 7. Transaction: Ghi nhận lịch hẹn và phân bổ slot
   return prisma.$transaction(async (tx) => {
+    // Lấy mã loại để phân luồng thanh toán (OFFLINE / VNPAY)
+    const hinhThuc = await tx.hinhThucThanhToan.findUnique({
+      where: { id: BigInt(data.hinhThucThanhToanId) },
+    });
+
     const datLich = await tx.datLich.create({
       data: {
         ngayDat: new Date(data.ngayDat),
@@ -378,9 +383,7 @@ const create = async (data, requestUser = null) => {
         lyDoKham: data.lyDoKham,
         giaKham: data.giaKham ? parseFloat(data.giaKham) : bacSi.giaKham,
         trangThai: 0,
-        trangThaiThanhToan: data.trangThaiThanhToan
-          ? Number(data.trangThaiThanhToan)
-          : 0,
+        trangThaiThanhToan: 0, // Luôn khởi tạo là 0, cập nhật qua VNPay IPN sau
         bacSiId: BigInt(data.bacSiId),
         benhNhanId: BigInt(data.benhNhanId),
         hinhThucThanhToanId: data.hinhThucThanhToanId
@@ -397,7 +400,11 @@ const create = async (data, requestUser = null) => {
       data: { soBenhNhanHienTai: { increment: 1 } },
     });
 
-    return datLich;
+    // Trả về kèm maLoai để controller xử lý redirect phí khám
+    return {
+      ...datLich,
+      _maLoai: hinhThuc?.maLoai || "OFFLINE",
+    };
   });
 };
 

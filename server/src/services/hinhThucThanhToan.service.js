@@ -9,7 +9,9 @@ const getAll = async () => {
 };
 
 const create = async (data) => {
-  return prisma.hinhThucThanhToan.create({ data: { tenHinhThuc: data.tenHinhThuc } });
+  return prisma.hinhThucThanhToan.create({
+    data: { tenHinhThuc: data.tenHinhThuc, maLoai: data.maLoai || "OFFLINE" },
+  });
 };
 
 const remove = async (id) => {

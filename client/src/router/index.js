@@ -21,6 +21,7 @@ import BookingPage from "../pages/patient/BookingPage";
 import AppointmentHistoryPage from "../pages/patient/AppointmentHistoryPage";
 import MedicalResultPage from "../pages/patient/MedicalResultPage";
 import PatientProfilePage from "../pages/patient/PatientProfilePage";
+import PaymentResultPage from "../pages/patient/PaymentResultPage";
 import SpecialtyListPage from "../pages/patient/SpecialtyListPage";
 import SpecialtyDetailPage from "../pages/patient/SpecialtyDetailPage";
 import FAQPage from "../pages/patient/FAQPage";
@@ -79,6 +80,7 @@ export const privateRoutes = [
   { path: "/appointments", component: AppointmentHistoryPage },
   { path: "/medical-results/:id", component: MedicalResultPage },
   { path: "/profile", component: PatientProfilePage },
+  { path: "/payment/result", component: PaymentResultPage },
 ];
 
 /* ==========================================================

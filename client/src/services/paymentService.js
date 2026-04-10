@@ -15,4 +15,7 @@ export const paymentService = {
 
   /** Xóa hình thức thanh toán (Admin) */
   remove: (id) => api.delete(`/hinh-thuc-thanh-toan/${id}`),
+
+  /** Tạo link thanh toán VNPay */
+  createVnpayPayment: (data) => api.post("/vnpay/create-payment", data),
 };

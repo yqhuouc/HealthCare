@@ -28,6 +28,12 @@ const STATUS_CONFIG = {
   3: { label: "Đã hủy", color: "bg-red-100 text-red-700" },
 };
 
+const PAYMENT_STATUS_CONFIG = {
+  0: { label: "Chưa thanh toán", color: "bg-red-50 text-red-500" },
+  1: { label: "Đã trả phí khám", color: "bg-amber-50 text-amber-600" },
+  2: { label: "Đã trả toàn bộ", color: "bg-emerald-50 text-emerald-600" },
+};
+
 const FILTER_TABS = [
   { key: "all", label: "Tất cả" },
   { key: 0, label: "Chờ xác nhận" },
@@ -156,9 +162,16 @@ export default function AppointmentHistoryPage() {
 
                 {/* Trạng thái + hành động */}
                 <div className="flex flex-col items-end gap-3 shrink-0">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusCfg.color}`}>
-                    {statusCfg.label}
-                  </span>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${statusCfg.color}`}>
+                      {statusCfg.label}
+                    </span>
+                    {appointment.trangThai !== 3 && (
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${PAYMENT_STATUS_CONFIG[appointment.trangThaiThanhToan]?.color || "bg-slate-100"}`}>
+                        {PAYMENT_STATUS_CONFIG[appointment.trangThaiThanhToan]?.label}
+                      </span>
+                    )}
+                  </div>
 
                   {isPending && (
                     <button

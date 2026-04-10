@@ -18,6 +18,9 @@ import { useParams, Link } from "react-router-dom";
 import { useAppointment } from "../../hooks/queries/useAppointmentQueries";
 import { formatPrice } from "../../utils/formatters";
 import { formatTime, formatDate } from "../../utils/dateUtils";
+import { paymentService } from "../../services/paymentService";
+import { toast } from "react-toastify";
+import { useState } from "react";
 
 export default function MedicalResultPage() {
   const { id } = useParams();
@@ -27,6 +30,30 @@ export default function MedicalResultPage() {
   /** Lệnh in phiếu kết quả */
   const handlePrint = () => {
     window.print();
+  };
+
+  /** Xử lý thanh toán VNPay */
+  const [paying, setPaying] = useState(false);
+  const handlePayment = async (loaiGiaoDich) => {
+    if (paying) return;
+    try {
+      setPaying(true);
+      toast.info("Đang xử lý yêu cầu thanh toán...");
+      const res = await paymentService.createVnpayPayment({
+        datLichId: id,
+        loaiGiaoDich: loaiGiaoDich, // "PHI_KHAM" hoặc "DON_THUOC"
+      });
+      if (res.paymentUrl) {
+        window.location.href = res.paymentUrl;
+      } else {
+        toast.error("Không nhận được liên kết thanh toán từ hệ thống.");
+      }
+    } catch (err) {
+      console.error("Payment error:", err);
+      toast.error(err?.response?.data?.message || "Không thể tạo liên kết thanh toán. Vui lòng thử lại sau.");
+    } finally {
+      setPaying(false);
+    }
   };
 
   if (loading) {
@@ -356,26 +383,57 @@ export default function MedicalResultPage() {
               )}
             </div>
 
-            <div className="w-full md:w-auto space-y-2 bg-primary/5 p-5 sm:p-6 rounded-2xl border border-primary/10">
-              <div className="flex justify-between items-center gap-10 text-xs sm:text-sm">
-                <span className="text-slate-500">Phí khám bệnh:</span>
-                <span className="font-semibold text-slate-700">
-                  {formatPrice(examFee)}
-                </span>
+            <div className="w-full md:w-auto space-y-4">
+              <div className="space-y-2 bg-primary/5 p-5 sm:p-6 rounded-2xl border border-primary/10">
+                <div className="flex justify-between items-center gap-10 text-xs sm:text-sm">
+                  <span className="text-slate-500">Phí khám bệnh:</span>
+                  <span className="font-semibold text-slate-700">
+                    {formatPrice(examFee)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center gap-10 text-xs sm:text-sm">
+                  <span className="text-slate-500">Chi phí thuốc:</span>
+                  <span className="font-semibold text-slate-700">
+                    {formatPrice(medicineFee)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center gap-10 pt-4 border-t border-primary/10">
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-tight">
+                    TỔNG CỘNG:
+                  </span>
+                  <span className="text-lg sm:text-2xl font-black text-primary">
+                    {formatPrice(totalAmount)}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between items-center gap-10 text-xs sm:text-sm">
-                <span className="text-slate-500">Chi phí thuốc:</span>
-                <span className="font-semibold text-slate-700">
-                  {formatPrice(medicineFee)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center gap-10 pt-4 border-t border-primary/10">
-                <span className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-tight">
-                  TỔNG CỘNG:
-                </span>
-                <span className="text-lg sm:text-2xl font-black text-primary">
-                  {formatPrice(totalAmount)}
-                </span>
+
+              {/* ACTION BUTTONS: THANH TOÁN ONLINE */}
+              <div className="flex flex-col gap-2 print:hidden">
+                {appointment.trangThaiThanhToan === 0 && (
+                  <button
+                    onClick={() => handlePayment("PHI_KHAM")}
+                    disabled={paying}
+                    className="w-full py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined">payments</span>
+                    Thanh toán phí khám ({formatPrice(examFee)})
+                  </button>
+                )}
+                {appointment.trangThaiThanhToan === 1 && donThuoc && (
+                  <button
+                    onClick={() => handlePayment("DON_THUOC")}
+                    disabled={paying}
+                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined">medication</span>
+                    Thanh toán đơn thuốc ({formatPrice(medicineFee)})
+                  </button>
+                )}
+                {appointment.trangThaiThanhToan < 2 && appointment.maLoai !== "VNPAY" && (
+                  <p className="text-[10px] text-slate-400 text-center italic">
+                    * Bạn có thể chọn thanh toán online qua VNPay hoặc tại quầy.
+                  </p>
+                )}
               </div>
             </div>
           </div>

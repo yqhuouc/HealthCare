@@ -24,6 +24,7 @@ import { usePaymentMethods } from "../../hooks/queries/usePaymentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { formatPrice } from "../../utils/formatters";
 import { toDateString, dayjs } from "../../utils/dateUtils";
+import { paymentService } from "../../services/paymentService";
 
 const DAY_NAMES = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
@@ -104,7 +105,7 @@ export default function BookingPage() {
 
   const specialtyName = doctor.chuyenKhoa?.tenChuyenKhoa || "Chưa phân khoa";
   const avatarUrl = doctor.taiKhoan?.anhDaiDien;
-  const canContinue = selectedDate && selectedSlot;
+  const canContinue = selectedDate && selectedSlot && selectedPayment;
 
   const handleContinue = () => {
     if (!canContinue) return;
@@ -127,12 +128,34 @@ export default function BookingPage() {
         ngayDat: selectedDate,
         gioBatDau: selectedSlot.gioBatDau,
         lyDoKham: reason || undefined,
-        hinhThucThanhToanId: selectedPayment ? Number(selectedPayment) : undefined,
+        hinhThucThanhToanId: Number(selectedPayment),
       },
       {
-        onSuccess: () => {
-          toast.success("Đặt lịch thành công! Vui lòng chờ xác nhận từ phòng khám.");
-          navigate("/appointments");
+        onSuccess: (res) => {
+          // Kiểm tra xem hình thức thanh toán có yêu cầu redirect sang VNPay không
+          if (res.maLoai === "VNPAY") {
+            toast.info("Đang xử lý thanh toán VNPay...");
+            paymentService
+              .createVnpayPayment({
+                datLichId: res.data.id,
+                loaiGiaoDich: "PHI_KHAM",
+              })
+              .then((vnpRes) => {
+                if (vnpRes.paymentUrl) {
+                  window.location.href = vnpRes.paymentUrl;
+                } else {
+                  toast.success("Đặt lịch thành công! Vui lòng thanh toán sau.");
+                  navigate("/appointments");
+                }
+              })
+              .catch(() => {
+                toast.warning("Đặt lịch thành công nhưng không thể tạo liên kết thanh toán. Bạn có thể thử lại sau trong phần Lịch sử.");
+                navigate("/appointments");
+              });
+          } else {
+            toast.success("Đặt lịch thành công! Vui lòng chờ xác nhận từ phòng khám.");
+            navigate("/appointments");
+          }
         },
         onError: (err) => {
           toast.error(err?.message || "Đặt lịch thất bại. Vui lòng thử lại.");
@@ -284,15 +307,22 @@ export default function BookingPage() {
               <select
                 value={selectedPayment}
                 onChange={(e) => setSelectedPayment(e.target.value)}
-                className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+                required
+                className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition bg-white"
               >
-                <option value="">-- Chọn hình thức thanh toán --</option>
+                <option value="">-- Chọn hình thức thanh toán (Bắt buộc) --</option>
                 {paymentMethods.map((pm) => (
                   <option key={pm.id} value={pm.id}>
-                    {pm.tenHinhThuc}
+                    {pm.tenHinhThuc} {pm.maLoai === "VNPAY" ? "(Thanh toán online ngay)" : "(Trả sau tại quầy)"}
                   </option>
                 ))}
               </select>
+              {selectedPayment && paymentMethods.find(p => String(p.id) === selectedPayment)?.maLoai === "VNPAY" && (
+                <p className="mt-2 text-[11px] text-amber-600 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">info</span>
+                  Bạn sẽ được chuyển hướng sang cổng thanh toán VNPay sau khi nhấn xác nhận.
+                </p>
+              )}
             </section>
           )}
 
