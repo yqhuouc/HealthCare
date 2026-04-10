@@ -11,7 +11,12 @@ dayjs.extend(timezone);
  * @param {string|Date} date 
  * @returns {dayjs.Dayjs}
  */
-const vnDay = (date) => dayjs(date).tz("Asia/Ho_Chi_Minh");
+const vnDay = (date) => {
+  if (typeof date === "string" && !date.includes("Z") && !date.includes("+")) {
+    return dayjs.tz(date, "Asia/Ho_Chi_Minh");
+  }
+  return dayjs(date).tz("Asia/Ho_Chi_Minh");
+};
 
 module.exports = {
   dayjs,

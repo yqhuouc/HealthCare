@@ -23,7 +23,7 @@ export function formatTime(timeInput) {
   ) {
     return timeInput.substring(0, 5);
   }
-  return dayjs(timeInput).tz("Asia/Ho_Chi_Minh").format("HH:mm");
+  return dayjs.utc(timeInput).year(2000).tz("Asia/Ho_Chi_Minh").format("HH:mm");
 }
 
 /**

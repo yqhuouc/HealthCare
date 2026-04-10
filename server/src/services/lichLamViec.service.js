@@ -29,7 +29,7 @@ const { dayjs, vnDay } = require("../utils/dateUtils");
  * @returns {Date} Object Date chuẩn của JS (được sinh ra từ Day.js)
  */
 const parseTime = (timeStr) => {
-  return vnDay(`1970-01-01T${timeStr}:00`).toDate();
+  return vnDay(`2000-01-01T${timeStr}:00`).toDate();
 };
 
 // ============================================================================

@@ -38,7 +38,7 @@ const parseTime = (timeStr) => {
  * @returns {string} Chuỗi hiển thị thời gian "HH:mm"
  */
 const formatTime = (date) => {
-  return vnDay(date).format("HH:mm");
+  return dayjs.utc(date).year(2000).tz("Asia/Ho_Chi_Minh").format("HH:mm");
 };
 
 /**
@@ -49,7 +49,7 @@ const formatTime = (date) => {
  * @returns {string} Chuỗi "HH:mm"
  */
 const normalizeTime = (date) => {
-  return vnDay(date).format("HH:mm");
+  return dayjs.utc(date).year(2000).tz("Asia/Ho_Chi_Minh").format("HH:mm");
 };
 
 /**
