@@ -22,7 +22,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useKhungGio, useCreateLichLamViec } from "../../hooks/queries/useScheduleQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
-import { formatTime } from "../../utils/formatters";
+import { formatTime, dayjs } from "../../utils/dateUtils";
 
 // Mảng định nghĩa tiêu đề các thứ trong tuần
 const DAYS_OF_WEEK = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
@@ -33,14 +33,14 @@ const DAYS_OF_WEEK = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
  * Helper: Tính số ngày của tháng
  */
 function getDaysInMonth(year, month) {
-  return new Date(year, month + 1, 0).getDate();
+  return dayjs().year(year).month(month).daysInMonth();
 }
 
 /**
  * Helper: Tính thứ của ngày đầu tiên trong tháng
  */
 function getFirstDayOfMonth(year, month) {
-  return new Date(year, month, 1).getDay();
+  return dayjs().year(year).month(month).startOf("month").day();
 }
 
 function DoctorAddShiftPage() {
@@ -49,12 +49,11 @@ function DoctorAddShiftPage() {
   const bacSiId = user?.bacSi?.id;
 
   // Quản lý trạng thái Calendar
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Đưa về 0h để so sánh ngày dễ hơn
+  const today = dayjs().tz("Asia/Ho_Chi_Minh").startOf("day");
 
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [selectedDate, setSelectedDate] = useState(new Date().getDate());
+  const [currentMonth, setCurrentMonth] = useState(today.month());
+  const [currentYear, setCurrentYear] = useState(today.year());
+  const [selectedDate, setSelectedDate] = useState(today.date());
 
   // Quản lý dữ liệu Khung giờ từ TanStack Query
   const [selectedSlotId, setSelectedSlotId] = useState(null);
@@ -78,8 +77,8 @@ function DoctorAddShiftPage() {
   const prevMonth = () => {
     // Không cho quay về tháng trước của hiện tại
     if (
-      currentYear < today.getFullYear() ||
-      (currentYear === today.getFullYear() && currentMonth <= today.getMonth())
+      currentYear < today.year() ||
+      (currentYear === today.year() && currentMonth <= today.month())
     ) {
       return;
     }
@@ -96,13 +95,7 @@ function DoctorAddShiftPage() {
     } else setCurrentMonth((m) => m + 1);
   };
 
-  const monthLabel = new Date(currentYear, currentMonth).toLocaleDateString(
-    "vi-VN",
-    {
-      month: "long",
-      year: "numeric",
-    },
-  );
+  const monthLabel = `Tháng ${currentMonth + 1} năm ${currentYear}`;
 
   // Tạo các ô trống (ngày của tháng cũ/mới) để Calendar cân đối
   const trailingDays = [];
@@ -117,25 +110,24 @@ function DoctorAddShiftPage() {
    * Kiểm tra ngày có trong quá khứ không
    */
   const checkIsPastDay = (day) => {
-    const dateToCheck = new Date(currentYear, currentMonth, day);
-    return dateToCheck < today;
+    const dateToCheck = dayjs().tz("Asia/Ho_Chi_Minh").year(currentYear).month(currentMonth).date(day).startOf("day");
+    return dateToCheck.isBefore(today);
   };
 
   /**
    * Kiểm tra giờ có trong quá khứ không (cho ngày hiện tại)
    */
   const checkIsPastTime = (slotTime) => {
-    const now = new Date();
+    const now = dayjs().tz("Asia/Ho_Chi_Minh");
     // Chỉ kiểm tra nếu ngày được chọn là hôm nay
     if (
-      currentYear === now.getFullYear() &&
-      currentMonth === now.getMonth() &&
-      selectedDate === now.getDate()
+      currentYear === now.year() &&
+      currentMonth === now.month() &&
+      selectedDate === now.date()
     ) {
       const [hours, minutes] = slotTime.split(":").map(Number);
-      const slotDate = new Date();
-      slotDate.setHours(hours, minutes, 0, 0);
-      return slotDate < now;
+      const slotDate = now.hour(hours).minute(minutes).second(0).millisecond(0);
+      return slotDate.isBefore(now);
     }
     return false;
   };
@@ -224,12 +216,12 @@ function DoctorAddShiftPage() {
                 <button
                   onClick={prevMonth}
                   disabled={
-                    currentYear === today.getFullYear() &&
-                    currentMonth === today.getMonth()
+                    currentYear === today.year() &&
+                    currentMonth === today.month()
                   }
                   className={`p-2 rounded-xl border border-transparent transition-all ${
-                    currentYear === today.getFullYear() &&
-                    currentMonth === today.getMonth()
+                    currentYear === today.year() &&
+                    currentMonth === today.month()
                       ? "text-slate-200 cursor-not-allowed"
                       : "hover:bg-white hover:border-slate-100 text-slate-400"
                   }`}

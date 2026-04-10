@@ -19,7 +19,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppointmentsByDoctor } from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
-import { getInitials, formatDate } from "../../utils/formatters";
+import { getInitials } from "../../utils/formatters";
+import { formatDate, toDateString } from "../../utils/dateUtils";
 
 
 
@@ -51,9 +52,7 @@ function DoctorHistoryPage() {
       `BN-${String(patientId).padStart(3, "0")}`.toLowerCase().includes(q);
 
     // 2. Lọc theo khoảng ngày
-    const aptDate = new Date(record.ngayDat).toLocaleDateString("en-CA", {
-      timeZone: "Asia/Ho_Chi_Minh",
-    });
+    const aptDate = toDateString(record.ngayDat);
     const matchFrom = !dateFrom || aptDate >= dateFrom;
     const matchTo = !dateTo || aptDate <= dateTo;
 

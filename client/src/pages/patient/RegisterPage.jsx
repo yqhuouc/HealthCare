@@ -25,6 +25,8 @@
  */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { registerSchema } from "../../validations/authSchema";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { authService } from "../../services/authService";
@@ -45,12 +47,10 @@ function RegisterPage() {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
-  } = useForm();
-
-  // Lấy giá trị mật khẩu hiện tại để so sánh với trường xác nhận
-  const passwordValue = watch("password");
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+  });
 
   // Xử lý đăng ký: gọi API → thông báo thành công → chuyển sang trang đăng nhập
   const onSubmit = async (data) => {
@@ -98,9 +98,7 @@ function RegisterPage() {
                     type="text"
                     placeholder="Nguyễn Văn A"
                     className={`${INPUT_CLASS} ${errors.fullName ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
-                    {...register("fullName", {
-                      required: "Vui lòng nhập họ và tên",
-                    })}
+                    {...register("fullName")}
                   />
                   {errors.fullName && (
                     <p className="text-red-500 text-xs mt-1">{errors.fullName.message}</p>
@@ -114,13 +112,7 @@ function RegisterPage() {
                     type="email"
                     placeholder="example@gmail.com"
                     className={`${INPUT_CLASS} ${errors.email ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
-                    {...register("email", {
-                      required: "Vui lòng nhập email",
-                      pattern: {
-                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                        message: "Email không hợp lệ",
-                      },
-                    })}
+                    {...register("email")}
                   />
                   {errors.email && (
                     <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
@@ -134,13 +126,7 @@ function RegisterPage() {
                     type="tel"
                     placeholder="0912 345 678"
                     className={`${INPUT_CLASS} ${errors.phone ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
-                    {...register("phone", {
-                      required: "Vui lòng nhập số điện thoại",
-                      pattern: {
-                        value: /^(0|\+84)[0-9]{9}$/,
-                        message: "Số điện thoại không hợp lệ (VD: 0912345678)",
-                      },
-                    })}
+                    {...register("phone")}
                   />
                   {errors.phone && (
                     <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
@@ -155,10 +141,7 @@ function RegisterPage() {
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       className={`${INPUT_CLASS} pr-12 ${errors.password ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
-                      {...register("password", {
-                        required: "Vui lòng nhập mật khẩu",
-                        minLength: { value: 6, message: "Mật khẩu tối thiểu 6 ký tự" },
-                      })}
+                      {...register("password")}
                     />
                     <button
                       type="button"
@@ -183,11 +166,7 @@ function RegisterPage() {
                       type={showConfirm ? "text" : "password"}
                       placeholder="••••••••"
                       className={`${INPUT_CLASS} pr-12 ${errors.confirmPassword ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
-                      {...register("confirmPassword", {
-                        required: "Vui lòng xác nhận mật khẩu",
-                        validate: (value) =>
-                          value === passwordValue || "Mật khẩu xác nhận không khớp",
-                      })}
+                      {...register("confirmPassword")}
                     />
                     <button
                       type="button"

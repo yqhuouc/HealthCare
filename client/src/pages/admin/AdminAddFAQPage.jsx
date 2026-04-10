@@ -21,6 +21,9 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useCreateFAQ } from "../../hooks/queries/useFAQQueries";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { faqSchema } from "../../validations/adminSchema";
 
 /**
  * Component AdminAddFAQPage - Cho phép quản trị viên tạo câu hỏi thường gặp mới
@@ -32,40 +35,25 @@ function AdminAddFAQPage() {
   const createMutation = useCreateFAQ();
   const loading = createMutation.isPending;
   
-  // State quản lý dữ liệu nhập liệu của form
-  const [form, setForm] = useState({
-    question: "",
-    answer: "",
-    status: "1", // Mặc định là đang hoạt động (Hiển thị)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(faqSchema),
+    defaultValues: {
+      cauHoi: "",
+      traLoi: "",
+      dangHoatDong: 1,
+    }
   });
-
-  /**
-   * Cập nhật state form khi người dùng nhập liệu
-   * @param {Object} e - Event thay đổi input
-   */
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
   /**
    * Gửi dữ liệu FAQ mới lên server để lưu trữ
    */
-  const handleSave = () => {
-    if (!form.question.trim()) {
-      toast.warn("Vui lòng nhập câu hỏi.");
-      return;
-    }
-    if (!form.answer.trim()) {
-      toast.warn("Vui lòng nhập câu trả lời.");
-      return;
-    }
-
+  const onSubmit = (data) => {
     createMutation.mutate(
-      {
-        cauHoi: form.question,
-        traLoi: form.answer,
-        dangHoatDong: Number(form.status),
-      },
+      data,
       {
         onSuccess: () => {
           toast.success("Đã thêm FAQ mới thành công!");
@@ -108,12 +96,11 @@ function AdminAddFAQPage() {
               Câu hỏi <span className="text-red-500">*</span>
             </label>
             <input
-              name="question"
-              value={form.question}
-              onChange={handleChange}
+              {...register("cauHoi")}
               placeholder="VD: Làm thế nào để đặt lịch hẹn khám bệnh?"
-              className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
+              className={`w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary ${errors.cauHoi ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
             />
+            {errors.cauHoi && <p className="text-red-500 text-xs mt-1">{errors.cauHoi.message}</p>}
           </div>
 
           {/* Nhập câu trả lời */}
@@ -122,13 +109,12 @@ function AdminAddFAQPage() {
               Câu trả lời <span className="text-red-500">*</span>
             </label>
             <textarea
-              name="answer"
-              value={form.answer}
-              onChange={handleChange}
+              {...register("traLoi")}
               rows={5}
               placeholder="Nhập câu trả lời chi tiết cho câu hỏi này..."
-              className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
+              className={`w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary ${errors.traLoi ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
             />
+            {errors.traLoi && <p className="text-red-500 text-xs mt-1">{errors.traLoi.message}</p>}
           </div>
 
           {/* Chọn trạng thái hiển thị */}
@@ -138,9 +124,7 @@ function AdminAddFAQPage() {
                 Trạng thái hiển thị
               </label>
               <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
+                {...register("dangHoatDong")}
                 className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
               >
                 <option value="1">Hiển thị</option>
@@ -159,7 +143,7 @@ function AdminAddFAQPage() {
             Hủy
           </button>
           <button
-            onClick={handleSave}
+            onClick={handleSubmit(onSubmit)}
             disabled={loading}
             className={`w-full sm:w-auto px-6 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
               loading ? "bg-slate-300 cursor-not-allowed" : "bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"

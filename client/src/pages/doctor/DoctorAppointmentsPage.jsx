@@ -20,7 +20,7 @@ import { Link } from "react-router-dom";
 import { useAppointmentsByDoctor, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
-import { formatTime } from "../../utils/formatters";
+import { formatTime, toDateString, dayjs } from "../../utils/dateUtils";
 
 /** 
  * CẤU HÌNH NHÃN (BADGE): Định nghĩa màu sắc và nội dung cho từng trạng thái
@@ -73,12 +73,10 @@ function DoctorAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const { today, tomorrow } = useMemo(() => {
-    const now = new Date();
-    const tmr = new Date(now);
-    tmr.setDate(tmr.getDate() + 1);
+    const now = dayjs();
     return {
-      today: now.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }),
-      tomorrow: tmr.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }),
+      today: toDateString(now),
+      tomorrow: toDateString(now.add(1, 'day')),
     };
   }, []);
 
@@ -88,7 +86,7 @@ function DoctorAppointmentsPage() {
     dateInput;
 
   const filtered = appointments.filter((apt) => {
-    const aptDate = new Date(apt.ngayDat).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
+    const aptDate = toDateString(apt.ngayDat);
     const matchDate = !selectedDate || aptDate === selectedDate;
     const matchStatus = statusFilter === "all" || apt.trangThai === statusFilter;
     const q = searchQuery.trim().toLowerCase();

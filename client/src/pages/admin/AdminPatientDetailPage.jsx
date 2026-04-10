@@ -3,6 +3,7 @@ import { usePatient } from "../../hooks/queries/usePatientQueries";
 import { useAppointmentsByPatient } from "../../hooks/queries/useAppointmentQueries";
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants";
 import { getInitials } from "../../utils/formatters";
+import { formatDate } from "../../utils/dateUtils";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 /**
@@ -70,7 +71,7 @@ function AdminPatientDetailPage() {
             <div className="text-center sm:text-left flex-1">
               <h2 className="text-2xl font-bold">{patient.hoTen}</h2>
               <p className="opacity-90 mt-1 uppercase text-xs font-black tracking-widest">
-                Mã BN: BN{patient.id} | Tham gia: {new Date(patient.taiKhoan?.ngayTao).toLocaleDateString("vi-VN")}
+                Mã BN: BN{patient.id} | Tham gia: {formatDate(patient.taiKhoan?.ngayTao)}
               </p>
               <div className="mt-4 flex flex-wrap gap-2 justify-center sm:justify-start">
                 <span className="px-3 py-1 bg-white/10 rounded-full text-xs font-medium border border-white/20">
@@ -98,7 +99,7 @@ function AdminPatientDetailPage() {
               </div>
               <div className="flex justify-between py-2 border-b border-slate-50">
                 <span className="text-slate-500">Ngày sinh:</span>
-                <span className="font-medium text-slate-900">{patient.taiKhoan?.ngaySinh ? new Date(patient.taiKhoan.ngaySinh).toLocaleDateString("vi-VN") : "Chưa cập nhật"}</span>
+                <span className="font-medium text-slate-900">{patient.taiKhoan?.ngaySinh ? formatDate(patient.taiKhoan.ngaySinh) : "Chưa cập nhật"}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-50">
                 <span className="text-slate-500">Địa chỉ:</span>
@@ -177,7 +178,7 @@ function AdminPatientDetailPage() {
                     <td className="px-6 py-4 font-bold text-slate-900">LK{apt.id}</td>
                     <td className="px-6 py-4 text-slate-700">{apt.bacSi?.tenBacSi}</td>
                     <td className="px-6 py-4 text-slate-500">
-                      {new Date(apt.ngayDat).toLocaleDateString("vi-VN")}
+                      {formatDate(apt.ngayDat)}
                     </td>
                     <td className="px-6 py-4">
                       {cfg && <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${cfg.className}`}>{cfg.label}</span>}

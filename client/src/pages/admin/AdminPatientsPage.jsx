@@ -185,7 +185,7 @@ export default function AdminPatientsPage() {
                     <td className="py-5 px-6">
                       <p className="font-bold text-slate-900 text-sm">{p.hoTen}</p>
                       <p className="text-[10px] font-medium text-slate-400 mt-0.5 uppercase tracking-wider">
-                        Tham gia: {p.taiKhoan?.ngayTao ? new Date(p.taiKhoan.ngayTao).toLocaleDateString("vi-VN") : "—"}
+                        Tham gia: {p.taiKhoan?.ngayTao ? formatDate(p.taiKhoan.ngayTao) : "—"}
                       </p>
                     </td>
                     {/* Thông tin liên lạc (SĐT & Email) */}

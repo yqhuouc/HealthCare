@@ -18,6 +18,9 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { authService } from "../../services/authService";
 import useAuthStore from "../../stores/useAuthStore";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { patientProfileSchema, passwordChangeSchema } from "../../validations/authSchema";
 
 const inputBase =
   "w-full px-4 py-3 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all disabled:opacity-60";
@@ -30,22 +33,29 @@ export default function PatientProfilePage() {
   const [saving, setSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
-  // Dữ liệu form profile
-  const [formData, setFormData] = useState({
-    hoTen: "",
-    email: "",
-    soDienThoai: "",
-    gioiTinh: "",
-    ngaySinh: "",
-    diaChi: "",
+  // Form profile
+  const profileForm = useForm({
+    resolver: zodResolver(patientProfileSchema),
+    defaultValues: {
+      hoTen: "",
+      email: "",
+      soDienThoai: "",
+      gioiTinh: "",
+      ngaySinh: "",
+      diaChi: "",
+    }
   });
-  const [snapshot, setSnapshot] = useState(formData);
+  
+  const [snapshot, setSnapshot] = useState(profileForm.getValues());
 
-  // State đổi mật khẩu
-  const [passwordData, setPasswordData] = useState({
-    matKhauCu: "",
-    matKhauMoi: "",
-    xacNhanMatKhau: "",
+  // Form password
+  const passwordForm = useForm({
+    resolver: zodResolver(passwordChangeSchema),
+    defaultValues: {
+      matKhauCu: "",
+      matKhauMoi: "",
+      xacNhanMatKhau: "",
+    }
   });
   const [changingPassword, setChangingPassword] = useState(false);
 
@@ -65,7 +75,7 @@ export default function PatientProfilePage() {
           ngaySinh: data.ngaySinh ? data.ngaySinh.split("T")[0] : "",
           diaChi: data.diaChi || "",
         };
-        setFormData(profileData);
+        profileForm.reset(profileData);
         setSnapshot(profileData);
       } catch {
         toast.error("Không thể tải thông tin hồ sơ.");
@@ -76,32 +86,26 @@ export default function PatientProfilePage() {
     fetchProfile();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleEdit = () => {
-    setSnapshot(formData);
+    setSnapshot(profileForm.getValues());
     setIsEditing(true);
   };
 
   const handleCancel = () => {
-    setFormData(snapshot);
+    profileForm.reset(snapshot);
     setIsEditing(false);
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
+  const onProfileSubmit = async (data) => {
     setSaving(true);
     try {
       const res = await authService.capNhatHoSo({
-        hoTen: formData.hoTen,
-        soDienThoai: formData.soDienThoai,
-        email: formData.email,
-        gioiTinh: formData.gioiTinh ? Number(formData.gioiTinh) : undefined,
-        ngaySinh: formData.ngaySinh || undefined,
-        diaChi: formData.diaChi || undefined,
+        hoTen: data.hoTen,
+        soDienThoai: data.soDienThoai,
+        email: data.email,
+        gioiTinh: data.gioiTinh ? Number(data.gioiTinh) : undefined,
+        ngaySinh: data.ngaySinh || undefined,
+        diaChi: data.diaChi || undefined,
       });
       toast.success("Cập nhật thông tin thành công!");
       // Cập nhật store
@@ -130,9 +134,7 @@ export default function PatientProfilePage() {
     setIsUploadingAvatar(true);
     try {
       const res = await authService.capNhatAvatar(formDataToUpload);
-      // Cập nhật URL ảnh mới lên trạng thái formData
-      setFormData(prev => ({ ...prev, anhDaiDien: res.anhDaiDien }));
-      // Cập nhật global state user
+      // Cập nhật URL ảnh mới lên store và không cần setState cho form
       setUser({ ...user, anhDaiDien: res.anhDaiDien });
       toast.success("Tải ảnh đại diện thành công!");
     } catch (err) {
@@ -144,27 +146,15 @@ export default function PatientProfilePage() {
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!passwordData.matKhauCu || !passwordData.matKhauMoi) {
-      toast.error("Vui lòng nhập đầy đủ mật khẩu.");
-      return;
-    }
-    if (passwordData.matKhauMoi.length < 6) {
-      toast.error("Mật khẩu mới tối thiểu 6 ký tự.");
-      return;
-    }
-    if (passwordData.matKhauMoi !== passwordData.xacNhanMatKhau) {
-      toast.error("Mật khẩu xác nhận không khớp.");
-      return;
-    }
+  const onPasswordSubmit = async (data) => {
     setChangingPassword(true);
     try {
       await authService.doiMatKhau({
-        matKhauCu: passwordData.matKhauCu,
-        matKhauMoi: passwordData.matKhauMoi,
+        matKhauCu: data.matKhauCu,
+        matKhauMoi: data.matKhauMoi,
       });
       toast.success("Đổi mật khẩu thành công!");
-      setPasswordData({ matKhauCu: "", matKhauMoi: "", xacNhanMatKhau: "" });
+      passwordForm.reset({ matKhauCu: "", matKhauMoi: "", xacNhanMatKhau: "" });
     } catch (err) {
       toast.error(err.message || "Đổi mật khẩu thất bại.");
     } finally {
@@ -203,9 +193,9 @@ export default function PatientProfilePage() {
               onChange={handleAvatarChange}
               disabled={isUploadingAvatar}
             />
-            {user?.anhDaiDien || formData.anhDaiDien ? (
+            {user?.anhDaiDien ? (
               <img
-                src={user?.anhDaiDien || formData.anhDaiDien}
+                src={user?.anhDaiDien}
                 alt="Avatar"
                 className="w-24 h-24 rounded-full object-cover border-4 border-primary/20"
               />
@@ -231,28 +221,27 @@ export default function PatientProfilePage() {
           </label>
           <div>
             <h2 className="text-xl font-bold text-slate-800">
-              {formData.hoTen}
+              {profileForm.watch("hoTen")}
             </h2>
-            <p className="text-slate-500 text-sm mt-1">{formData.email}</p>
+            <p className="text-slate-500 text-sm mt-1">{profileForm.watch("email")}</p>
           </div>
         </div>
 
         <hr className="border-slate-100 mb-8" />
 
         {/* Form chỉnh sửa thông tin */}
-        <form onSubmit={handleSave}>
+        <form onSubmit={profileForm.handleSubmit(onProfileSubmit)}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Họ và tên */}
             <div>
               <label className={labelBase}>Họ và tên</label>
               <input
                 type="text"
-                name="hoTen"
-                value={formData.hoTen}
-                onChange={handleChange}
+                {...profileForm.register("hoTen")}
                 disabled={!isEditing}
-                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
+                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"} ${profileForm.formState.errors.hoTen ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
               />
+              {profileForm.formState.errors.hoTen && <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.hoTen.message}</p>}
             </div>
 
             {/* Email */}
@@ -260,12 +249,11 @@ export default function PatientProfilePage() {
               <label className={labelBase}>Email</label>
               <input
                 type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
+                {...profileForm.register("email")}
                 disabled={!isEditing}
-                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
+                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"} ${profileForm.formState.errors.email ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
               />
+              {profileForm.formState.errors.email && <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.email.message}</p>}
             </div>
 
             {/* Số điện thoại */}
@@ -273,21 +261,18 @@ export default function PatientProfilePage() {
               <label className={labelBase}>Số điện thoại</label>
               <input
                 type="tel"
-                name="soDienThoai"
-                value={formData.soDienThoai}
-                onChange={handleChange}
+                {...profileForm.register("soDienThoai")}
                 disabled={!isEditing}
-                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
+                className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"} ${profileForm.formState.errors.soDienThoai ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
               />
+              {profileForm.formState.errors.soDienThoai && <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.soDienThoai.message}</p>}
             </div>
 
             {/* Giới tính */}
             <div>
               <label className={labelBase}>Giới tính</label>
               <select
-                name="gioiTinh"
-                value={formData.gioiTinh}
-                onChange={handleChange}
+                {...profileForm.register("gioiTinh")}
                 disabled={!isEditing}
                 className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
               >
@@ -303,9 +288,7 @@ export default function PatientProfilePage() {
               <label className={labelBase}>Ngày sinh</label>
               <input
                 type="date"
-                name="ngaySinh"
-                value={formData.ngaySinh}
-                onChange={handleChange}
+                {...profileForm.register("ngaySinh")}
                 disabled={!isEditing}
                 className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
               />
@@ -316,9 +299,7 @@ export default function PatientProfilePage() {
               <label className={labelBase}>Địa chỉ</label>
               <input
                 type="text"
-                name="diaChi"
-                value={formData.diaChi}
-                onChange={handleChange}
+                {...profileForm.register("diaChi")}
                 disabled={!isEditing}
                 placeholder="Nhập địa chỉ..."
                 className={`${inputBase} ${isEditing ? "bg-white" : "bg-slate-50"}`}
@@ -358,8 +339,7 @@ export default function PatientProfilePage() {
         </form>
       </div>
 
-      {/* Card đổi mật khẩu */}
-      <div className="bg-white rounded-lg shadow p-6 mt-8">
+      <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="bg-white rounded-lg shadow p-6 mt-8">
         <h3 className="text-lg font-bold text-slate-800 mb-6">Đổi mật khẩu</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -368,53 +348,43 @@ export default function PatientProfilePage() {
             <input
               type="password"
               placeholder="Nhập mật khẩu hiện tại"
-              value={passwordData.matKhauCu}
-              onChange={(e) =>
-                setPasswordData((p) => ({ ...p, matKhauCu: e.target.value }))
-              }
-              className={inputBase}
+              {...passwordForm.register("matKhauCu")}
+              className={`${inputBase} ${passwordForm.formState.errors.matKhauCu ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
             />
+            {passwordForm.formState.errors.matKhauCu && <p className="text-red-500 text-xs mt-1">{passwordForm.formState.errors.matKhauCu.message}</p>}
           </div>
           <div>
             <label className={labelBase}>Mật khẩu mới</label>
             <input
               type="password"
               placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
-              value={passwordData.matKhauMoi}
-              onChange={(e) =>
-                setPasswordData((p) => ({ ...p, matKhauMoi: e.target.value }))
-              }
-              className={inputBase}
+              {...passwordForm.register("matKhauMoi")}
+              className={`${inputBase} ${passwordForm.formState.errors.matKhauMoi ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
             />
+            {passwordForm.formState.errors.matKhauMoi && <p className="text-red-500 text-xs mt-1">{passwordForm.formState.errors.matKhauMoi.message}</p>}
           </div>
           <div>
             <label className={labelBase}>Xác nhận mật khẩu mới</label>
             <input
               type="password"
               placeholder="Nhập lại mật khẩu mới"
-              value={passwordData.xacNhanMatKhau}
-              onChange={(e) =>
-                setPasswordData((p) => ({
-                  ...p,
-                  xacNhanMatKhau: e.target.value,
-                }))
-              }
-              className={inputBase}
+              {...passwordForm.register("xacNhanMatKhau")}
+              className={`${inputBase} ${passwordForm.formState.errors.xacNhanMatKhau ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
             />
+            {passwordForm.formState.errors.xacNhanMatKhau && <p className="text-red-500 text-xs mt-1">{passwordForm.formState.errors.xacNhanMatKhau.message}</p>}
           </div>
         </div>
 
         <div className="flex justify-end mt-6">
           <button
-            type="button"
-            onClick={handleChangePassword}
+            type="submit"
             disabled={changingPassword}
             className="px-6 py-2.5 rounded-lg border border-primary text-primary font-medium text-sm hover:bg-primary/5 transition disabled:opacity-60"
           >
             {changingPassword ? "Đang xử lý..." : "Đổi mật khẩu"}
           </button>
         </div>
-      </div>
+      </form>
     </section>
   );
 }

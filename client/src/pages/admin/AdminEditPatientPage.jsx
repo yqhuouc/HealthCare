@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { usePatient, useUpdatePatient } from "../../hooks/queries/usePatientQueries";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { patientSchema } from "../../validations/adminSchema";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 /**
@@ -31,26 +34,33 @@ function EditPatientForm({ patientData, patientId }) {
   
   // Khởi tạo form state trực tiếp từ props — KHÔNG cần useEffect
   const p = patientData || {};
-  const [formData, setFormData] = useState({
-    hoTen: p.hoTen || "",
-    soDienThoai: p.soDienThoai || "",
-    taiKhoan: {
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors }
+  } = useForm({
+    resolver: zodResolver(patientSchema),
+    defaultValues: {
+      hoTen: p.hoTen || "",
+      soDienThoai: p.soDienThoai || "",
       email: p.taiKhoan?.email || "",
       diaChi: p.taiKhoan?.diaChi || "",
       ngaySinh: p.taiKhoan?.ngaySinh ? p.taiKhoan.ngaySinh.split("T")[0] : "",
       gioiTinh: p.taiKhoan?.gioiTinh ?? 1,
-    },
+    }
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const gioiTinhValue = watch("gioiTinh");
+
+  const onSubmit = (data) => {
     const payload = {
-      hoTen: formData.hoTen,
-      soDienThoai: formData.soDienThoai,
-      emailLienHe: formData.taiKhoan.email,
-      diaChi: formData.taiKhoan.diaChi,
-      ngaySinh: formData.taiKhoan.ngaySinh,
-      gioiTinh: Number(formData.taiKhoan.gioiTinh)
+      hoTen: data.hoTen,
+      soDienThoai: data.soDienThoai,
+      emailLienHe: data.email,
+      diaChi: data.diaChi,
+      ngaySinh: data.ngaySinh,
+      gioiTinh: Number(data.gioiTinh)
     };
 
     updateMutation.mutate(
@@ -89,7 +99,7 @@ function EditPatientForm({ patientData, patientId }) {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 sm:p-8 space-y-8">
           {/* Section 1: Thông tin liên hệ cơ bản */}
           <section className="space-y-6">
             <h3 className="font-bold text-slate-900 border-l-4 border-primary pl-3 uppercase text-xs tracking-widest">
@@ -102,13 +112,10 @@ function EditPatientForm({ patientData, patientId }) {
                 </label>
                 <input
                   type="text"
-                  required
-                  value={formData.hoTen}
-                  onChange={(e) =>
-                    setFormData({ ...formData, hoTen: e.target.value })
-                  }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  {...register("hoTen")}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${errors.hoTen ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.hoTen && <p className="text-red-500 text-xs mt-1">{errors.hoTen.message}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">
@@ -116,13 +123,10 @@ function EditPatientForm({ patientData, patientId }) {
                 </label>
                 <input
                   type="tel"
-                  required
-                  value={formData.soDienThoai}
-                  onChange={(e) =>
-                    setFormData({ ...formData, soDienThoai: e.target.value })
-                  }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  {...register("soDienThoai")}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${errors.soDienThoai ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.soDienThoai && <p className="text-red-500 text-xs mt-1">{errors.soDienThoai.message}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">
@@ -131,7 +135,7 @@ function EditPatientForm({ patientData, patientId }) {
                 <input
                   type="email"
                   disabled
-                  value={formData.taiKhoan.email}
+                  {...register("email")}
                   className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed"
                 />
                 <p className="text-[10px] text-slate-400 italic">
@@ -144,18 +148,10 @@ function EditPatientForm({ patientData, patientId }) {
                 </label>
                 <input
                   type="text"
-                  value={formData.taiKhoan.diaChi}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      taiKhoan: {
-                        ...formData.taiKhoan,
-                        diaChi: e.target.value,
-                      },
-                    })
-                  }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  {...register("diaChi")}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${errors.diaChi ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.diaChi && <p className="text-red-500 text-xs mt-1">{errors.diaChi.message}</p>}
               </div>
             </div>
           </section>
@@ -172,18 +168,10 @@ function EditPatientForm({ patientData, patientId }) {
                 </label>
                 <input
                   type="date"
-                  value={formData.taiKhoan.ngaySinh}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      taiKhoan: {
-                        ...formData.taiKhoan,
-                        ngaySinh: e.target.value,
-                      },
-                    })
-                  }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  {...register("ngaySinh")}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${errors.ngaySinh ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.ngaySinh && <p className="text-red-500 text-xs mt-1">{errors.ngaySinh.message}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">
@@ -197,25 +185,19 @@ function EditPatientForm({ patientData, patientId }) {
                     >
                       <input
                         type="radio"
-                        name="gioiTinh"
+                        {...register("gioiTinh")}
+                        value={val}
                         className="peer hidden"
-                        checked={formData.taiKhoan.gioiTinh === val}
-                        onChange={() =>
-                          setFormData({
-                            ...formData,
-                            taiKhoan: { ...formData.taiKhoan, gioiTinh: val },
-                          })
-                        }
                       />
                       <span
-                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.taiKhoan.gioiTinh === val ? "border-primary" : "border-slate-300"}`}
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${Number(gioiTinhValue) === val ? "border-primary" : "border-slate-300"}`}
                       >
-                        {formData.taiKhoan.gioiTinh === val && (
+                        {Number(gioiTinhValue) === val && (
                           <span className="w-2 h-2 bg-primary rounded-full transition-all" />
                         )}
                       </span>
                       <span
-                        className={`text-sm font-medium ${formData.taiKhoan.gioiTinh === val ? "text-primary" : "text-slate-600"}`}
+                        className={`text-sm font-medium ${Number(gioiTinhValue) === val ? "text-primary" : "text-slate-600"}`}
                       >
                         {val === 1 ? "Nam" : "Nữ"}
                       </span>

@@ -3,6 +3,9 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useDoctor, useUpdateDoctor } from "../../hooks/queries/useDoctorQueries";
 import { useSpecialties } from "../../hooks/queries/useSpecialtyQueries";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { doctorSchema } from "../../validations/adminSchema";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 /**
@@ -53,46 +56,41 @@ function EditDoctorForm({ doctorData, doctorId }) {
   
   // Khởi tạo form state trực tiếp từ props — KHÔNG cần useEffect
   const doc = doctorData || {};
-  const [form, setForm] = useState({
-    tenBacSi: doc.tenBacSi || "",
-    chuyenKhoaId: doc.chuyenKhoaId?.toString() || "",
-    hocViChucDanh: doc.hocViChucDanh || "",
-    giaKham: doc.giaKham || "",
-    moTaNgan: doc.moTaNgan || "",
-    moTaChiTiet: doc.moTaChiTiet || "",
-    email: doc.taiKhoan?.email || "",
-    matKhau: "",
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(doctorSchema),
+    defaultValues: {
+      tenBacSi: doc.tenBacSi || "",
+      chuyenKhoaId: doc.chuyenKhoaId?.toString() || "",
+      hocViChucDanh: doc.hocViChucDanh || "",
+      giaKham: doc.giaKham || "",
+      moTaNgan: doc.moTaNgan || "",
+      moTaChiTiet: doc.moTaChiTiet || "",
+      email: doc.taiKhoan?.email || "",
+      matKhau: "",
+    }
   });
-
-  /**
-   * Cập nhật state form khi người dùng nhập liệu vào các ô input
-   */
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
   /**
    * Xử lý gửi yêu cầu cập nhật thông tin lên Server
    */
-  const handleSave = () => {
-    if (!form.tenBacSi.trim() || !form.chuyenKhoaId || !form.email.trim()) {
-      toast.warn("Vui lòng nhập đầy đủ: Họ tên, Chuyên khoa và Email.");
-      return;
-    }
-
+  const onSubmit = (data) => {
     const updateData = {
-      ...form,
-      giaKham: form.giaKham ? Number(form.giaKham) : null,
+      ...data,
+      giaKham: data.giaKham ? Number(data.giaKham) : null,
     };
     
-    if (!form.matKhau.trim()) {
+    if (!updateData.matKhau.trim()) {
       delete updateData.matKhau;
     }
 
     updateMutation.mutate(
       { id: doctorId, data: updateData },
       {
-        onSuccess: () => toast.success(`Cập nhật bác sĩ "${form.tenBacSi}" thành công!`),
+        onSuccess: () => toast.success(`Cập nhật bác sĩ "${data.tenBacSi}" thành công!`),
         onError: (err) => toast.error(err.message || "Có lỗi xảy ra khi cập nhật!"),
       }
     );
@@ -133,24 +131,23 @@ function EditDoctorForm({ doctorData, doctorId }) {
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Email đăng nhập <span className="text-rose-500">*</span></label>
                 <input
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
+                  type="email"
+                  {...register("email")}
                   placeholder="VD: doctor@example.com"
-                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                  className={`w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium ${errors.email ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Mật khẩu mới (Tùy chọn)</label>
                 <div className="relative">
                   <input
-                    name="matKhau"
                     type={showPassword ? "text" : "password"}
-                    value={form.matKhau}
-                    onChange={handleChange}
+                    {...register("matKhau")}
                     placeholder="Để trống nếu không thay đổi"
-                    className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                    className={`w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium ${errors.matKhau ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                   />
+                  {errors.matKhau && <p className="text-red-500 text-xs mt-1">{errors.matKhau.message}</p>}
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -181,20 +178,17 @@ function EditDoctorForm({ doctorData, doctorId }) {
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Họ tên bác sĩ <span className="text-rose-500">*</span></label>
                 <input
-                  name="tenBacSi"
-                  value={form.tenBacSi}
-                  onChange={handleChange}
+                  {...register("tenBacSi")}
                   placeholder="VD: PGS. TS. Nguyễn Văn A"
-                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                  className={`w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium ${errors.tenBacSi ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.tenBacSi && <p className="text-red-500 text-xs mt-1">{errors.tenBacSi.message}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Chuyên khoa <span className="text-rose-500">*</span></label>
                 <select
-                  name="chuyenKhoaId"
-                  value={form.chuyenKhoaId}
-                  onChange={handleChange}
-                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium appearance-none cursor-pointer"
+                  {...register("chuyenKhoaId")}
+                  className={`w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium appearance-none cursor-pointer ${errors.chuyenKhoaId ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 >
                   <option value="">-- Chọn chuyên khoa --</option>
                   {specialties.map((s) => (
@@ -203,6 +197,7 @@ function EditDoctorForm({ doctorData, doctorId }) {
                     </option>
                   ))}
                 </select>
+                {errors.chuyenKhoaId && <p className="text-red-500 text-xs mt-1">{errors.chuyenKhoaId.message}</p>}
               </div>
             </div>
           </div>
@@ -219,47 +214,44 @@ function EditDoctorForm({ doctorData, doctorId }) {
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Học vị / Chức danh</label>
                 <input
-                  name="hocViChucDanh"
-                  value={form.hocViChucDanh}
-                  onChange={handleChange}
+                  type="text"
+                  {...register("hocViChucDanh")}
                   placeholder="VD: Bác sĩ chuyên khoa II, ThS..."
-                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                  className={`w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium ${errors.hocViChucDanh ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.hocViChucDanh && <p className="text-red-500 text-xs mt-1">{errors.hocViChucDanh.message}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Giá khám bệnh (VNĐ)</label>
                 <input
-                  name="giaKham"
                   type="number"
-                  value={form.giaKham}
-                  onChange={handleChange}
+                  {...register("giaKham")}
                   placeholder="VD: 500000"
-                  className="w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-bold text-primary"
+                  className={`w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-bold text-primary ${errors.giaKham ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.giaKham && <p className="text-red-500 text-xs mt-1">{errors.giaKham.message}</p>}
               </div>
             </div>
             
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Mô tả ngắn gọn chuyên môn</label>
               <input
-                name="moTaNgan"
-                value={form.moTaNgan}
-                onChange={handleChange}
+                {...register("moTaNgan")}
                 placeholder="VD: Chuyên gia hàng đầu về tim mạch can thiệp với hơn 20 năm kinh nghiệm."
-                className="w-full px-5 py-4 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                className={`w-full px-5 py-4 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium ${errors.moTaNgan ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
               />
+              {errors.moTaNgan && <p className="text-red-500 text-xs mt-1">{errors.moTaNgan.message}</p>}
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Giới thiệu chi tiết</label>
               <textarea
-                name="moTaChiTiet"
-                value={form.moTaChiTiet}
-                onChange={handleChange}
+                {...register("moTaChiTiet")}
                 rows={10}
                 placeholder="Nhập quá trình công tác, đào tạo và các thành tựu của bác sĩ..."
-                className="w-full px-5 py-4 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium resize-none leading-relaxed"
+                className={`w-full px-5 py-4 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium resize-none leading-relaxed ${errors.moTaChiTiet ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
               />
+              {errors.moTaChiTiet && <p className="text-red-500 text-xs mt-1">{errors.moTaChiTiet.message}</p>}
             </div>
           </div>
         </div>
@@ -273,7 +265,7 @@ function EditDoctorForm({ doctorData, doctorId }) {
             Hủy bỏ
           </button>
           <button
-            onClick={handleSave}
+            onClick={handleSubmit(onSubmit)}
             disabled={saving}
             className={`w-full sm:w-auto px-12 py-3.5 rounded-2xl text-white text-sm font-black transition-all flex items-center justify-center gap-2 shadow-xl ${
               saving ? "bg-slate-300" : "bg-primary hover:bg-primary/90 shadow-primary/20"

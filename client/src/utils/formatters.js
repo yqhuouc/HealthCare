@@ -24,48 +24,7 @@ export const getDoctorInitials = (name) => {
   return name.slice(0, 2).toUpperCase();
 };
 
-/**
- * Định dạng thời gian (HH:mm) đảm bảo đúng múi giờ Việt Nam
- * @param {string|Date} timeInput - Giờ hoặc đối tượng Date
- * @returns {string} Giờ định dạng HH:mm
- */
-export function formatTime(timeInput) {
-  if (!timeInput) return "";
-  // Nếu là định dạng HH:mm:ss thuần (không có T của ISO)
-  if (
-    typeof timeInput === "string" &&
-    !timeInput.includes("T") &&
-    timeInput.includes(":")
-  ) {
-    return timeInput.substring(0, 5);
-  }
-  const d = new Date(timeInput);
-  if (isNaN(d.getTime())) return timeInput;
-  d.setFullYear(2024); // Ép năm cố định để tránh lỗi lệch múi giờ lịch sử
-  return d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
 
-/**
- * Định dạng ngày tháng năm (DD/MM/YYYY) đảm bảo đúng múi giờ Việt Nam
- * @param {string|Date} dateInput - Chuỗi ngày hoặc đối tượng Date
- * @returns {string} Ngày định dạng DD/MM/YYYY
- */
-export function formatDate(dateInput) {
-  if (!dateInput) return "";
-  const d = new Date(dateInput);
-  if (isNaN(d.getTime())) return dateInput;
-  return d.toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
 
 /**
  * Định dạng tiền tệ VNĐ (Ví dụ: 100000 -> "100.000đ")

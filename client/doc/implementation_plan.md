@@ -5,7 +5,7 @@
 | # | Thư viện | Vai trò | package.json | Dùng thực tế | Đánh giá |
 |---|----------|---------|:------------:|:------------:|:--------:|
 | 1 | **Zustand** | State management | ✅ `^5.0.11` | ✅ `useAuthStore` | ✅ OK |
-| 2 | **React Query** | Server-state / API | ✅ `^5.90.21` | ❌ **0/40 pages dùng** | 🔴 CẦN SỬA |
+| 2 | **React Query** | Server-state / API | ✅ `^5.90.21` | ✅ **~40 pages đã dùng** | ✅ OK |
 | 3 | **Axios** | HTTP client | ✅ `^1.13.6` | ✅ `services/api.js` + interceptors | ✅ OK |
 | 4 | **React Router** | Routing | ✅ `^7.13.1` | ✅ `router/index.js` + layouts | ✅ OK |
 | 5 | **Tailwind CSS** | UI styling | ✅ `^4.2.1` | ✅ Toàn bộ app | ✅ OK |
@@ -17,26 +17,8 @@
 
 ## Chi tiết vấn đề từng thư viện
 
-### 🔴 React Query — Cài rồi nhưng chưa dùng
-
-**Hiện trạng**: `QueryClientProvider` đã wrap `<App/>` trong `main.jsx`, nhưng **tất cả 40 pages** đều dùng pattern thủ công:
-
-```jsx
-// ❌ Lặp lại ~40 lần trong dự án
-const [data, setData] = useState([]);
-const [loading, setLoading] = useState(true);
-useEffect(() => {
-  const fetch = async () => {
-    setLoading(true);
-    try { const res = await service.getAll(); setData(res.data); }
-    catch { toast.error("Lỗi"); }
-    finally { setLoading(false); }
-  };
-  fetch();
-}, [deps]);
-```
-
-**Hệ quả**: Không cache, không auto-refetch, không đồng bộ data giữa pages, boilerplate lặp lại.
+### ✅ React Query — Đã hoàn thành Refactor
+**Đã giải quyết**: Các component đã loại bỏ `useEffect` + `useState`, được bọc thông qua các query hooks ở folder `hooks/queries`. Toàn bộ thao tác CRUD (tạo, cập nhật, xóa) đã chạy mutation invalidate dữ liệu.
 
 ---
 
@@ -106,7 +88,7 @@ Các file dùng `new Date()` nhiều nhất:
 
 ## Proposed Changes — 5 Phases
 
-### Phase 1: Cài đặt thư viện thiếu
+### ✅ Phase 1: Cài đặt thư viện thiếu (Chuẩn bị làm)
 > Cài `zod`, `@hookform/resolvers`, `dayjs` vào project
 
 #### [MODIFY] `package.json`
@@ -116,7 +98,7 @@ npm install zod @hookform/resolvers dayjs
 
 ---
 
-### Phase 2: Tạo Custom React Query Hooks (`hooks/queries/`)
+### ✅ Phase 2: Tạo Custom React Query Hooks (`hooks/queries/`) [ĐÃ HOÀN THÀNH]
 
 Tầng hook trung gian giữa `services/` → `pages/`. Mỗi entity có 1 file.
 
@@ -190,7 +172,7 @@ Tương tự cho các entity khác:
 
 ---
 
-### Phase 3: Tích hợp Day.js
+### 🚀 Phase 3: Tích hợp Day.js (Chuẩn bị làm)
 
 #### [MODIFY] `utils/formatters.js`
 
@@ -245,7 +227,7 @@ Thay `new Date()` inline bằng `dayjs()`:
 
 ---
 
-### Phase 4: Mở rộng React Hook Form + Zod
+### 🚀 Phase 4: Mở rộng React Hook Form + Zod (Chuẩn bị làm)
 
 #### [NEW] `validations/` — Zod schemas tập trung
 
@@ -325,7 +307,7 @@ Danh sách 8 form pages cần chuyển:
 
 ---
 
-### Phase 5: Refactor Pages — Thay useEffect+useState bằng React Query hooks
+### ✅ Phase 5: Refactor Pages — Thay useEffect bằng React Query [ĐÃ HOÀN THÀNH]
 
 #### Admin Pages (19 files)
 
@@ -384,7 +366,7 @@ Danh sách 8 form pages cần chuyển:
 
 ---
 
-### Phase 6: Dọn dẹp
+### ✅ Phase 6: Dọn dẹp [ĐÃ HOÀN THÀNH]
 
 | Hành động | Chi tiết |
 |-----------|----------|
@@ -400,20 +382,20 @@ Danh sách 8 form pages cần chuyển:
 | Thư viện mới cần cài | **3** (`zod`, `@hookform/resolvers`, `dayjs`) |
 | Custom hook files mới | **9** (trong `hooks/queries/`) |
 | Zod schema files mới | **5** (trong `validations/`) |
-| Pages refactor React Query | **~37** |
+| Pages refactor React Query | **~38** |
 | Pages refactor Form (RHF+Zod) | **11** (8 chuyển mới + 3 nâng cấp) |
 | Pages refactor Day.js | **~15** |
-| Xóa thư mục rỗng | **1** (`context/`) |
+| Xóa thư mục rỗng | **1** (`context/` đã xóa) |
 
 ---
 
 ## Open Questions
 
 > [!IMPORTANT]
-> **Thứ tự thực hiện?** Tôi đề xuất: Phase 1 (cài lib) → Phase 2 (hooks) → Phase 3 (dayjs) → Phase 4 (form+zod) → Phase 5 (refactor pages) → Phase 6 (cleanup). Bạn OK không?
-
-> [!IMPORTANT]
-> **Phạm vi refactor?** Đây là thay đổi lớn (~37 pages). Bạn muốn tôi làm **tất cả cùng lúc** hay **chia nhỏ theo portal** (Admin trước → Doctor → Patient)?
+> **TIẾN ĐỘ HIỆN TẠI:** Đã hoàn tất xử lý xong toàn diện React Query (Phase 2, 5, 6).
+> 
+> **THAO TÁC TIẾP THEO (NEXT STEPS):**
+> Sẽ tiến hành Phase 1 (Cài đặt `zod`, `@hookform/resolvers`, `dayjs`) -> Phase 3 (Refactor tập trung xử lý Ngày/Giờ với `dayjs`) -> Phase 4 (Thiết lập `Zod Schema` và kết nối với `React Hook Form` trên 11 file Form của admin/doctor/patient). Bạn OK không?
 
 ---
 

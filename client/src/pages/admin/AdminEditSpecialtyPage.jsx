@@ -3,6 +3,9 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useSpecialty, useUpdateSpecialty } from "../../hooks/queries/useSpecialtyQueries";
 import { specialtyService } from "../../services/specialtyService"; // Giữ lại cho uploadAnh
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { specialtySchema } from "../../validations/adminSchema";
 
 // Danh sách các icon Google Material Symbols gợi ý cho chuyên khoa
 const ICON_OPTIONS = [
@@ -50,24 +53,27 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
   
   // Khởi tạo form state trực tiếp từ props
   const item = specialtyData || {};
-  const [form, setForm] = useState({
-    name: item.tenChuyenKhoa || "",
-    icon: item.icon || "medical_services",
-    description: item.moTaChuyenKhoa || "",
-    duration: item.thoiLuongKham || 20,
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors }
+  } = useForm({
+    resolver: zodResolver(specialtySchema),
+    defaultValues: {
+      tenChuyenKhoa: item.tenChuyenKhoa || "",
+      icon: item.icon || "medical_services",
+      moTa: item.moTaChuyenKhoa || "",
+      thoiLuongKham: item.thoiLuongKham || 20,
+    }
   });
+
+  const iconValue = watch("icon");
 
   // State quản lý tệp tin ảnh và preview
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [currentImageUrl] = useState(item.anhChuyenKhoa || null);
-
-  /**
-   * Cập nhật state khi người dùng nhập liệu vào form
-   */
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
   /**
    * Xử lý khi người dùng chọn một tệp ảnh mới
@@ -88,21 +94,16 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
   /**
    * Thực hiện lưu các thay đổi lên server
    */
-  const handleSave = async () => {
-    if (!form.name.trim()) {
-      toast.warn("Vui lòng nhập tên chuyên khoa.");
-      return;
-    }
-
+  const onSubmit = async (data) => {
     try {
       // BƯỚC 1: Cập nhật thông tin mô tả văn bản qua mutation
       await updateMutation.mutateAsync({
         id: specialtyId,
         data: {
-          tenChuyenKhoa: form.name.trim(),
-          icon: form.icon,
-          moTaChuyenKhoa: form.description,
-          thoiLuongKham: Number(form.duration) || 20,
+          tenChuyenKhoa: data.tenChuyenKhoa.trim(),
+          icon: data.icon,
+          moTaChuyenKhoa: data.moTa,
+          thoiLuongKham: Number(data.thoiLuongKham) || 20,
         },
       });
 
@@ -111,7 +112,7 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
         await specialtyService.uploadAnh(specialtyId, selectedFile);
       }
 
-      toast.success(`Cập nhật chuyên khoa "${form.name}" thành công!`);
+      toast.success(`Cập nhật chuyên khoa "${data.tenChuyenKhoa}" thành công!`);
       navigate("/admin/specialties");
     } catch (error) {
       console.error(error);
@@ -150,12 +151,11 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
                   Tên chuyên khoa <span className="text-rose-500">*</span>
                 </label>
                 <input
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
+                  {...register("tenChuyenKhoa")}
                   placeholder="VD: Nội tổng quát..."
-                  className="w-full px-4 py-2.5 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className={`w-full px-4 py-2.5 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${errors.tenChuyenKhoa ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.tenChuyenKhoa && <p className="text-red-500 text-xs mt-1">{errors.tenChuyenKhoa.message}</p>}
               </div>
 
               <div>
@@ -163,27 +163,25 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
                   Thời lượng khám trung bình (Phút)
                 </label>
                 <input
-                  name="duration"
                   type="number"
-                  value={form.duration}
-                  onChange={handleChange}
+                  {...register("thoiLuongKham")}
                   min={5}
                   max={120}
                   placeholder="VD: 20"
-                  className="w-full px-4 py-2.5 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className={`w-full px-4 py-2.5 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${errors.thoiLuongKham ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.thoiLuongKham && <p className="text-red-500 text-xs mt-1">{errors.thoiLuongKham.message}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả chuyên khoa</label>
                 <textarea
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
+                  {...register("moTa")}
                   rows={8}
                   placeholder="Nhập thông tin giới thiệu chuyên khoa..."
-                  className="w-full px-4 py-2.5 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
+                  className={`w-full px-4 py-2.5 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none ${errors.moTa ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                 />
+                {errors.moTa && <p className="text-red-500 text-xs mt-1">{errors.moTa.message}</p>}
               </div>
             </div>
           </div>
@@ -200,10 +198,8 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
             
             <div className="space-y-4">
               <select
-                name="icon"
-                value={form.icon}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                {...register("icon")}
+                className={`w-full px-4 py-2.5 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${errors.icon ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
               >
                 {ICON_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -217,7 +213,7 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
                 <div className="flex flex-col items-center gap-2">
                   <div className="size-16 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-slate-100">
                     <span className="material-symbols-outlined text-primary text-4xl">
-                      {form.icon}
+                      {iconValue || "medical_services"}
                     </span>
                   </div>
                 </div>
@@ -273,7 +269,7 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
           Hủy bỏ
         </button>
         <button
-          onClick={handleSave}
+          onClick={handleSubmit(onSubmit)}
           disabled={saving}
           className={`w-full sm:w-auto px-10 py-3 rounded-xl text-white text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-lg ${
             saving ? "bg-slate-300" : "bg-primary hover:bg-primary/95 shadow-primary/20"

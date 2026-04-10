@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useFAQ, useUpdateFAQ } from "../../hooks/queries/useFAQQueries";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { faqSchema } from "../../validations/adminSchema";
 
 /**
  * Trang AdminEditFAQPage - Chỉnh sửa Câu hỏi thường gặp (FAQ)
@@ -31,28 +34,22 @@ function EditFAQForm({ faqData, faqId }) {
   
   // Khởi tạo form state trực tiếp từ props
   const item = faqData || {};
-  const [form, setForm] = useState({
-    cauHoi: item.cauHoi || "",
-    traLoi: item.traLoi || "",
-    dangHoatDong: item.dangHoatDong ?? 1,
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(faqSchema),
+    defaultValues: {
+      cauHoi: item.cauHoi || "",
+      traLoi: item.traLoi || "",
+      dangHoatDong: item.dangHoatDong ?? 1,
+    }
   });
 
-  const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "number" ? Number(value) : value,
-    }));
-  };
-
-  const handleSave = () => {
-    if (!form.cauHoi.trim() || !form.traLoi.trim()) {
-      toast.warn("Vui lòng nhập đầy đủ câu hỏi và câu trả lời.");
-      return;
-    }
-
+  const onSubmit = (data) => {
     updateMutation.mutate(
-      { id: faqId, data: form },
+      { id: faqId, data },
       {
         onSuccess: () => {
           toast.success("Cập nhật câu hỏi thành công!");
@@ -94,13 +91,12 @@ function EditFAQForm({ faqData, faqId }) {
               Câu hỏi <span className="text-red-500">*</span>
             </label>
             <textarea
-              name="cauHoi"
-              value={form.cauHoi}
-              onChange={handleChange}
+              {...register("cauHoi")}
               rows={2}
               placeholder="VD: Làm thế nào để đặt lịch khám?"
-              className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
+              className={`w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary ${errors.cauHoi ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
             />
+            {errors.cauHoi && <p className="text-red-500 text-xs mt-1">{errors.cauHoi.message}</p>}
           </div>
 
           {/* Ô nhập Nội dung câu trả lời */}
@@ -109,13 +105,12 @@ function EditFAQForm({ faqData, faqId }) {
               Câu trả lời <span className="text-red-500">*</span>
             </label>
             <textarea
-              name="traLoi"
-              value={form.traLoi}
-              onChange={handleChange}
+              {...register("traLoi")}
               rows={6}
               placeholder="Nhập nội dung câu trả lời chi tiết..."
-              className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
+              className={`w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary ${errors.traLoi ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
             />
+            {errors.traLoi && <p className="text-red-500 text-xs mt-1">{errors.traLoi.message}</p>}
           </div>
 
           {/* Lựa chọn trạng thái hiển thị */}
@@ -124,11 +119,8 @@ function EditFAQForm({ faqData, faqId }) {
               Trạng thái hiển thị
             </label>
             <select
-              name="dangHoatDong"
-              value={form.dangHoatDong}
-              onChange={handleChange}
-              type="number"
-              className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"
+              {...register("dangHoatDong")}
+              className={`w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary ${errors.dangHoatDong ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
             >
               <option value={1}>Đang hoạt động (Hiển thị)</option>
               <option value={0}>Tạm ẩn</option>
@@ -147,7 +139,7 @@ function EditFAQForm({ faqData, faqId }) {
           </button>
           {/* Nút lưu thay đổi */}
           <button
-            onClick={handleSave}
+            onClick={handleSubmit(onSubmit)}
             disabled={saving}
             className={`w-full sm:w-auto px-6 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
               saving

@@ -16,6 +16,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useFAQsAdmin, useDeleteFAQ } from "../../hooks/queries/useFAQQueries";
+import { formatDate, dayjs } from "../../utils/dateUtils";
 
 // Bản đồ trạng thái dùng để hiển thị nhãn và màu sắc tương ứng
 const STATUS_MAP = {
@@ -114,7 +115,7 @@ function AdminFAQsPage() {
                     </td>
                     {/* Cột Ngày tạo */}
                     <td className="px-5 py-4 text-slate-600">
-                      {new Date(item.ngayTao || new Date()).toLocaleDateString("vi-VN")}
+                      {formatDate(item.ngayTao || dayjs())}
                     </td>
                     {/* Cột Trạng thái dot color */}
                     <td className="px-5 py-4">
@@ -164,7 +165,7 @@ function AdminFAQsPage() {
                   </div>
                 </div>
                 <p className="text-xs text-slate-500">
-                  {new Date(item.ngayTao || new Date()).toLocaleDateString("vi-VN")}
+                  {formatDate(item.ngayTao || dayjs())}
                 </p>
                 <div className="flex items-center gap-2">
                   <Link

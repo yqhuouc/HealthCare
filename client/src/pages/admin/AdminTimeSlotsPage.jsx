@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import { useKhungGio, useCreateKhungGio, useDeleteKhungGio } from "../../hooks/queries/useScheduleQueries";
-import { formatTime } from "../../utils/formatters";
+import { formatTime } from "../../utils/dateUtils";
 
 /**
  * Trang AdminTimeSlotsPage - Quản lý danh mục khung giờ (Admin)

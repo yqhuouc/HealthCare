@@ -18,7 +18,8 @@ import { Link } from "react-router-dom";
 import { useAppointmentsByDoctor, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
-import { getInitials, formatTime } from "../../utils/formatters";
+import { getInitials } from "../../utils/formatters";
+import { formatTime, toDateString, dayjs } from "../../utils/dateUtils";
 
 /**
  * Cấu hình hiển thị cho các trạng thái lịch hẹn
@@ -46,17 +47,11 @@ function DoctorDashboardPage() {
    * Xử lý lọc dữ liệu ngay tại Client
    */
   // Lấy chuỗi ngày hôm nay theo định dạng YYYY-MM-DD (múi giờ VN)
-  const todayStr = new Date().toLocaleDateString("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
+  const todayStr = toDateString(dayjs());
 
   // Lọc lấy các lịch hẹn của hôm nay
   const todayAppointments = appointments.filter((a) => {
-    const d = new Date(a.ngayDat);
-    return (
-      d.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }) ===
-      todayStr
-    );
+    return toDateString(a.ngayDat) === todayStr;
   });
 
   /**

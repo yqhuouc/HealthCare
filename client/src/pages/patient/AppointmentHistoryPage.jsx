@@ -19,7 +19,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAppointmentsByPatient, useDeleteAppointment } from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
-import { formatTime, formatDate } from "../../utils/formatters";
+import { formatTime, formatDate } from "../../utils/dateUtils";
 
 const STATUS_CONFIG = {
   0: { label: "Chờ xác nhận", color: "bg-yellow-100 text-yellow-700" },

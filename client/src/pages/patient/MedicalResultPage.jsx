@@ -16,7 +16,8 @@
  */
 import { useParams, Link } from "react-router-dom";
 import { useAppointment } from "../../hooks/queries/useAppointmentQueries";
-import { formatTime, formatDate, formatPrice } from "../../utils/formatters";
+import { formatPrice } from "../../utils/formatters";
+import { formatTime, formatDate } from "../../utils/dateUtils";
 
 export default function MedicalResultPage() {
   const { id } = useParams();

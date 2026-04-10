@@ -4,6 +4,7 @@ import { useAppointment, useUpdateAppointmentStatus, useUpdatePaymentStatus } fr
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { getInitials } from "../../utils/formatters";
+import { formatDate, formatTime } from "../../utils/dateUtils";
 
 // Map mã trạng thái từ DB sang key cấu hình UI
 const STATUS_MAP = {
@@ -107,12 +108,12 @@ function AdminAppointmentDetailPage() {
           <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
             <span className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-sm">calendar_month</span>
-              {new Date(appointment.ngayDat).toLocaleDateString("vi-VN")}
+              {formatDate(appointment.ngayDat)}
             </span>
             <span className="text-slate-200">|</span>
             <span className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-sm">schedule</span>
-              {appointment.gioBatDau ? new Date(appointment.gioBatDau).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "—"}
+              {appointment.gioBatDau ? formatTime(appointment.gioBatDau) : "—"}
             </span>
           </div>
 

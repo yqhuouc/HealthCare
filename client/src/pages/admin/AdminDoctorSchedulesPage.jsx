@@ -4,7 +4,7 @@ import { useLichLamViec, useKhungGio, useDeleteLichLamViec, useUpdateLichLamViec
 import { useSpecialties } from "../../hooks/queries/useSpecialtyQueries";
 import { useDoctors } from "../../hooks/queries/useDoctorQueries";
 import { scheduleService } from "../../services/scheduleService"; // Giữ lại cho bulk create
-import { formatTime } from "../../utils/formatters";
+import { formatTime, toDateString, dayjs } from "../../utils/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import { scheduleKeys } from "../../hooks/queries/useScheduleQueries";
 
@@ -19,7 +19,7 @@ function AdminDoctorSchedulesPage() {
   const [filters, setFilters] = useState({
     chuyenKhoaId: "all",
     bacSiId: "all",
-    ngayLamViec: new Date().toISOString().split("T")[0]
+    ngayLamViec: toDateString(dayjs())
   });
 
   // TanStack Query: Lấy dữ liệu danh mục (auto-cache)
@@ -75,11 +75,11 @@ function AdminDoctorSchedulesPage() {
       return;
     }
 
-    const start = new Date(newSchedule.ngayBatDau);
-    const end = new Date(newSchedule.ngayKetThuc || newSchedule.ngayBatDau);
+    const start = dayjs(newSchedule.ngayBatDau).startOf("day");
+    const end = dayjs(newSchedule.ngayKetThuc || newSchedule.ngayBatDau).startOf("day");
     const dates = [];
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(new Date(d).toISOString().split("T")[0]);
+    for (let d = start; !d.isAfter(end); d = d.add(1, "day")) {
+      dates.push(toDateString(d));
     }
 
     let successCount = 0;
@@ -331,7 +331,7 @@ function AdminDoctorSchedulesPage() {
                   <input
                     type="date"
                     required
-                    min={new Date().toISOString().split("T")[0]}
+                    min={toDateString(dayjs())}
                     value={newSchedule.ngayBatDau}
                     onChange={(e) => setNewSchedule({ ...newSchedule, ngayBatDau: e.target.value })}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"

@@ -17,16 +17,16 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useTongQuan, useLichHenStats } from "../../hooks/queries/useStatsQueries";
 import { useAppointments } from "../../hooks/queries/useAppointmentQueries";
+import { formatDate, toDateString, dayjs } from "../../utils/dateUtils";
 
 function AdminDashboardPage() {
   // Xác định khoảng thời gian 14 ngày gần nhất cho biểu đồ
   const dateRange = useMemo(() => {
-    const today = new Date();
-    const pastDate = new Date();
-    pastDate.setDate(today.getDate() - 13);
+    const today = dayjs();
+    const pastDate = today.subtract(13, "day");
     return {
-      tuNgay: pastDate.toISOString().split("T")[0],
-      denNgay: today.toISOString().split("T")[0],
+      tuNgay: toDateString(pastDate),
+      denNgay: toDateString(today),
     };
   }, []);
 
@@ -46,21 +46,19 @@ function AdminDashboardPage() {
     const rawDays = lichHenRes.data.lichHenTheoNgay;
     const cleanDays = rawDays.map((d) => ({ ...d, soLuong: Number(d.soLuong || 0) }));
 
-    const today = new Date();
-    const pastDate = new Date();
-    pastDate.setDate(today.getDate() - 13);
+    const today = dayjs();
+    const pastDate = today.subtract(13, "day");
 
     const formattedChart = [];
     const maxCount = Math.max(...cleanDays.map((d) => d.soLuong), 1);
 
     for (let i = 0; i < 14; i++) {
-      const d = new Date(pastDate);
-      d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split("T")[0];
-      const dateLabel = `${d.getDate()}/${d.getMonth() + 1}`;
+      const d = pastDate.add(i, "day");
+      const dateStr = toDateString(d);
+      const dateLabel = d.format("D/M");
 
       const match = cleanDays.find((rd) => {
-        const rdDate = new Date(rd.ngay).toISOString().split("T")[0];
+        const rdDate = toDateString(rd.ngay);
         return rdDate === dateStr;
       });
 
@@ -251,9 +249,7 @@ function AdminDashboardPage() {
               {recentAppointments.map((apt) => {
                 const pName = apt.benhNhan?.hoTen || "Ẩn danh";
                 const dName = apt.bacSi?.tenBacSi || "Không rõ";
-                const aptDate = new Date(apt.ngayDat).toLocaleDateString(
-                  "vi-VN",
-                );
+                const aptDate = formatDate(apt.ngayDat);
 
                 // Cấu hình Icon và Màu sắc dựa trên trạng thái lịch hẹn
                 const statusIcons = {

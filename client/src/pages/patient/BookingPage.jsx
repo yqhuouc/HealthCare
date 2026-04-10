@@ -23,23 +23,20 @@ import { useSlotTrong, useCreateAppointment } from "../../hooks/queries/useAppoi
 import { usePaymentMethods } from "../../hooks/queries/usePaymentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { formatPrice } from "../../utils/formatters";
+import { toDateString, dayjs } from "../../utils/dateUtils";
 
 const DAY_NAMES = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
 function generateNext14Days() {
   const days = [];
-  const today = new Date();
+  const today = dayjs().tz("Asia/Ho_Chi_Minh");
   for (let i = 0; i <= 20; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
+    const date = today.add(i, "day");
     days.push({
-      value: `${yyyy}-${mm}-${dd}`,
-      display: `${dd}/${mm}`,
-      dayName: DAY_NAMES[date.getDay()],
-      dateNum: date.getDate(),
+      value: toDateString(date),
+      display: date.format("DD/MM"),
+      dayName: DAY_NAMES[date.day()],
+      dateNum: date.date(),
     });
   }
   return days;
@@ -241,12 +238,11 @@ export default function BookingPage() {
             ) : (
               <div className="grid grid-cols-4 gap-3">
                 {slots.map((slot, idx) => {
-                  const now = new Date();
+                  const now = dayjs().tz("Asia/Ho_Chi_Minh");
                   const [h, m] = slot.gioBatDau.split(":").map(Number);
-                  const slotDate = new Date(selectedDate);
-                  slotDate.setHours(h, m, 0, 0);
+                  const slotDate = dayjs(selectedDate).tz("Asia/Ho_Chi_Minh").hour(h).minute(m).second(0).millisecond(0);
 
-                  const isPast = slotDate < now;
+                  const isPast = slotDate.isBefore(now);
                   const isBooked = slot.daDat || !slot.conTrong || isPast;
                   const isSelected = selectedSlot?.gioBatDau === slot.gioBatDau;
 

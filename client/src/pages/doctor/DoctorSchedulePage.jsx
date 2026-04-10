@@ -24,7 +24,7 @@ import { Link } from "react-router-dom";
 import { useLichLamViec, useDeleteLichLamViec } from "../../hooks/queries/useScheduleQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
-import { formatTime } from "../../utils/formatters";
+import { formatTime, formatDate, toDateString, dayjs } from "../../utils/dateUtils";
 
 // Mảng định nghĩa tên các thứ trong tuần để hiển thị lên đầu bộ lịch
 const DAYS_OF_WEEK = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
@@ -32,28 +32,27 @@ const DAYS_OF_WEEK = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
 
 /**
- * HÀM HỖ TRỢ: Tính xem một tháng có bao nhiêu ngày (28, 29, 30 hay 31)
+ * HÀM HỖ TRỢ: Tính xem một tháng có bao nhiêu ngày
  */
 function getDaysInMonth(year, month) {
-  // Ngày 0 của tháng kế tiếp chính là ngày cuối cùng của tháng hiện tại
-  return new Date(year, month + 1, 0).getDate();
+  return dayjs().year(year).month(month).daysInMonth();
 }
 
 /**
- * HÀM HỖ TRỢ: Tìm xem ngày đầu tiên của tháng rơi vào thứ mấy (để xếp lịch cho đúng cột)
+ * HÀM HỖ TRỢ: Tìm xem ngày đầu tiên của tháng rơi vào thứ mấy
  */
 function getFirstDayOfMonth(year, month) {
-  return new Date(year, month, 1).getDay(); // 0 là Chủ Nhật, 1 là Thứ Hai...
+  return dayjs().year(year).month(month).startOf("month").day();
 }
 
 function DoctorSchedulePage() {
   const { user } = useAuthStore();
   const bacSiId = user?.bacSi?.id;
 
-  const now = new Date();
-  const [selectedDate, setSelectedDate] = useState(now.getDate());
-  const [currentMonth, setCurrentMonth] = useState(now.getMonth());
-  const [currentYear, setCurrentYear] = useState(now.getFullYear());
+  const now = dayjs().tz("Asia/Ho_Chi_Minh");
+  const [selectedDate, setSelectedDate] = useState(now.date());
+  const [currentMonth, setCurrentMonth] = useState(now.month());
+  const [currentYear, setCurrentYear] = useState(now.year());
 
   // TanStack Query: Lấy lịch làm việc theo bác sĩ (auto-cache)
   const { data: schRes, isLoading: loading } = useLichLamViec({ bacSiId });
@@ -68,23 +67,18 @@ function DoctorSchedulePage() {
    */
   const activeDays = schedules
     .filter((s) => {
-      const d = new Date(s.ngayLamViec);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      const d = dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh");
+      return d.month() === currentMonth && d.year() === currentYear;
     })
-    .map((s) => new Date(s.ngayLamViec).getDate());
+    .map((s) => dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh").date());
 
   /**
    * LOGIC QUAN TRỌNG: Phân loại trạng thái của ca trực (Hoàn thành / Hôm nay / Sắp tới)
    */
-  const todayStr = new Date().toLocaleDateString("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
+  const todayStr = toDateString(dayjs());
 
   const getShiftStatus = (schedule) => {
-    const shiftDate = new Date(schedule.ngayLamViec).toLocaleDateString(
-      "en-CA",
-      { timeZone: "Asia/Ho_Chi_Minh" },
-    );
+    const shiftDate = toDateString(schedule.ngayLamViec);
     if (shiftDate < todayStr) return "completed"; // Ngày trong quá khứ
     if (shiftDate === todayStr) return "active"; // Chính là ngày hôm nay
     return "upcoming"; // Các ngày trong tương lai
@@ -135,13 +129,7 @@ function DoctorSchedulePage() {
   };
 
   // Tên tháng hiển thị (Ví dụ: "Tháng 4 năm 2024")
-  const monthName = new Date(currentYear, currentMonth).toLocaleDateString(
-    "vi-VN",
-    {
-      month: "long",
-      year: "numeric",
-    },
-  );
+  const monthName = `Tháng ${currentMonth + 1} năm ${currentYear}`;
 
   /**
    * CHỨC NĂNG: Xóa một ca làm việc (Chỉ dành cho ca chưa diễn ra)
@@ -173,12 +161,12 @@ function DoctorSchedulePage() {
    * BỘ LỌC CHÍNH: Quyết định xem ca trực nào sẽ được hiển thị ở bảng bên phải
    */
   const filteredSchedules = schedules.filter((s) => {
-    const d = new Date(s.ngayLamViec);
+    const d = dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh");
     // 1. Chỉ lấy ca thuộc Tháng/Năm đang xem trên lịch
-    if (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear)
+    if (d.month() !== currentMonth || d.year() !== currentYear)
       return false;
     // 2. Nếu bác sĩ có chọn một ngày cụ thể thì chỉ lấy ca của ngày đó
-    if (selectedDate !== null && d.getDate() !== selectedDate) return false;
+    if (selectedDate !== null && d.date() !== selectedDate) return false;
     return true;
   });
 
@@ -347,11 +335,7 @@ function DoctorSchedulePage() {
                     {filteredSchedules.map((shift) => {
                       const status = getShiftStatus(shift);
                       const statusInfo = STATUS_MAP[status];
-                      const shiftDate = new Date(
-                        shift.ngayLamViec,
-                      ).toLocaleDateString("vi-VN", {
-                        timeZone: "Asia/Ho_Chi_Minh",
-                      });
+                      const shiftDate = formatDate(shift.ngayLamViec);
                       return (
                         <div key={shift.id} className="p-4 space-y-2">
                           <div className="flex items-center justify-between">
@@ -420,11 +404,7 @@ function DoctorSchedulePage() {
                         {filteredSchedules.map((shift) => {
                           const status = getShiftStatus(shift);
                           const statusInfo = STATUS_MAP[status];
-                          const shiftDate = new Date(
-                            shift.ngayLamViec,
-                          ).toLocaleDateString("vi-VN", {
-                            timeZone: "Asia/Ho_Chi_Minh",
-                          });
+                          const shiftDate = formatDate(shift.ngayLamViec);
                           return (
                             <tr
                               key={shift.id}

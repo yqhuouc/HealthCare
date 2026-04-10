@@ -23,6 +23,8 @@
  */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema } from "../../validations/authSchema";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import useAuthStore from "../../stores/useAuthStore";
@@ -44,7 +46,9 @@ function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm();
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+  });
 
   // Xử lý đăng nhập: gọi API → server set cookie → redirect theo vai trò
   const onSubmit = async (data) => {
@@ -90,13 +94,7 @@ function LoginPage() {
                     type="email"
                     placeholder="example@gmail.com"
                     className={`${INPUT_CLASS} ${errors.email ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
-                    {...register("email", {
-                      required: "Vui lòng nhập email",
-                      pattern: {
-                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                        message: "Email không hợp lệ",
-                      },
-                    })}
+                    {...register("email")}
                   />
                   {errors.email && (
                     <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
@@ -111,10 +109,7 @@ function LoginPage() {
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       className={`${INPUT_CLASS} pr-12 ${errors.password ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
-                      {...register("password", {
-                        required: "Vui lòng nhập mật khẩu",
-                        minLength: { value: 6, message: "Mật khẩu tối thiểu 6 ký tự" },
-                      })}
+                      {...register("password")}
                     />
                     <button
                       type="button"

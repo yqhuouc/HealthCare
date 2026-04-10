@@ -23,7 +23,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAppointment, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
 import { useCreatePrescription, useUpdatePrescription } from "../../hooks/queries/usePrescriptionQueries";
 import { toast } from "react-toastify";
-import { formatTime, formatDate, formatPrice } from "../../utils/formatters";
+import { formatPrice } from "../../utils/formatters";
+import { formatTime, formatDate } from "../../utils/dateUtils";
 
 /**
  * Cấu trúc mặc định của một dòng thuốc trong đơn

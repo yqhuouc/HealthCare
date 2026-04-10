@@ -14,6 +14,7 @@
  */
 import { useState, useMemo } from "react";
 import { useTongQuan, useDoanhThuStats, useLichHenStats } from "../../hooks/queries/useStatsQueries";
+import { toDateString, dayjs } from "../../utils/dateUtils";
 
 /**
  * Thành phần StatCard — Card hiển thị một chỉ số KPI tổng quan.
@@ -45,17 +46,16 @@ function StatCard({ icon, iconBg, label, value, subLabel }) {
 }
 
 function AdminStatsPage() {
-  const currentYear = new Date().getFullYear();
+  const currentYear = dayjs().year();
   const [selectedYear, setSelectedYear] = useState(currentYear);
 
   // Thiết lập khoảng thời gian 14 ngày cho biểu đồ xu hướng
   const dateRange = useMemo(() => {
-    const today = new Date();
-    const pastDate = new Date();
-    pastDate.setDate(today.getDate() - 13);
+    const today = dayjs();
+    const pastDate = today.subtract(13, "day");
     return {
-      tuNgay: pastDate.toISOString().split("T")[0],
-      denNgay: today.toISOString().split("T")[0],
+      tuNgay: toDateString(pastDate),
+      denNgay: toDateString(today),
     };
   }, []);
 
@@ -79,24 +79,22 @@ function AdminStatsPage() {
     const rawDays = (lichHenRes?.data?.lichHenTheoNgay || []).map((d) => ({
       ...d, soLuong: Number(d.soLuong || 0),
     }));
-    const today = new Date();
-    const pastDate = new Date();
-    pastDate.setDate(today.getDate() - 13);
+    const today = dayjs();
+    const pastDate = today.subtract(13, "day");
     const formattedChart = [];
     for (let i = 0; i < 14; i++) {
-      const d = new Date(pastDate);
-      d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split("T")[0];
-      const dateLabel = `${d.getDate()}/${d.getMonth() + 1}`;
-      const match = rawDays.find((rd) => {
-        const rdDate = new Date(rd.ngay).toISOString().split("T")[0];
-        return rdDate === dateStr;
-      });
-      formattedChart.push({
-        label: dateLabel,
-        count: match ? match.soLuong : 0,
-        isToday: dateStr === today.toISOString().split("T")[0],
-      });
+        const d = pastDate.add(i, "day");
+        const dateStr = toDateString(d);
+        const dateLabel = d.format("D/M");
+        const match = rawDays.find((rd) => {
+            const rdDate = toDateString(rd.ngay);
+            return rdDate === dateStr;
+        });
+        formattedChart.push({
+            label: dateLabel,
+            count: match ? match.soLuong : 0,
+            isToday: dateStr === toDateString(today),
+        });
     }
     return formattedChart;
   }, [lichHenRes]);
