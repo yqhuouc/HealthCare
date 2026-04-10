@@ -1,76 +1,68 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { doctorService } from "../../services/doctorService";
-import { specialtyService } from "../../services/specialtyService";
+import { useDoctor, useUpdateDoctor } from "../../hooks/queries/useDoctorQueries";
+import { useSpecialties } from "../../hooks/queries/useSpecialtyQueries";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 /**
  * Trang AdminEditDoctorPage - Chỉnh sửa thông tin Bác sĩ (Admin)
- * Chức năng: Tải dữ liệu cũ, cho phép sửa đổi thông tin cá nhân, chuyên môn và đổi mật khẩu tài khoản.
+ * 
+ * Kiến trúc: Tách thành 2 lớp component:
+ * - AdminEditDoctorPage (wrapper): Chịu trách nhiệm fetch data, hiển thị loading.
+ * - EditDoctorForm (child): Nhận initialData qua props, khởi tạo form state trực tiếp.
+ * 
+ * Lý do: React 19 cảnh báo nếu gọi setState trong useEffect (cascading render).
+ * Bằng cách truyền data qua props, form state chỉ khởi tạo 1 lần khi mount → không cần useEffect sync.
  */
 function AdminEditDoctorPage() {
-  const { id } = useParams(); // Lấy ID bác sĩ từ URL
+  const { id } = useParams();
+  
+  // TanStack Query: Lấy chi tiết bác sĩ (auto-cache)
+  const { data: docRes, isLoading: loadingDoc } = useDoctor(id);
+
+  // Hiển thị vòng xoay nếu đang tải dữ liệu
+  if (loadingDoc) {
+    return (
+      <div className="flex justify-center py-40">
+        <LoadingSpinner size="size-12" />
+      </div>
+    );
+  }
+
+  // Render form chỉ khi data đã sẵn sàng. Key={id} đảm bảo form re-mount nếu chuyển sang id khác.
+  return <EditDoctorForm doctorData={docRes?.data} doctorId={id} />;
+}
+
+/**
+ * Component con EditDoctorForm — Chứa toàn bộ form và logic submit.
+ * Nhận doctorData từ props → khởi tạo state form trực tiếp (không cần useEffect sync).
+ */
+function EditDoctorForm({ doctorData, doctorId }) {
   const navigate = useNavigate();
   
-  // State quản lý danh sách và trạng thái hệ thống
-  const [specialties, setSpecialties] = useState([]); // Danh sách chuyên khoa để chọn
-  const [loading, setLoading] = useState(true);      // Trạng thái tải dữ liệu ban đầu
-  const [saving, setSaving] = useState(false);        // Trạng thái khi đang gửi yêu cầu lưu
-  const [showPassword, setShowPassword] = useState(false); // Trạng thái ẩn/hiện mật khẩu mới
+  // TanStack Query: Lấy danh sách chuyên khoa (auto-cache)
+  const { data: specRes } = useSpecialties();
+  const specialties = specRes?.data || [];
+
+  // TanStack Query: Mutation cập nhật bác sĩ (auto-invalidate list + detail)
+  const updateMutation = useUpdateDoctor();
+  const saving = updateMutation.isPending;
+
+  const [showPassword, setShowPassword] = useState(false);
   
-  // State quản lý dữ liệu form
+  // Khởi tạo form state trực tiếp từ props — KHÔNG cần useEffect
+  const doc = doctorData || {};
   const [form, setForm] = useState({
-    tenBacSi: "",
-    chuyenKhoaId: "",
-    hocViChucDanh: "",
-    giaKham: "",
-    moTaNgan: "",
-    moTaChiTiet: "",
-    email: "",    // Email dùng làm tên đăng nhập
-    matKhau: "",  // Chỉ nhập nếu muốn đổi mật khẩu mới
+    tenBacSi: doc.tenBacSi || "",
+    chuyenKhoaId: doc.chuyenKhoaId?.toString() || "",
+    hocViChucDanh: doc.hocViChucDanh || "",
+    giaKham: doc.giaKham || "",
+    moTaNgan: doc.moTaNgan || "",
+    moTaChiTiet: doc.moTaChiTiet || "",
+    email: doc.taiKhoan?.email || "",
+    matKhau: "",
   });
-
-  /**
-   * Lấy thông tin chi tiết của bác sĩ hiện tại và danh sách chuyên khoa
-   */
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [docRes, specRes] = await Promise.all([
-          doctorService.getById(id),
-          specialtyService.getAll(),
-        ]);
-
-        if (docRes.success) {
-          const doc = docRes.data;
-          // Đổ dữ liệu cũ vào form
-          setForm({
-            tenBacSi: doc.tenBacSi || "",
-            chuyenKhoaId: doc.chuyenKhoaId?.toString() || "",
-            hocViChucDanh: doc.hocViChucDanh || "",
-            giaKham: doc.giaKham || "",
-            moTaNgan: doc.moTaNgan || "",
-            moTaChiTiet: doc.moTaChiTiet || "",
-            email: doc.taiKhoan?.email || "",
-            matKhau: "", // Mật khẩu luôn để trống khi load để đảm bảo bảo mật
-          });
-        }
-
-        if (specRes.success) {
-          setSpecialties(specRes.data);
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("Không thể tải thông tin bác sĩ!");
-        navigate("/admin/doctors");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [id, navigate]);
 
   /**
    * Cập nhật state form khi người dùng nhập liệu vào các ô input
@@ -82,44 +74,29 @@ function AdminEditDoctorPage() {
   /**
    * Xử lý gửi yêu cầu cập nhật thông tin lên Server
    */
-  const handleSave = async () => {
-    // Kiểm tra các trường bắt buộc
+  const handleSave = () => {
     if (!form.tenBacSi.trim() || !form.chuyenKhoaId || !form.email.trim()) {
       toast.warn("Vui lòng nhập đầy đủ: Họ tên, Chuyên khoa và Email.");
       return;
     }
 
-    setSaving(true);
-    try {
-      // Chuẩn bị dữ liệu gửi đi
-      const updateData = {
-        ...form,
-        giaKham: form.giaKham ? Number(form.giaKham) : null,
-      };
-      
-      // Nếu không nhập mật khẩu mới, ta xóa trường matKhau khỏi payload để tránh ghi đè mật khẩu cũ bằng chuỗi rỗng
-      if (!form.matKhau.trim()) {
-        delete updateData.matKhau;
-      }
-
-      await doctorService.update(id, updateData);
-      toast.success(`Cập nhật bác sĩ "${form.tenBacSi}" thành công!`);
-      // Lưu thành công có thể ở lại trang hoặc quay về danh sách tùy ý, ở đây giữ nguyên để xem lại
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi cập nhật!");
-    } finally {
-      setSaving(false);
+    const updateData = {
+      ...form,
+      giaKham: form.giaKham ? Number(form.giaKham) : null,
+    };
+    
+    if (!form.matKhau.trim()) {
+      delete updateData.matKhau;
     }
-  };
 
-  // Hiển thị vòng xoay nếu đang tải dữ liệu
-  if (loading) {
-    return (
-      <div className="flex justify-center py-40">
-        <LoadingSpinner size="size-12" />
-      </div>
+    updateMutation.mutate(
+      { id: doctorId, data: updateData },
+      {
+        onSuccess: () => toast.success(`Cập nhật bác sĩ "${form.tenBacSi}" thành công!`),
+        onError: (err) => toast.error(err.message || "Có lỗi xảy ra khi cập nhật!"),
+      }
     );
-  }
+  };
 
   return (
     <div className="max-w-4xl mx-auto pb-10 font-sans">
@@ -136,7 +113,7 @@ function AdminEditDoctorPage() {
       <div className="mb-10 flex flex-col sm:flex-row items-end justify-between gap-4">
         <div className="text-center sm:text-left">
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Chỉnh sửa bác sĩ</h2>
-          <p className="text-slate-500 text-sm mt-2">Cập nhật thông tin chuyên môn và tài khoản đăng nhập cho BS{id}.</p>
+          <p className="text-slate-500 text-sm mt-2">Cập nhật thông tin chuyên môn và tài khoản đăng nhập cho BS{doctorId}.</p>
         </div>
         <span className="px-4 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest border border-slate-200">
           Chế độ chỉnh sửa

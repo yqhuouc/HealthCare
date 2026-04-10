@@ -19,9 +19,9 @@
  * =============================================================================
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { scheduleService } from "../../services/scheduleService";
+import { useLichLamViec, useDeleteLichLamViec } from "../../hooks/queries/useScheduleQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
 import { formatTime } from "../../utils/formatters";
@@ -47,39 +47,20 @@ function getFirstDayOfMonth(year, month) {
 }
 
 function DoctorSchedulePage() {
-  // 1. LẤY THÔNG TIN CỦA BÁC SĨ ĐANG ĐĂNG NHẬP
   const { user } = useAuthStore();
   const bacSiId = user?.bacSi?.id;
 
-  // 2. KHỞI TẠO CÁC TRẠNG THÁI (STATE)
   const now = new Date();
-  // selectedDate: Ngày bác sĩ bấm chọn trên lịch (null có nghĩa là đang xem cả tháng)
   const [selectedDate, setSelectedDate] = useState(now.getDate());
-  // currentMonth & currentYear: Tháng/Năm đang hiển thị trên bộ lịch
   const [currentMonth, setCurrentMonth] = useState(now.getMonth());
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
-  // schedules: Nơi lưu toàn bộ danh sách ca trực lấy về từ Database
-  const [schedules, setSchedules] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  /**
-   * LUỒNG XỬ LÝ: Gọi API để lấy danh sách ca trực của bác sĩ ngay khi vào trang
-   */
-  useEffect(() => {
-    if (!bacSiId) return;
-    const fetchData = async () => {
-      try {
-        const res = await scheduleService.getLichLamViec({ bacSiId });
-        setSchedules(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error("Lỗi khi tải lịch:", err);
-        toast.error("Không thể tải lịch làm việc");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [bacSiId]);
+  // TanStack Query: Lấy lịch làm việc theo bác sĩ (auto-cache)
+  const { data: schRes, isLoading: loading } = useLichLamViec({ bacSiId });
+  const schedules = Array.isArray(schRes?.data) ? schRes.data : [];
+
+  // TanStack Query: Mutation xóa ca trực (auto-invalidate)
+  const deleteMutation = useDeleteLichLamViec();
 
   /**
    * LOGIC QUAN TRỌNG: Tìm các ngày có ca trực trong tháng hiện tại
@@ -165,16 +146,12 @@ function DoctorSchedulePage() {
   /**
    * CHỨC NĂNG: Xóa một ca làm việc (Chỉ dành cho ca chưa diễn ra)
    */
-  const handleDelete = async (shiftId) => {
+  const handleDelete = (shiftId) => {
     if (!confirm("Bạn có chắc chắn muốn xóa ca làm việc này?")) return;
-    try {
-      await scheduleService.deleteLichLamViec(shiftId);
-      // Xóa thành công thì cập nhật lại danh sách trên giao diện ngay lập tức
-      setSchedules((prev) => prev.filter((s) => s.id !== shiftId));
-      toast.success("Đã xóa ca làm việc");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Lỗi xóa ca làm việc");
-    }
+    deleteMutation.mutate(shiftId, {
+      onSuccess: () => toast.success("Đã xóa ca làm việc"),
+      onError: (err) => toast.error(err.message || "Lỗi xóa ca làm việc"),
+    });
   };
 
   /**

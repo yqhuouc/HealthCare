@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { specialtyService } from "../../services/specialtyService";
+import { useSpecialty, useUpdateSpecialty } from "../../hooks/queries/useSpecialtyQueries";
+import { specialtyService } from "../../services/specialtyService"; // Giữ lại cho uploadAnh
 
 // Danh sách các icon Google Material Symbols gợi ý cho chuyên khoa
 const ICON_OPTIONS = [
@@ -23,58 +24,43 @@ const ICON_OPTIONS = [
 
 /**
  * Trang AdminEditSpecialtyPage - Chỉnh sửa thông tin Chuyên khoa (Admin)
- * Chức năng: Tải dữ liệu chuyên khoa cũ, cho phép sửa đổi tên, icon, mô tả, thời lượng khám và tải lên ảnh mới.
+ * Kiến trúc: Wrapper (fetch + loading) → Child Form (để tránh setState trong useEffect)
  */
 function AdminEditSpecialtyPage() {
-  const { id } = useParams(); // Lấy ID chuyên khoa từ URL
+  const { id } = useParams();
+  const { data: specRes, isLoading: loading } = useSpecialty(id);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-40">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+      </div>
+    );
+  }
+
+  return <EditSpecialtyForm specialtyData={specRes?.data} specialtyId={id} />;
+}
+
+function EditSpecialtyForm({ specialtyData, specialtyId }) {
   const navigate = useNavigate();
-  const fileInputRef = useRef(null); // Ref để kích hoạt input file ẩn
+  const fileInputRef = useRef(null);
   
-  // State quản lý trạng thái hệ thống
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const updateMutation = useUpdateSpecialty();
+  const saving = updateMutation.isPending;
   
-  // State quản lý dữ liệu văn bản của form
+  // Khởi tạo form state trực tiếp từ props
+  const item = specialtyData || {};
   const [form, setForm] = useState({
-    name: "",
-    icon: "medical_services",
-    description: "",
-    duration: 20, // Thời lượng khám trung bình (phút)
+    name: item.tenChuyenKhoa || "",
+    icon: item.icon || "medical_services",
+    description: item.moTaChuyenKhoa || "",
+    duration: item.thoiLuongKham || 20,
   });
 
   // State quản lý tệp tin ảnh và preview
-  const [selectedFile, setSelectedFile] = useState(null); // File ảnh mới được chọn
-  const [previewUrl, setPreviewUrl] = useState(null);      // Link preview ảnh mới
-  const [currentImageUrl, setCurrentImageUrl] = useState(null); // Link ảnh hiện tại trên server
-
-  /**
-   * Effect thực hiện tải dữ liệu chuyên khoa từ API khi trang vừa load
-   */
-  useEffect(() => {
-    const fetchSpecialty = async () => {
-      try {
-        const res = await specialtyService.getById(id);
-        if (res.success) {
-          const item = res.data;
-          // Đổ dữ liệu vào form
-          setForm({
-            name: item.tenChuyenKhoa || "",
-            icon: item.icon || "medical_services",
-            description: item.moTaChuyenKhoa || "",
-            duration: item.thoiLuongKham || 20,
-          });
-          setCurrentImageUrl(item.anhChuyenKhoa);
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("Không tìm thấy chuyên khoa!");
-        navigate("/admin/specialties");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSpecialty();
-  }, [id, navigate]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [currentImageUrl] = useState(item.anhChuyenKhoa || null);
 
   /**
    * Cập nhật state khi người dùng nhập liệu vào form
@@ -108,41 +94,30 @@ function AdminEditSpecialtyPage() {
       return;
     }
 
-    setSaving(true);
     try {
-      // BƯỚC 1: Cập nhật thông tin mô tả văn bản
-      await specialtyService.update(id, {
-        tenChuyenKhoa: form.name.trim(),
-        icon: form.icon,
-        moTaChuyenKhoa: form.description,
-        thoiLuongKham: Number(form.duration) || 20,
+      // BƯỚC 1: Cập nhật thông tin mô tả văn bản qua mutation
+      await updateMutation.mutateAsync({
+        id: specialtyId,
+        data: {
+          tenChuyenKhoa: form.name.trim(),
+          icon: form.icon,
+          moTaChuyenKhoa: form.description,
+          thoiLuongKham: Number(form.duration) || 20,
+        },
       });
 
       // BƯỚC 2: Nếu người dùng có chọn ảnh mới, thực hiện upload ảnh
       if (selectedFile) {
-        await specialtyService.uploadAnh(id, selectedFile);
+        await specialtyService.uploadAnh(specialtyId, selectedFile);
       }
 
       toast.success(`Cập nhật chuyên khoa "${form.name}" thành công!`);
-      navigate("/admin/specialties"); // Quay về trang danh sách
+      navigate("/admin/specialties");
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi cập nhật!");
-    } finally {
-      setSaving(false);
+      toast.error(error.message || "Có lỗi xảy ra khi cập nhật!");
     }
   };
-
-  // Hiển thị vòng xoay chờ nếu đang tải dữ liệu
-  if (loading) {
-    return (
-      <div className="flex justify-center py-40">
-        <span className="material-symbols-outlined animate-spin text-5xl text-primary/30">
-          progress_activity
-        </span>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-4xl mx-auto pb-10">
@@ -158,7 +133,7 @@ function AdminEditSpecialtyPage() {
       <div className="mb-8 flex items-end justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Chỉnh sửa chuyên khoa</h2>
-          <p className="text-slate-500 text-sm mt-1">Cập nhật thông tin chi tiết cho chuyên khoa ID #{id}.</p>
+          <p className="text-slate-500 text-sm mt-1">Cập nhật thông tin chi tiết cho chuyên khoa ID #{specialtyId}.</p>
         </div>
         <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-widest border border-slate-200">
           Chế độ chỉnh sửa

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { doctorService } from "../../services/doctorService";
-import { specialtyService } from "../../services/specialtyService";
-import { adminStatsService } from "../../services/adminStatsService";
+import { useDoctors, useUpdateDoctor, useDeleteDoctor } from "../../hooks/queries/useDoctorQueries";
+import { useSpecialties } from "../../hooks/queries/useSpecialtyQueries";
+import { useTongQuan } from "../../hooks/queries/useStatsQueries";
 import { formatPrice } from "../../utils/formatters";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
@@ -21,14 +21,6 @@ export default function AdminDoctorsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedSpecialty, setSelectedSpecialty] = useState(""); // ID chuyên khoa đang lọc
-  
-  // State lưu trữ dữ liệu từ API
-  const [doctors, setDoctors] = useState([]);      // Danh sách bác sĩ hiển thị
-  const [specialties, setSpecialties] = useState([]); // Danh sách tất cả chuyên khoa để làm bộ lọc
-  const [loading, setLoading] = useState(true);      // Trạng thái đang tải dữ liệu
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalDoctors, setTotalDoctors] = useState(0);
-  const [stats, setStats] = useState({ tongBacSi: 0, tongChuyenKhoa: 0 }); // Thống kê nhanh ở cuối trang
 
   // State quản lý Modal xác nhận (Dùng chung cho Xóa, Khóa, Mở khóa)
   const [modalMode, setModalMode] = useState(null); // 'delete' | 'lock' | 'unlock'
@@ -45,54 +37,28 @@ export default function AdminDoctorsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  /**
-   * Lấy danh mục chuyên khoa và các thông số thống kê cơ bản
-   */
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [specRes, statsRes] = await Promise.all([
-          specialtyService.getAll(),
-          adminStatsService.getTongQuan(),
-        ]);
-        if (specRes.success) setSpecialties(specRes.data);
-        if (statsRes.success) setStats(statsRes.data);
-      } catch (err) {
-        console.error("Lỗi lấy dữ liệu ban đầu:", err);
-      }
-    };
-    fetchData();
-  }, []);
+  // TanStack Query: Lấy danh sách bác sĩ (auto-cache, auto-refetch khi filters thay đổi)
+  const { data: doctorsRes, isLoading: loading } = useDoctors({
+    page,
+    limit: ITEMS_PER_PAGE,
+    search: debouncedSearch,
+    chuyenKhoaId: selectedSpecialty || undefined,
+  });
+  const doctors = doctorsRes?.data || [];
+  const totalPages = Number(doctorsRes?.pagination?.totalPages || 1);
+  const totalDoctors = Number(doctorsRes?.pagination?.total || 0);
 
-  /**
-   * Hàm lấy danh sách bác sĩ dựa trên phân trang, tìm kiếm và chuyên khoa
-   */
-  const fetchDoctors = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await doctorService.getAll({
-        page,
-        limit: ITEMS_PER_PAGE,
-        search: debouncedSearch,
-        chuyenKhoaId: selectedSpecialty || undefined,
-      });
-      if (res.success) {
-        setDoctors(res.data);
-        setTotalPages(Number(res.pagination?.totalPages || 1));
-        setTotalDoctors(Number(res.pagination?.total || 0));
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Lỗi khi lấy danh sách bác sĩ");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, debouncedSearch, selectedSpecialty]);
+  // TanStack Query: Lấy danh sách chuyên khoa cho dropdown filter
+  const { data: specRes } = useSpecialties();
+  const specialties = specRes?.data || [];
 
-  // Tự động gọi fetch mỗi khi các tham số lọc thay đổi
-  useEffect(() => {
-    fetchDoctors();
-  }, [fetchDoctors]);
+  // TanStack Query: Lấy thống kê tổng quan (tổng BS, tổng chuyên khoa)
+  const { data: statsRes } = useTongQuan();
+  const stats = statsRes?.data || { tongBacSi: 0, tongChuyenKhoa: 0 };
+
+  // TanStack Query: Mutations (auto-invalidate list sau khi thành công)
+  const updateMutation = useUpdateDoctor();
+  const deleteMutation = useDeleteDoctor();
 
   /**
    * Mở modal xác nhận hành động
@@ -111,26 +77,29 @@ export default function AdminDoctorsPage() {
   const handleConfirmAction = async () => {
     if (!selectedDoctor) return;
 
-    try {
-      if (modalMode === 'delete') {
-        // Hành động XÓA bác sĩ
-        await doctorService.remove(selectedDoctor.id);
-        toast.success(`Đã xóa hồ sơ bác sĩ ${selectedDoctor.tenBacSi}`);
-      } else {
-        // Hành động KHÓA hoặc MỞ KHÓA (Cập nhật trạng thái tài khoản)
-        const newStatus = modalMode === 'lock' ? 0 : 1; // 0: Khóa, 1: Hoạt động
-        await doctorService.update(selectedDoctor.id, { 
-          trangThaiTaiKhoan: newStatus 
-        });
-        toast.success(`${modalMode === 'lock' ? "Khóa" : "Mở khóa"} tài khoản bác sĩ thành công!`);
-      }
-      // Tải lại danh sách sau khi thao tác thành công
-      await fetchDoctors();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Thao tác thất bại");
-    } finally {
+    const onSettled = () => {
       setIsModalOpen(false);
       setSelectedDoctor(null);
+    };
+
+    if (modalMode === 'delete') {
+      // Hành động XÓA bác sĩ
+      deleteMutation.mutate(selectedDoctor.id, {
+        onSuccess: () => toast.success(`Đã xóa hồ sơ bác sĩ ${selectedDoctor.tenBacSi}`),
+        onError: (err) => toast.error(err.message || "Thao tác thất bại"),
+        onSettled,
+      });
+    } else {
+      // Hành động KHÓA hoặc MỞ KHÓA (Cập nhật trạng thái tài khoản)
+      const newStatus = modalMode === 'lock' ? 0 : 1; // 0: Khóa, 1: Hoạt động
+      updateMutation.mutate(
+        { id: selectedDoctor.id, data: { trangThaiTaiKhoan: newStatus } },
+        {
+          onSuccess: () => toast.success(`${modalMode === 'lock' ? "Khóa" : "Mở khóa"} tài khoản bác sĩ thành công!`),
+          onError: (err) => toast.error(err.message || "Thao tác thất bại"),
+          onSettled,
+        }
+      );
     }
   };
 

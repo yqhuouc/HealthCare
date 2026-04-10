@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { specialtyService } from "../../services/specialtyService";
+import { useSpecialties, useDeleteSpecialty } from "../../hooks/queries/useSpecialtyQueries";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 
 // Số lượng chuyên khoa hiển thị trên một trang (phân trang client-side)
@@ -16,39 +16,19 @@ const ITEMS_PER_PAGE = 7;
  * - Điều hướng thêm mới và chỉnh sửa chuyên khoa.
  */
 function AdminSpecialtiesPage() {
-  // State quản lý dữ liệu và UI
+  // State quản lý UI
   const [currentPage, setCurrentPage] = useState(1);
-  const [specialties, setSpecialties] = useState([]);
-  const [loading, setLoading] = useState(true);
   
   // State quản lý Modal xác nhận xóa
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState(null);
 
-  /**
-   * Lấy toàn bộ danh sách chuyên khoa từ Server
-   */
-  const fetchSpecialties = async () => {
-    setLoading(true);
-    try {
-      const res = await specialtyService.getAll();
-      if (res.success) {
-        setSpecialties(res.data);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Lỗi khi tải danh sách chuyên khoa");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // TanStack Query: Lấy danh sách chuyên khoa (auto-cache, auto-refetch)
+  const { data: specRes, isLoading: loading } = useSpecialties();
+  const specialties = specRes?.data || [];
 
-  /**
-   * Hook khởi tạo: Gọi API lấy dữ liệu khi trang được tải
-   */
-  useEffect(() => {
-    fetchSpecialties();
-  }, []);
+  // TanStack Query: Mutation xóa chuyên khoa (auto-invalidate list)
+  const deleteMutation = useDeleteSpecialty();
 
   // Tính toán các thông số phân trang
   const totalPages = Math.ceil(specialties.length / ITEMS_PER_PAGE);
@@ -74,16 +54,12 @@ function AdminSpecialtiesPage() {
   /**
    * Thực hiện xóa sau khi đã xác nhận qua Modal
    */
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     if (!selectedSpecialty) return;
-    try {
-      await specialtyService.remove(selectedSpecialty.id);
-      toast.success(`Đã xóa chuyên khoa "${selectedSpecialty.tenChuyenKhoa}"`);
-      fetchSpecialties(); // Tải lại danh sách mới
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi xóa");
-    }
+    deleteMutation.mutate(selectedSpecialty.id, {
+      onSuccess: () => toast.success(`Đã xóa chuyên khoa "${selectedSpecialty.tenChuyenKhoa}"`),
+      onError: (err) => toast.error(err.message || "Có lỗi xảy ra khi xóa"),
+    });
   };
 
   return (

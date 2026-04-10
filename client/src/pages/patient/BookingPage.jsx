@@ -15,19 +15,17 @@
  * Dữ liệu: API /api/bac-si/:id, /api/dat-lich/slot-trong, /api/hinh-thuc-thanh-toan
  * ============================================================
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { doctorService } from "../../services/doctorService";
-import { appointmentService } from "../../services/appointmentService";
-import { paymentService } from "../../services/paymentService";
+import { useDoctor } from "../../hooks/queries/useDoctorQueries";
+import { useSlotTrong, useCreateAppointment } from "../../hooks/queries/useAppointmentQueries";
+import { usePaymentMethods } from "../../hooks/queries/usePaymentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { formatPrice } from "../../utils/formatters";
 
-/** Tên viết tắt các ngày trong tuần (0=CN, 1=T2, ..., 6=T7) */
 const DAY_NAMES = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-/** Tạo danh sách 14 ngày tiếp theo kể từ ngày mai */
 function generateNext14Days() {
   const days = [];
   const today = new Date();
@@ -47,9 +45,6 @@ function generateNext14Days() {
   return days;
 }
 
-
-
-/** Format ngày hiển thị dạng dd/MM/yyyy */
 function formatDisplayDate(dateStr) {
   if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-");
@@ -63,73 +58,28 @@ export default function BookingPage() {
 
   const next14Days = useMemo(() => generateNext14Days(), []);
 
-  // Data states
-  const [doctor, setDoctor] = useState(null);
-  const [slots, setSlots] = useState([]);
-  const [paymentMethods, setPaymentMethods] = useState([]);
-  const [loadingDoctor, setLoadingDoctor] = useState(true);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+  // TanStack Query: Lấy thông tin bác sĩ
+  const { data: docRes, isLoading: loadingDoctor } = useDoctor(doctorId);
+  const doctor = docRes?.data || null;
+
+  // TanStack Query: Lấy hình thức thanh toán
+  const { data: pmRes } = usePaymentMethods();
+  const paymentMethods = pmRes?.data || [];
 
   // Form states
   const [selectedDate, setSelectedDate] = useState("");
-  const [selectedSlot, setSelectedSlot] = useState(null); // { gioBatDau, gioKetThuc, lichLamViecId }
+  const [selectedSlot, setSelectedSlot] = useState(null);
   const [reason, setReason] = useState("");
   const [selectedPayment, setSelectedPayment] = useState("");
   const [step, setStep] = useState(1);
-  const [submitting, setSubmitting] = useState(false);
 
-  // Fetch thông tin bác sĩ
-  useEffect(() => {
-    const fetchDoctor = async () => {
-      try {
-        const res = await doctorService.getById(doctorId);
-        setDoctor(res.data);
-      } catch {
-        setDoctor(null);
-      } finally {
-        setLoadingDoctor(false);
-      }
-    };
-    fetchDoctor();
-  }, [doctorId]);
+  // TanStack Query: Lấy slot trống khi chọn ngày (auto-refetch)
+  const { data: slotRes, isLoading: loadingSlots } = useSlotTrong(doctorId, selectedDate);
+  const slots = slotRes?.data?.slots || [];
 
-  // Fetch hình thức thanh toán
-  useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        const res = await paymentService.getAll();
-        setPaymentMethods(res.data || []);
-      } catch {
-        /* lỗi hiện qua interceptor */
-      }
-    };
-    fetchPayments();
-  }, []);
-
-  // Fetch slot trống khi chọn ngày
-  useEffect(() => {
-    if (!selectedDate || !doctorId) {
-      setSlots([]);
-      setSelectedSlot(null);
-      return;
-    }
-
-    const fetchSlots = async () => {
-      setLoadingSlots(true);
-      setSelectedSlot(null);
-      try {
-        const res = await appointmentService.getSlotTrong(doctorId, selectedDate);
-        const data = res.data;
-        // data.slots chứa tất cả slot, data.slotTrong chứa slot còn trống
-        setSlots(data?.slots || []);
-      } catch {
-        setSlots([]);
-      } finally {
-        setLoadingSlots(false);
-      }
-    };
-    fetchSlots();
-  }, [selectedDate, doctorId]);
+  // TanStack Query: Mutation tạo lịch hẹn
+  const createMutation = useCreateAppointment();
+  const submitting = createMutation.isPending;
 
   // Loading bác sĩ
   if (loadingDoctor) {
@@ -164,34 +114,36 @@ export default function BookingPage() {
     setStep(2);
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (submitting) return;
 
-    // Lấy benhNhanId từ user store
     const benhNhanId = user?.benhNhan?.id;
     if (!benhNhanId) {
       toast.error("Không tìm thấy thông tin bệnh nhân. Vui lòng đăng nhập lại.");
       return;
     }
 
-    setSubmitting(true);
-    try {
-      await appointmentService.create({
+    createMutation.mutate(
+      {
         bacSiId: Number(doctorId),
         benhNhanId: Number(benhNhanId),
         ngayDat: selectedDate,
         gioBatDau: selectedSlot.gioBatDau,
         lyDoKham: reason || undefined,
         hinhThucThanhToanId: selectedPayment ? Number(selectedPayment) : undefined,
-      });
-      toast.success("Đặt lịch thành công! Vui lòng chờ xác nhận từ phòng khám.");
-      navigate("/appointments");
-    } catch (err) {
-      toast.error(err?.message || "Đặt lịch thất bại. Vui lòng thử lại.");
-    } finally {
-      setSubmitting(false);
-    }
+      },
+      {
+        onSuccess: () => {
+          toast.success("Đặt lịch thành công! Vui lòng chờ xác nhận từ phòng khám.");
+          navigate("/appointments");
+        },
+        onError: (err) => {
+          toast.error(err?.message || "Đặt lịch thất bại. Vui lòng thử lại.");
+        },
+      }
+    );
   };
+
 
   const selectedDayInfo = next14Days.find((d) => d.value === selectedDate);
 

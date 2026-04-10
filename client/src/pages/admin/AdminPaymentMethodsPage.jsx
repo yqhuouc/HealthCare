@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { toast } from "react-toastify";
-import { paymentService } from "../../services/paymentService";
+import { usePaymentMethods, useCreatePaymentMethod, useDeletePaymentMethod } from "../../hooks/queries/usePaymentQueries";
 
 /**
  * Trang AdminPaymentMethodsPage - Quản lý các hình thức thanh toán (Admin)
@@ -10,71 +10,41 @@ import { paymentService } from "../../services/paymentService";
  * - Cho phép xóa các hình thức thanh toán không còn sử dụng.
  */
 function AdminPaymentMethodsPage() {
-  // State quản lý dữ liệu danh sách và trạng thái ứng dụng
-  const [methods, setMethods] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
+  // TanStack Query: Lấy danh sách hình thức thanh toán (auto-cache)
+  const { data: methodsRes, isLoading: loading } = usePaymentMethods();
+  const methods = methodsRes?.data || [];
   
-  // State cho form thêm phương thức mới
+  // TanStack Query: Mutations (auto-invalidate list)
+  const createMutation = useCreatePaymentMethod();
+  const deleteMutation = useDeletePaymentMethod();
+  
+  const [showAddModal, setShowAddModal] = useState(false);
   const [newMethod, setNewMethod] = useState({ tenHinhThuc: "", moTa: "" });
-
-  /**
-   * Hàm lấy danh sách hình thức thanh toán từ Server
-   * Sử dụng useCallback để định nghĩa hàm ổn định cho useEffect
-   */
-  const fetchMethods = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await paymentService.getAll();
-      if (res.success) setMethods(res.data);
-    } catch (error) {
-      console.error(error);
-      toast.error("Lỗi khi tải danh sách hình thức thanh toán");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  /**
-   * Tự động tải dữ liệu khi component được mount lần đầu
-   */
-  useEffect(() => {
-    fetchMethods();
-  }, [fetchMethods]);
 
   /**
    * Xử lý gửi Form tạo mới hình thức thanh toán
    */
-  const handleCreate = async (e) => {
+  const handleCreate = (e) => {
     e.preventDefault();
-    try {
-      const res = await paymentService.create(newMethod);
-      if (res.success) {
+    createMutation.mutate(newMethod, {
+      onSuccess: () => {
         toast.success("Thêm hình thức thanh toán thành công");
-        setNewMethod({ tenHinhThuc: "", moTa: "" }); // Reset form
-        setShowAddModal(false); // Đóng modal
-        fetchMethods(); // Tải lại danh sách cập nhật
-      }
-    } catch (error) {
-      toast.error(error.message || "Lỗi khi tạo hình thức thanh toán");
-    }
+        setNewMethod({ tenHinhThuc: "", moTa: "" });
+        setShowAddModal(false);
+      },
+      onError: (error) => toast.error(error.message || "Lỗi khi tạo hình thức thanh toán"),
+    });
   };
 
   /**
    * Xử lý xóa hình thức thanh toán theo ID
-   * Có yêu cầu xác nhận từ phái người dùng
    */
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa hình thức thanh toán này?")) return;
-    try {
-      const res = await paymentService.remove(id);
-      if (res.success) {
-        toast.success("Xóa thành công");
-        fetchMethods(); // Tải lại danh sách sau khi xóa
-      }
-    } catch (error) {
-       toast.error(error.message || "Lỗi khi xóa hình thức thanh toán");
-    }
+    deleteMutation.mutate(id, {
+      onSuccess: () => toast.success("Xóa thành công"),
+      onError: (error) => toast.error(error.message || "Lỗi khi xóa hình thức thanh toán"),
+    });
   };
 
   return (

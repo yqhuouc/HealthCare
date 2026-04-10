@@ -13,33 +13,16 @@
  * Dữ liệu: API /api/bac-si/:id
  * ============================================================
  */
-import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { doctorService } from "../../services/doctorService";
+import { useDoctor } from "../../hooks/queries/useDoctorQueries";
 import { formatPrice } from "../../utils/formatters";
 import useAuthStore from "../../stores/useAuthStore";
-
-/** Hàm format giá tiền sang dạng VND: 150000 → "150.000đ" */
 
 export default function DoctorDetailPage() {
   const { id } = useParams();
   const { user } = useAuthStore();
-  const [doctor, setDoctor] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchDoctor = async () => {
-      try {
-        const res = await doctorService.getById(id);
-        setDoctor(res.data);
-      } catch {
-        setDoctor(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDoctor();
-  }, [id]);
+  const { data: docRes, isLoading: loading } = useDoctor(id);
+  const doctor = docRes?.data || null;
 
   // Loading
   if (loading) {

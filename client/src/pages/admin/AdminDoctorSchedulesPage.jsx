@@ -1,28 +1,54 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { toast } from "react-toastify";
-import { scheduleService } from "../../services/scheduleService";
-import { doctorService } from "../../services/doctorService";
-import { specialtyService } from "../../services/specialtyService";
+import { useLichLamViec, useKhungGio, useDeleteLichLamViec, useUpdateLichLamViec } from "../../hooks/queries/useScheduleQueries";
+import { useSpecialties } from "../../hooks/queries/useSpecialtyQueries";
+import { useDoctors } from "../../hooks/queries/useDoctorQueries";
+import { scheduleService } from "../../services/scheduleService"; // Giữ lại cho bulk create
 import { formatTime } from "../../utils/formatters";
+import { useQueryClient } from "@tanstack/react-query";
+import { scheduleKeys } from "../../hooks/queries/useScheduleQueries";
 
 /**
  * Trang AdminDoctorSchedulesPage - Quản lý lịch làm việc của Bác sĩ (Admin)
  * Cho phép xem danh sách lịch, tạo lịch hộ bác sĩ, điều chỉnh số lượng bệnh nhân tối đa và xóa lịch.
  */
 function AdminDoctorSchedulesPage() {
-  // State lưu trữ dữ liệu danh mục
-  const [specialties, setSpecialties] = useState([]); // Danh sách chuyên khoa
-  const [doctors, setDoctors] = useState([]);       // Danh sách tất cả bác sĩ
-  const [slots, setSlots] = useState([]);           // Các khung giờ khám có sẵn (Ví dụ: 8:00 - 9:00...)
-  const [schedules, setSchedules] = useState([]);   // Danh sách lịch làm việc hiện có theo bộ lọc
-  const [loading, setLoading] = useState(true);      // Trạng thái đang tải dữ liệu
+  const queryClient = useQueryClient();
   
   // State quản lý các bộ lọc ở đầu trang
   const [filters, setFilters] = useState({
     chuyenKhoaId: "all",
     bacSiId: "all",
-    ngayLamViec: new Date().toISOString().split("T")[0] // Mặc định là ngày hôm nay
+    ngayLamViec: new Date().toISOString().split("T")[0]
   });
+
+  // TanStack Query: Lấy dữ liệu danh mục (auto-cache)
+  const { data: spRes } = useSpecialties();
+  const { data: dRes } = useDoctors();
+  const { data: sRes } = useKhungGio();
+  const specialties = spRes?.data || [];
+  const doctors = dRes?.data || [];
+  const slots = sRes?.data || [];
+
+  // TanStack Query: Lấy lịch làm việc theo bộ lọc
+  const schParams = {
+    bacSiId: filters.bacSiId !== "all" ? filters.bacSiId : "",
+    ngayLamViec: filters.ngayLamViec
+  };
+  const { data: schRes, isLoading: loading } = useLichLamViec(schParams);
+  
+  // Lọc client-side theo chuyên khoa nếu cần
+  const schedules = (() => {
+    let data = schRes?.data || [];
+    if (filters.chuyenKhoaId !== "all" && filters.bacSiId === "all") {
+      data = data.filter(sch => sch.bacSi?.chuyenKhoaId === Number(filters.chuyenKhoaId));
+    }
+    return data;
+  })();
+
+  // TanStack Query: Mutations
+  const deleteMutation = useDeleteLichLamViec();
+  const updateMutation = useUpdateLichLamViec();
 
   // State quản lý Modal thêm mới lịch làm việc
   const [showAddModal, setShowAddModal] = useState(false);
@@ -31,53 +57,12 @@ function AdminDoctorSchedulesPage() {
     bacSiId: "",
     ngayBatDau: "",
     ngayKetThuc: "",
-    khungGioIds: [] // Mảng chứa các ID khung giờ được chọn để tạo hàng loạt
+    khungGioIds: []
   });
 
-  // State quản lý Modal chỉnh sửa tải trọng (số bệnh nhân tối đa) và Modal xóa
+  // State quản lý Modal chỉnh sửa tải trọng và Modal xóa
   const [editModal, setEditModal] = useState({ open: false, schedule: null, newLimit: 0 });
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
-
-  /**
-   * Hàm lấy toàn bộ dữ liệu từ API dựa trên các bộ lọc
-   */
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Gọi đồng thời nhiều API để tối ưu hiệu năng
-      const [spRes, dRes, sRes, schRes] = await Promise.all([
-        specialtyService.getAll(),
-        doctorService.getAll(),
-        scheduleService.getAllKhungGio(), // Lấy danh sách khung giờ hệ thống
-        scheduleService.getLichLamViec({  // Lấy lịch làm việc thực tế của bác sĩ
-          bacSiId: filters.bacSiId !== "all" ? filters.bacSiId : "",
-          ngayLamViec: filters.ngayLamViec
-        })
-      ]);
-
-      if (spRes.success) setSpecialties(spRes.data);
-      if (dRes.success) setDoctors(dRes.data);
-      if (sRes.success) setSlots(sRes.data);
-      if (schRes.success) {
-        // Nếu admin lọc theo chuyên khoa nhưng để "Tất cả bác sĩ", ta cần thực hiện lọc thủ công ở client
-        let currentSchedules = schRes.data;
-        if (filters.chuyenKhoaId !== "all" && filters.bacSiId === "all") {
-           currentSchedules = currentSchedules.filter(sch => sch.bacSi?.chuyenKhoaId === Number(filters.chuyenKhoaId));
-        }
-        setSchedules(currentSchedules);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Lỗi khi tải dữ liệu");
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
-
-  // Gọi lại fetchData mỗi khi filters thay đổi
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   /**
    * Xử lý tạo lịch làm việc hàng loạt theo khoảng ngày và nhiều khung giờ
@@ -90,7 +75,6 @@ function AdminDoctorSchedulesPage() {
       return;
     }
 
-    // Tính toán danh sách các ngày trong khoảng từ ngày bắt đầu đến ngày kết thúc
     const start = new Date(newSchedule.ngayBatDau);
     const end = new Date(newSchedule.ngayKetThuc || newSchedule.ngayBatDau);
     const dates = [];
@@ -100,10 +84,8 @@ function AdminDoctorSchedulesPage() {
 
     let successCount = 0;
     let failCount = 0;
-
     toast.info("Đang xử lý tạo lịch...");
 
-    // Lặp qua từng ngày và từng khung giờ để gửi yêu cầu tạo lịch
     for (const date of dates) {
       for (const slotId of newSchedule.khungGioIds) {
         try {
@@ -120,12 +102,12 @@ function AdminDoctorSchedulesPage() {
       }
     }
 
-    // Thông báo kết quả cho người dùng
     if (successCount > 0) {
       toast.success(`Đã tạo thành công ${successCount} ca làm việc.`);
       setShowAddModal(false);
       setNewSchedule({ bacSiId: "", ngayBatDau: "", ngayKetThuc: "", khungGioIds: [] });
-      fetchData(); // Tải lại danh sách để cập nhật hiển thị
+      // Invalidate queries thay vì fetchData()
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.lists() });
     }
     if (failCount > 0) {
       toast.warning(`${failCount} ca bị trùng hoặc lỗi.`);
@@ -135,35 +117,33 @@ function AdminDoctorSchedulesPage() {
   /**
    * Thực hiện xóa ca làm việc sau khi đã xác nhận
    */
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     if (!deleteModal.id) return;
-    try {
-      await scheduleService.deleteLichLamViec(deleteModal.id);
-      toast.success("Đã xóa ca làm việc");
-      setDeleteModal({ open: false, id: null });
-      fetchData();
-    } catch (error) {
-       toast.error(error.message || "Lỗi khi xóa");
-    }
+    deleteMutation.mutate(deleteModal.id, {
+      onSuccess: () => {
+        toast.success("Đã xóa ca làm việc");
+        setDeleteModal({ open: false, id: null });
+      },
+      onError: (error) => toast.error(error.message || "Lỗi khi xóa"),
+    });
   };
 
   /**
    * Cập nhật số lượng bệnh nhân tối đa cho một ca làm việc cụ thể
-   * @param {Event} e - Sự kiện submit form
    */
-  const submitEditCapacity = async (e) => {
+  const submitEditCapacity = (e) => {
     e.preventDefault();
     if (!editModal.schedule) return;
-    try {
-      await scheduleService.updateLichLamViec(editModal.schedule.id, { 
-        soBenhNhanToiDa: editModal.newLimit 
-      });
-      toast.success("Đã điều chỉnh tải trọng thành công!");
-      setEditModal({ open: false, schedule: null, newLimit: 0 });
-      fetchData();
-    } catch (error) {
-       toast.error(error.message || "Lỗi khi cập nhật");
-    }
+    updateMutation.mutate(
+      { id: editModal.schedule.id, data: { soBenhNhanToiDa: editModal.newLimit } },
+      {
+        onSuccess: () => {
+          toast.success("Đã điều chỉnh tải trọng thành công!");
+          setEditModal({ open: false, schedule: null, newLimit: 0 });
+        },
+        onError: (error) => toast.error(error.message || "Lỗi khi cập nhật"),
+      }
+    );
   };
 
   /**

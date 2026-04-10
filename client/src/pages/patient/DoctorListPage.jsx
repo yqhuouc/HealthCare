@@ -14,58 +14,27 @@
  * Dữ liệu: API /api/bac-si, /api/chuyen-khoa
  * ============================================================
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { doctorService } from "../../services/doctorService";
+import { useDoctors } from "../../hooks/queries/useDoctorQueries";
+import { useSpecialties } from "../../hooks/queries/useSpecialtyQueries";
 import { formatPrice } from "../../utils/formatters";
-import { specialtyService } from "../../services/specialtyService";
-
-/** Hàm format giá tiền sang dạng VND: 150000 → "150.000đ" */
 
 export default function DoctorListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("");
-  const [doctors, setDoctors] = useState([]);
-  const [specialties, setSpecialties] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState(null);
 
-  // Fetch chuyên khoa (1 lần duy nhất) cho dropdown lọc
-  useEffect(() => {
-    const fetchSpecialties = async () => {
-      try {
-        const res = await specialtyService.getAll();
-        setSpecialties(res.data || []);
-      } catch {
-        /* im lặng */
-      }
-    };
-    fetchSpecialties();
-  }, []);
+  // TanStack Query: Lấy chuyên khoa (auto-cache, chỉ fetch 1 lần)
+  const { data: specRes } = useSpecialties();
+  const specialties = specRes?.data || [];
 
-  // Fetch bác sĩ khi thay đổi filter
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      setLoading(true);
-      try {
-        const params = { limit: 12 };
-        if (searchQuery) params.search = searchQuery;
-        if (selectedSpecialty) params.chuyenKhoaId = selectedSpecialty;
-
-        const res = await doctorService.getAll(params);
-        setDoctors(res.data || []);
-        setPagination(res.pagination || null);
-      } catch {
-        /* lỗi hiện qua toast interceptor */
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Debounce search 400ms
-    const timer = setTimeout(fetchDoctors, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery, selectedSpecialty]);
+  // TanStack Query: Lấy bác sĩ theo filter (auto-refetch khi filter đổi)
+  const filters = { limit: 12 };
+  if (searchQuery) filters.search = searchQuery;
+  if (selectedSpecialty) filters.chuyenKhoaId = selectedSpecialty;
+  const { data: docRes, isLoading: loading } = useDoctors(filters);
+  const doctors = docRes?.data || [];
+  const pagination = docRes?.pagination || null;
 
   return (
     <section className="py-12">

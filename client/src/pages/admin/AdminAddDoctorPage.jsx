@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { doctorService } from "../../services/doctorService";
-import { specialtyService } from "../../services/specialtyService";
+import { useCreateDoctor } from "../../hooks/queries/useDoctorQueries";
+import { useSpecialties } from "../../hooks/queries/useSpecialtyQueries";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 /**
@@ -12,11 +12,13 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 function AdminAddDoctorPage() {
   const navigate = useNavigate();
   
-  // State lưu trữ danh sách chuyên khoa để hiển thị trong dropdown
-  const [specialties, setSpecialties] = useState([]);
-  
-  // State quản lý trạng thái đang gửi dữ liệu (loading)
-  const [loading, setLoading] = useState(false);
+  // TanStack Query: Lấy danh sách chuyên khoa (auto-cache)
+  const { data: specRes } = useSpecialties();
+  const specialties = specRes?.data || [];
+
+  // TanStack Query: Mutation tạo bác sĩ mới (auto-invalidate list)
+  const createMutation = useCreateDoctor();
+  const loading = createMutation.isPending;
   
   // State lưu trữ dữ liệu form
   const [form, setForm] = useState({
@@ -30,22 +32,6 @@ function AdminAddDoctorPage() {
     moTaChiTiet: "",
   });
 
-  // Effect lấy danh sách chuyên khoa khi component mount
-  useEffect(() => {
-    const fetchSpecialties = async () => {
-      try {
-        const res = await specialtyService.getAll();
-        if (res.success) {
-          setSpecialties(res.data);
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("Không thể tải danh sách chuyên khoa!");
-      }
-    };
-    fetchSpecialties();
-  }, []);
-
   /**
    * Xử lý thay đổi giá trị trong các ô nhập liệu (input)
    * @param {Object} e - Event object
@@ -57,28 +43,26 @@ function AdminAddDoctorPage() {
   /**
    * Xử lý lưu thông tin bác sĩ mới vào hệ thống
    */
-  const handleSave = async () => {
+  const handleSave = () => {
     // Kiểm tra các trường bắt buộc
     if (!form.tenBacSi.trim() || !form.chuyenKhoaId || !form.email || !form.matKhau) {
       toast.warn("Vui lòng nhập đầy đủ: Họ tên, Chuyên khoa, Email, Mật khẩu.");
       return;
     }
     
-    setLoading(true);
-    try {
-      // Gọi service để tạo bác sĩ
-      await doctorService.create({
-        ...form,
-        giaKham: form.giaKham ? Number(form.giaKham) : null,
-      });
-      toast.success(`Đã thêm bác sĩ "${form.tenBacSi}" thành công!`);
-      // Quay lại danh sách bác sĩ sau khi thêm thành công
-      navigate("/admin/doctors");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi thêm bác sĩ!");
-    } finally {
-      setLoading(false);
-    }
+    // Gọi mutation tạo bác sĩ (auto-invalidate list sau khi thành công)
+    createMutation.mutate(
+      { ...form, giaKham: form.giaKham ? Number(form.giaKham) : null },
+      {
+        onSuccess: () => {
+          toast.success(`Đã thêm bác sĩ "${form.tenBacSi}" thành công!`);
+          navigate("/admin/doctors");
+        },
+        onError: (error) => {
+          toast.error(error.message || "Có lỗi xảy ra khi thêm bác sĩ!");
+        },
+      }
+    );
   };
 
   return (

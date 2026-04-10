@@ -13,31 +13,16 @@
  * Dữ liệu: API /api/chuyen-khoa
  * ============================================================
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { specialtyService } from "../../services/specialtyService";
+import { useSpecialties } from "../../hooks/queries/useSpecialtyQueries";
 
-// Icon mặc định cho chuyên khoa nếu không có dữ liệu trong DB
 const DEFAULT_ICON = "medical_services";
 
 export default function SpecialtyListPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [specialties, setSpecialties] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchSpecialties = async () => {
-      try {
-        const res = await specialtyService.getAll();
-        setSpecialties(res.data || []);
-      } catch {
-        /* lỗi hiện qua toast interceptor */
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSpecialties();
-  }, []);
+  const { data: specRes, isLoading: loading } = useSpecialties();
+  const specialties = specRes?.data || [];
 
   // Lọc chuyên khoa theo tên (không phân biệt hoa thường)
   const filteredSpecialties = specialties.filter((s) =>

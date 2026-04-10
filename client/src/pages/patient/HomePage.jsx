@@ -12,38 +12,21 @@
  * Dữ liệu: API /api/chuyen-khoa, /api/bac-si
  * ============================================================
  */
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { formatPrice } from "../../utils/formatters";
-import { specialtyService } from "../../services/specialtyService";
-import { doctorService } from "../../services/doctorService";
+import { useSpecialties } from "../../hooks/queries/useSpecialtyQueries";
+import { useDoctors } from "../../hooks/queries/useDoctorQueries";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
-// Icon mặc định cho chuyên khoa nếu không có dữ liệu trong DB
 const DEFAULT_ICON = "medical_services";
 
 function HomePage() {
-  const [specialties, setSpecialties] = useState([]);
-  const [doctors, setDoctors] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [specRes, docRes] = await Promise.all([
-          specialtyService.getAll(),
-          doctorService.getAll({ limit: 4 }),
-        ]);
-        setSpecialties(specRes.data || []);
-        setDoctors(docRes.data || []);
-      } catch {
-        /* Lỗi sẽ hiện toast qua interceptor */
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  // TanStack Query: Lấy chuyên khoa + bác sĩ (auto-parallel)
+  const { data: specRes, isLoading: loadingSpec } = useSpecialties();
+  const { data: docRes, isLoading: loadingDoc } = useDoctors({ limit: 4 });
+  const specialties = specRes?.data || [];
+  const doctors = docRes?.data || [];
+  const loading = loadingSpec || loadingDoc;
 
   return (
     <div>

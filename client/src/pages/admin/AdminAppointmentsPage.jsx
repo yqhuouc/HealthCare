@@ -18,11 +18,11 @@
  * Dữ liệu: APPOINTMENT_STATUS_CONFIG từ appointmentConstants.js
  * ============================================================
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants";
-import { appointmentService } from "../../services/appointmentService";
+import { useAppointments, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 // Chuyển đổi mã trạng thái số từ Database sang key chuỗi dùng cho config UI
@@ -54,78 +54,52 @@ function AdminAppointmentsPage() {
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  
-  // State lưu trữ dữ liệu từ API
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalAppointments, setTotalAppointments] = useState(0);
 
-  // Xử lý Debounce cho ô tìm kiếm để tránh gọi API quá nhiều lần liên tục
+  // Debounce tìm kiếm
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1); // Reset về trang 1 khi tìm kiếm thay đổi
+      setPage(1);
     }, 500);
     return () => clearTimeout(timer);
   }, [search]);
 
-  /**
-   * Hàm lấy danh sách lịch hẹn từ API dựa trên các bộ lọc hiện tại
-   */
-  const fetchAppointments = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = {
-        page,
-        limit: ITEMS_PER_PAGE,
-        search: debouncedSearch,
-        ...(statusFilter !== "all" && { trangThai: statusFilter }),
-        ...(dateFrom && { ngayDat: dateFrom }),
-      };
-      const res = await appointmentService.getAllForAdmin(params);
-      if (res.success) {
-        setAppointments(res.data || []);
-        setTotalPages(res.pagination?.totalPages || 1);
-        setTotalAppointments(res.pagination?.total || 0);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Lỗi khi lấy danh sách lịch hẹn");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter, dateFrom, debouncedSearch]);
+  // TanStack Query: Lấy danh sách lịch hẹn (auto-cache, auto-refetch theo filters)
+  const queryParams = {
+    page,
+    limit: ITEMS_PER_PAGE,
+    search: debouncedSearch,
+    ...(statusFilter !== "all" && { trangThai: statusFilter }),
+    ...(dateFrom && { ngayDat: dateFrom }),
+  };
+  const { data: aptRes, isLoading: loading } = useAppointments(queryParams);
+  const appointments = aptRes?.data || [];
+  const totalPages = aptRes?.pagination?.totalPages || 1;
+  const totalAppointments = aptRes?.pagination?.total || 0;
+
+  // TanStack Query: Mutation cập nhật trạng thái (auto-invalidate)
+  const statusMutation = useUpdateAppointmentStatus();
 
   /**
-   * Xử lý cập nhật nhanh trạng thái của một lịch hẹn trực tiếp từ danh sách
-   * @param {number} id - ID lịch hẹn
-   * @param {number} newStatus - Trạng thái mới cần chuyển sang
+   * Xử lý cập nhật nhanh trạng thái của một lịch hẹn
    */
-  const handleUpdateStatus = async (id, newStatus) => {
-    try {
-      await appointmentService.updateTrangThai(id, newStatus);
-      const labels = { 0: "Đã hoàn tác (về chờ)", 1: "Đã xác nhận lịch", 2: "Đã hoàn thành khám", 3: "Đã hủy lịch" };
-      toast.success(labels[newStatus] || "Cập nhật thành công");
-      fetchAppointments(); // Gọi lại API để cập nhật dữ liệu hiển thị
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Lỗi cập nhật trạng thái");
-    }
+  const handleUpdateStatus = (id, newStatus) => {
+    const labels = { 0: "Đã hoàn tác (về chờ)", 1: "Đã xác nhận lịch", 2: "Đã hoàn thành khám", 3: "Đã hủy lịch" };
+    statusMutation.mutate(
+      { id, trangThai: newStatus },
+      {
+        onSuccess: () => toast.success(labels[newStatus] || "Cập nhật thành công"),
+        onError: (err) => toast.error(err.message || "Lỗi cập nhật trạng thái"),
+      }
+    );
   };
 
-  // Tự động tải lại dữ liệu khi các tham số lọc thay đổi
-  useEffect(() => {
-    fetchAppointments();
-  }, [fetchAppointments]);
-
   /**
-   * Kích hoạt lọc dữ liệu theo các điều kiện đã chọn
+   * Kích hoạt lọc theo ngày
    */
   const handleFilter = () => {
     setPage(1);
-    fetchAppointments();
   };
 
   return (

@@ -12,28 +12,14 @@
  * Dữ liệu: API /api/cau-hoi-thuong-gap
  * ============================================================
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { faqService } from "../../services/faqService";
+import { useFAQs } from "../../hooks/queries/useFAQQueries";
 
 export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState(null);
-  const [faqList, setFaqList] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchFaqs = async () => {
-      try {
-        const res = await faqService.getAll();
-        setFaqList(res.data || []);
-      } catch {
-        /* lỗi hiện qua toast interceptor */
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFaqs();
-  }, []);
+  const { data: faqRes, isLoading: loading } = useFAQs();
+  const faqList = faqRes?.data || [];
 
   /** Toggle mở/đóng câu hỏi: click cùng index → đóng, click khác → mở cái mới */
   const toggle = (index) => {

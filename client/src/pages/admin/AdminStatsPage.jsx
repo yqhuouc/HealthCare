@@ -12,8 +12,8 @@
  * - Bảng vinh danh Top 10 bác sĩ có số lượng đặt lịch cao nhất.
  * - Hỗ trợ lọc dữ liệu theo Năm.
  */
-import { useState, useEffect, useMemo } from "react";
-import { adminStatsService } from "../../services/adminStatsService";
+import { useState, useMemo } from "react";
+import { useTongQuan, useDoanhThuStats, useLichHenStats } from "../../hooks/queries/useStatsQueries";
 
 /**
  * Thành phần StatCard — Card hiển thị một chỉ số KPI tổng quan.
@@ -45,104 +45,61 @@ function StatCard({ icon, iconBg, label, value, subLabel }) {
 }
 
 function AdminStatsPage() {
-  /**
-   * Khởi tạo state cho năm được chọn, mặc định lấy năm hiện tại từ hệ thống.
-   */
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [loading, setLoading] = useState(true);
 
-  // ── State lưu trữ dữ liệu từ các API ────────────────────────────────────
-  
-  // Dữ liệu tổng quan: đếm số lượng bản ghi và doanh thu tổng hợp
-  const [overview, setOverview] = useState({
-    tongLichHen: 0,
-    tongBacSi: 0,
-    tongBenhNhan: 0,
-    tongChuyenKhoa: 0,
-    lichHenTheoTrangThai: [],
-    doanhThuKham: 0,
-    doanhThuThuoc: 0,
-    tongDoanhThu: 0,
-  });
-
-  // Dữ liệu doanh thu chi tiết theo từng tháng trong năm
-  const [revenueStats, setRevenueStats] = useState([]);
-
-  // Danh sách bác sĩ có thành tích tốt (đặt lịch nhiều)
-  const [topDoctors, setTopDoctors] = useState([]);
-
-  // Dữ liệu biến động số lượng lịch khám theo ngày trong 2 tuần qua
-  const [dailyAppointments, setDailyAppointments] = useState([]);
-
-  // ── Effect xử lý tải dữ liệu từ nhiều nguồn API đồng thời ──────────────
-  useEffect(() => {
-    const fetchStats = async () => {
-      setLoading(true); // Bắt đầu trạng thái tải
-      try {
-        // Thiết lập khoảng thời gian 14 ngày cho biểu đồ xu hướng
-        const today = new Date();
-        const pastDate = new Date();
-        pastDate.setDate(today.getDate() - 13);
-        const tuNgay = pastDate.toISOString().split("T")[0];
-        const denNgay = today.toISOString().split("T")[0];
-
-        // Gọi đồng thời 3 API thống kê khác nhau bằng Promise.all
-        const [tongQuanRes, doanhThuRes, lichHenRes] = await Promise.all([
-          adminStatsService.getTongQuan(),
-          adminStatsService.getDoanhThuStats({ nam: selectedYear }),
-          adminStatsService.getLichHenStats({ tuNgay, denNgay }),
-        ]);
-
-        // Cập nhật state cho phần Tổng quan
-        if (tongQuanRes.data) {
-          setOverview(tongQuanRes.data);
-        }
-
-        // Cập nhật state cho phần Thống kê doanh thu tháng
-        if (doanhThuRes.data?.thongKeThang) {
-          setRevenueStats(doanhThuRes.data.thongKeThang);
-        }
-
-        // Cập nhật state cho dữ liệu bác sĩ và lịch hẹn theo ngày
-        if (lichHenRes.data) {
-          if (lichHenRes.data.lichHenTheoBacSi) {
-            setTopDoctors(lichHenRes.data.lichHenTheoBacSi);
-          }
-          if (lichHenRes.data.lichHenTheoNgay) {
-            const rawDays = lichHenRes.data.lichHenTheoNgay.map((d) => ({
-              ...d,
-              soLuong: Number(d.soLuong || 0),
-            }));
-            
-            // Xử lý chuẩn hóa dữ liệu 14 ngày: đảm bảo có đủ 14 điểm dữ liệu (ngay cả khi ngày đó 0 lượt khám)
-            const formattedChart = [];
-            for (let i = 0; i < 14; i++) {
-              const d = new Date(pastDate);
-              d.setDate(d.getDate() + i);
-              const dateStr = d.toISOString().split("T")[0];
-              const dateLabel = `${d.getDate()}/${d.getMonth() + 1}`;
-              const match = rawDays.find((rd) => {
-                const rdDate = new Date(rd.ngay).toISOString().split("T")[0];
-                return rdDate === dateStr;
-              });
-              formattedChart.push({
-                label: dateLabel,
-                count: match ? match.soLuong : 0,
-                isToday: dateStr === today.toISOString().split("T")[0],
-              });
-            }
-            setDailyAppointments(formattedChart);
-          }
-        }
-      } catch (error) {
-        console.error("Lỗi khi tải dữ liệu thống kê:", error);
-      } finally {
-        setLoading(false); // Kết thúc trạng thái tải dữ liệu
-      }
+  // Thiết lập khoảng thời gian 14 ngày cho biểu đồ xu hướng
+  const dateRange = useMemo(() => {
+    const today = new Date();
+    const pastDate = new Date();
+    pastDate.setDate(today.getDate() - 13);
+    return {
+      tuNgay: pastDate.toISOString().split("T")[0],
+      denNgay: today.toISOString().split("T")[0],
     };
-    fetchStats();
-  }, [selectedYear]);
+  }, []);
+
+  // TanStack Query: 3 queries song song (auto-cache)
+  const { data: tongQuanRes, isLoading: l1 } = useTongQuan();
+  const { data: doanhThuRes, isLoading: l2 } = useDoanhThuStats({ nam: selectedYear });
+  const { data: lichHenRes, isLoading: l3 } = useLichHenStats(dateRange);
+  const loading = l1 || l2 || l3;
+
+  // Trích xuất dữ liệu từ query responses
+  const overview = useMemo(() => tongQuanRes?.data || {
+    tongLichHen: 0, tongBacSi: 0, tongBenhNhan: 0, tongChuyenKhoa: 0,
+    lichHenTheoTrangThai: [], doanhThuKham: 0, doanhThuThuoc: 0, tongDoanhThu: 0,
+  }, [tongQuanRes]);
+
+  const revenueStats = useMemo(() => doanhThuRes?.data?.thongKeThang || [], [doanhThuRes]);
+  const topDoctors = useMemo(() => lichHenRes?.data?.lichHenTheoBacSi || [], [lichHenRes]);
+
+  // Xử lý chuẩn hóa dữ liệu 14 ngày cho biểu đồ
+  const dailyAppointments = useMemo(() => {
+    const rawDays = (lichHenRes?.data?.lichHenTheoNgay || []).map((d) => ({
+      ...d, soLuong: Number(d.soLuong || 0),
+    }));
+    const today = new Date();
+    const pastDate = new Date();
+    pastDate.setDate(today.getDate() - 13);
+    const formattedChart = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(pastDate);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split("T")[0];
+      const dateLabel = `${d.getDate()}/${d.getMonth() + 1}`;
+      const match = rawDays.find((rd) => {
+        const rdDate = new Date(rd.ngay).toISOString().split("T")[0];
+        return rdDate === dateStr;
+      });
+      formattedChart.push({
+        label: dateLabel,
+        count: match ? match.soLuong : 0,
+        isToday: dateStr === today.toISOString().split("T")[0],
+      });
+    }
+    return formattedChart;
+  }, [lichHenRes]);
 
   // ── Logic xử lý dữ liệu ảo hóa cho UI Chart ──────────────────────────────────────────
 

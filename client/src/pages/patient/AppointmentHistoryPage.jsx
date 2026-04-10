@@ -14,17 +14,13 @@
  * Dữ liệu: API /api/dat-lich/benh-nhan/:benhNhanId
  * ============================================================
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { appointmentService } from "../../services/appointmentService";
+import { useAppointmentsByPatient, useDeleteAppointment } from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { formatTime, formatDate } from "../../utils/formatters";
 
-/**
- * Mapping trạng thái lịch hẹn: number → { label, color }
- * 0: Chờ xác nhận | 1: Đã xác nhận | 2: Đã khám | 3: Đã hủy
- */
 const STATUS_CONFIG = {
   0: { label: "Chờ xác nhận", color: "bg-yellow-100 text-yellow-700" },
   1: { label: "Đã xác nhận", color: "bg-blue-100 text-blue-700" },
@@ -32,7 +28,6 @@ const STATUS_CONFIG = {
   3: { label: "Đã hủy", color: "bg-red-100 text-red-700" },
 };
 
-/** Cấu hình các tab lọc trạng thái lịch hẹn */
 const FILTER_TABS = [
   { key: "all", label: "Tất cả" },
   { key: 0, label: "Chờ xác nhận" },
@@ -41,48 +36,29 @@ const FILTER_TABS = [
   { key: 3, label: "Đã hủy" },
 ];
 
-
-
 export default function AppointmentHistoryPage() {
   const user = useAuthStore((s) => s.user);
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const benhNhanId = user?.benhNhan?.id;
   const [filterStatus, setFilterStatus] = useState("all");
 
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      const benhNhanId = user?.benhNhan?.id;
-      if (!benhNhanId) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const res = await appointmentService.getByBenhNhan(benhNhanId);
-        setAppointments(res.data || []);
-      } catch {
-        /* lỗi hiện qua interceptor */
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAppointments();
-  }, [user]);
+  // TanStack Query: Lấy lịch hẹn theo bệnh nhân
+  const { data: aptRes, isLoading: loading } = useAppointmentsByPatient(benhNhanId);
+  const appointments = aptRes?.data || [];
 
-  // Lọc danh sách lịch hẹn theo trạng thái
+  // TanStack Query: Mutation xóa lịch hẹn
+  const deleteMutation = useDeleteAppointment();
+
   const filteredAppointments =
     filterStatus === "all"
       ? appointments
       : appointments.filter((a) => a.trangThai === filterStatus);
 
-  const handleCancel = async (appointmentId) => {
+  const handleCancel = (appointmentId) => {
     if (!window.confirm("Bạn có chắc chắn muốn hủy lịch hẹn này?")) return;
-    try {
-      await appointmentService.remove(appointmentId);
-      setAppointments((prev) => prev.filter((a) => String(a.id) !== String(appointmentId)));
-      toast.success("Đã hủy lịch hẹn thành công.");
-    } catch (err) {
-      toast.error(err?.message || "Không thể hủy lịch hẹn.");
-    }
+    deleteMutation.mutate(appointmentId, {
+      onSuccess: () => toast.success("Đã hủy lịch hẹn thành công."),
+      onError: (err) => toast.error(err?.message || "Không thể hủy lịch hẹn."),
+    });
   };
 
   if (loading) {

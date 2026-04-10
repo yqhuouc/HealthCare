@@ -14,9 +14,8 @@
  * State quản lý: appointments (danh sách), loading (trạng thái tải).
  * ============================================================
  */
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { appointmentService } from "../../services/appointmentService";
+import { useAppointmentsByDoctor, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
 import { getInitials, formatTime } from "../../utils/formatters";
@@ -32,35 +31,16 @@ const STATUS_CONFIG = {
   3: { label: "Đã hủy", color: "bg-rose-100 text-rose-600" },
 };
 
-
-
 function DoctorDashboardPage() {
-  // Lấy User hiện tại từ Auth Store (Zustand)
   const { user } = useAuthStore();
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // ID bác sĩ dùng để lọc dữ liệu từ API
   const bacSiId = user?.bacSi?.id;
 
-  /**
-   * Effect: Tải toàn bộ danh sách lịch hẹn của Bác sĩ này
-   */
-  useEffect(() => {
-    if (!bacSiId) return;
-    const fetchData = async () => {
-      try {
-        const res = await appointmentService.getByBacSi(bacSiId);
-        setAppointments(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error("Dashboard fetch error:", err);
-        toast.error("Không thể tải dữ liệu dashboard");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [bacSiId]);
+  // TanStack Query: Lấy danh sách lịch hẹn theo bác sĩ (auto-cache)
+  const { data: aptRes, isLoading: loading } = useAppointmentsByDoctor(bacSiId);
+  const appointments = Array.isArray(aptRes?.data) ? aptRes.data : [];
+
+  // TanStack Query: Mutation cập nhật trạng thái (auto-invalidate)
+  const statusMutation = useUpdateAppointmentStatus();
 
   /**
    * Xử lý lọc dữ liệu ngay tại Client
@@ -113,26 +93,16 @@ function DoctorDashboardPage() {
     },
   ];
 
-  /**
-   * Hàm gọi API cập nhật trạng thái lịch hẹn (Xác nhận/Hoàn thành...)
-   * @param {number} id - ID lịch hẹn
-   * @param {number} newStatus - Trạng thái mới (0, 1, 2, 3)
-   */
-  const handleUpdateStatus = async (id, newStatus) => {
-    try {
-      await appointmentService.updateTrangThai(id, newStatus);
-      // Cập nhật lại state cục bộ để UI thay đổi ngay lập tức
-      setAppointments((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, trangThai: newStatus } : a)),
-      );
-      const labels = { 1: "Đã xác nhận", 2: "Đã hoàn thành", 3: "Đã hủy" };
-      toast.success(labels[newStatus] || "Cập nhật thành công");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Lỗi cập nhật trạng thái");
-    }
+  const handleUpdateStatus = (id, newStatus) => {
+    const labels = { 1: "Đã xác nhận", 2: "Đã hoàn thành", 3: "Đã hủy" };
+    statusMutation.mutate(
+      { id, trangThai: newStatus },
+      {
+        onSuccess: () => toast.success(labels[newStatus] || "Cập nhật thành công"),
+        onError: (err) => toast.error(err.message || "Lỗi cập nhật trạng thái"),
+      }
+    );
   };
-
-
 
   /**
    * Render nhãn trạng thái (Badge) + ký hiệu đã kê đơn

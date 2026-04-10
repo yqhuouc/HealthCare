@@ -15,9 +15,9 @@
  * =============================================================================
  */
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { appointmentService } from "../../services/appointmentService";
+import { useAppointmentsByDoctor, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
 import { formatTime } from "../../utils/formatters";
@@ -56,76 +56,49 @@ function getPatientAvatar(anhDaiDien) {
 }
 
 function DoctorAppointmentsPage() {
-  // Lấy thông tin bác sĩ từ Store (Zustand)
   const { user } = useAuthStore();
   const bacSiId = user?.bacSi?.id;
 
-  // QUẢN LÝ DỮ LIỆU
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // TanStack Query: Lấy danh sách lịch hẹn (auto-cache)
+  const { data: aptRes, isLoading: loading } = useAppointmentsByDoctor(bacSiId);
+  const appointments = Array.isArray(aptRes?.data) ? aptRes.data : [];
+  
+  // TanStack Query: Mutation cập nhật trạng thái
+  const statusMutation = useUpdateAppointmentStatus();
   
   // QUẢN LÝ BỘ LỌC (STATE)
-  const [activeDate, setActiveDate] = useState("today"); // Mặc định là hiện lịch "Hôm nay"
-  const [dateInput, setDateInput] = useState("");        // Lưu ngày khi dùng ô chọn ngày (date picker)
-  const [searchQuery, setSearchQuery] = useState("");    // Lưu từ khóa tìm theo tên/mã BN
+  const [activeDate, setActiveDate] = useState("today");
+  const [dateInput, setDateInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  /**
-   * LUỒNG CHÍNH: Tải danh sách lịch hẹn từ máy chủ
-   */
-  useEffect(() => {
-    if (!bacSiId) return;
-    const fetchData = async () => {
-      try {
-        const res = await appointmentService.getByBacSi(bacSiId);
-        setAppointments(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error("Lỗi khi tải dữ liệu:", err);
-        toast.error("Không thể tải danh sách lịch khám");
-      } finally {
-        setLoading(false);
-      }
+  const { today, tomorrow } = useMemo(() => {
+    const now = new Date();
+    const tmr = new Date(now);
+    tmr.setDate(tmr.getDate() + 1);
+    return {
+      today: now.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }),
+      tomorrow: tmr.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }),
     };
-    fetchData();
-  }, [bacSiId]);
-
-  /** 
-   * XỬ LÝ NGÀY THÁNG ĐÊ LỌC:
-   * Chuyển đổi Hôm nay/Ngày mai/Ngày chọn riêng thành chuỗi YYYY-MM-DD để so sánh.
-   */
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
-  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_MinH" });
+  }, []);
 
   const selectedDate =
     activeDate === "today" ? today :
     activeDate === "tomorrow" ? tomorrow :
     dateInput;
 
-  /** 
-   * BỘ LỌC TỔNG HỢP: 
-   * Đây là nơi kết hợp 3 điều kiện (Ngày + Trạng thái + Tìm kiếm) để lọc dữ liệu hiển thị.
-   */
   const filtered = appointments.filter((apt) => {
-    // Lớp 1: Lọc theo Ngày khám
     const aptDate = new Date(apt.ngayDat).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
     const matchDate = !selectedDate || aptDate === selectedDate;
-
-    // Lớp 2: Lọc theo Trạng thái (Chờ/Xác nhận/Hủy...)
     const matchStatus = statusFilter === "all" || apt.trangThai === statusFilter;
-
-    // Lớp 3: Tìm kiếm theo Tên hoặc Mã BN (Ví dụ: BN-005)
     const q = searchQuery.trim().toLowerCase();
     const patientId = apt.benhNhan?.id || apt.benhNhanId || apt.id;
     const matchSearch = !q ||
       (apt.benhNhan?.hoTen || "").toLowerCase().includes(q) ||
       `BN-${String(patientId).padStart(3, "0")}`.toLowerCase().includes(q);
-
     return matchDate && matchStatus && matchSearch;
   });
 
-  /** 
-   * THỐNG KÊ NHANH: Tính toán con số cho các thẻ ở cuối trang
-   */
   const stats = {
     total: filtered.length,
     pending: filtered.filter((a) => a.trangThai === 0).length,
@@ -133,21 +106,15 @@ function DoctorAppointmentsPage() {
     cancelled: filtered.filter((a) => a.trangThai === 3).length,
   };
 
-  /** 
-   * CHỨC NĂNG: Cập nhật trạng thái lịch (Xác nhận/Hủy...)
-   * Gửi yêu cầu lên Server và cập nhật lại giao diện ngay lập tức.
-   */
-  const handleUpdateStatus = async (id, newStatus) => {
-    try {
-      await appointmentService.updateTrangThai(id, newStatus);
-      setAppointments((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, trangThai: newStatus } : a))
-      );
-      const labels = { 0: "Đã hoàn tác (về chờ)", 1: "Đã xác nhận lịch", 2: "Đã hoàn thành khám", 3: "Đã hủy lịch" };
-      toast.success(labels[newStatus] || "Cập nhật thành công");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Lỗi cập nhật trạng thái");
-    }
+  const handleUpdateStatus = (id, newStatus) => {
+    const labels = { 0: "Đã hoàn tác (về chờ)", 1: "Đã xác nhận lịch", 2: "Đã hoàn thành khám", 3: "Đã hủy lịch" };
+    statusMutation.mutate(
+      { id, trangThai: newStatus },
+      {
+        onSuccess: () => toast.success(labels[newStatus] || "Cập nhật thành công"),
+        onError: (err) => toast.error(err.message || "Lỗi cập nhật trạng thái"),
+      }
+    );
   };
 
   // Trạng thái chờ tải dữ liệu

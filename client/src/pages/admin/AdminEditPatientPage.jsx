@@ -1,98 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { patientService } from "../../services/patientService";
+import { usePatient, useUpdatePatient } from "../../hooks/queries/usePatientQueries";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 /**
  * Trang AdminEditPatientPage - Chỉnh sửa thông tin Bệnh nhân (Admin)
- * Chức năng: Tải dữ liệu hồ sơ bệnh nhân hiện có và cho phép cập nhật thông tin cá nhân như họ tên, số điện thoại, ngày sinh, địa chỉ.
+ * Kiến trúc: Wrapper (fetch + loading) → Child Form (khởi tạo state từ props)
+ * Để tránh React 19 warning về setState trong useEffect.
  */
 function AdminEditPatientPage() {
-  const { id } = useParams(); // Lấy ID bệnh nhân từ URL
-  const navigate = useNavigate();
-  
-  // State quản lý trạng thái hệ thống
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  
-  // State quản lý dữ liệu form (Phân tách giữa thông tin cơ bản và thông tin tài khoản liên kết)
-  const [formData, setFormData] = useState({
-    hoTen: "",
-    soDienThoai: "",
-    taiKhoan: {
-      email: "",
-      diaChi: "",
-      ngaySinh: "",
-      gioiTinh: 1, // 1: Nam, 2: Nữ
-    },
-  });
+  const { id } = useParams();
+  const { data: patientRes, isLoading: loading } = usePatient(id);
 
-  /**
-   * Effect thực hiện tải dữ liệu bệnh nhân từ API khi trang vừa được load
-   */
-  useEffect(() => {
-    const fetchPatient = async () => {
-      try {
-        const res = await patientService.getById(id);
-        if (res.success) {
-          const p = res.data;
-          // Gán dữ liệu cũ vào state để hiển thị lên form
-          setFormData({
-            hoTen: p.hoTen || "",
-            soDienThoai: p.soDienThoai || "",
-            taiKhoan: {
-              email: p.taiKhoan?.email || "",
-              diaChi: p.taiKhoan?.diaChi || "",
-              // Xử lý định dạng ngày sinh từ ISO sang YYYY-MM-DD để input type="date" hiểu được
-              ngaySinh: p.taiKhoan?.ngaySinh
-                ? p.taiKhoan.ngaySinh.split("T")[0]
-                : "",
-              gioiTinh: p.taiKhoan?.gioiTinh ?? 1,
-            },
-          });
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("Không tìm thấy thông tin bệnh nhân");
-        navigate("/admin/patients"); // Quay lại danh sách nếu có lỗi
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPatient();
-  }, [id, navigate]);
-
-  /**
-   * Xử lý thực hiện lưu/cập nhật thông tin bệnh nhân
-   * @param {Event} e - Sự kiện submit form
-   */
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      // Làm phẳng dữ liệu (Flatten) để gửi lên Backend theo đúng payload yêu cầu
-      const payload = {
-        hoTen: formData.hoTen,
-        soDienThoai: formData.soDienThoai,
-        emailLienHe: formData.taiKhoan.email,
-        diaChi: formData.taiKhoan.diaChi,
-        ngaySinh: formData.taiKhoan.ngaySinh,
-        gioiTinh: Number(formData.taiKhoan.gioiTinh)
-      };
-
-      const res = await patientService.update(id, payload);
-      if (res.success) {
-        toast.success("Cập nhật thông tin bệnh nhân thành công");
-      }
-    } catch (error) {
-      toast.error(error.message || "Lỗi khi cập nhật");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Hiển thị vòng xoay chờ nếu đang tải dữ liệu
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -100,6 +20,47 @@ function AdminEditPatientPage() {
       </div>
     );
   }
+
+  return <EditPatientForm patientData={patientRes?.data} patientId={id} />;
+}
+
+function EditPatientForm({ patientData, patientId }) {
+  const navigate = useNavigate();
+  const updateMutation = useUpdatePatient();
+  const submitting = updateMutation.isPending;
+  
+  // Khởi tạo form state trực tiếp từ props — KHÔNG cần useEffect
+  const p = patientData || {};
+  const [formData, setFormData] = useState({
+    hoTen: p.hoTen || "",
+    soDienThoai: p.soDienThoai || "",
+    taiKhoan: {
+      email: p.taiKhoan?.email || "",
+      diaChi: p.taiKhoan?.diaChi || "",
+      ngaySinh: p.taiKhoan?.ngaySinh ? p.taiKhoan.ngaySinh.split("T")[0] : "",
+      gioiTinh: p.taiKhoan?.gioiTinh ?? 1,
+    },
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const payload = {
+      hoTen: formData.hoTen,
+      soDienThoai: formData.soDienThoai,
+      emailLienHe: formData.taiKhoan.email,
+      diaChi: formData.taiKhoan.diaChi,
+      ngaySinh: formData.taiKhoan.ngaySinh,
+      gioiTinh: Number(formData.taiKhoan.gioiTinh)
+    };
+
+    updateMutation.mutate(
+      { id: patientId, data: payload },
+      {
+        onSuccess: () => toast.success("Cập nhật thông tin bệnh nhân thành công"),
+        onError: (err) => toast.error(err.message || "Lỗi khi cập nhật"),
+      }
+    );
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
@@ -113,7 +74,7 @@ function AdminEditPatientPage() {
         </Link>
         <span>/</span>
         <span className="text-slate-900 font-medium">
-          Chỉnh sửa hồ sơ BN#{id}
+          Chỉnh sửa hồ sơ BN#{patientId}
         </span>
       </div>
 

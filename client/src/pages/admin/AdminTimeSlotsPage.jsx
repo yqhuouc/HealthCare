@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { toast } from "react-toastify";
-import { scheduleService } from "../../services/scheduleService";
+import { useKhungGio, useCreateKhungGio, useDeleteKhungGio } from "../../hooks/queries/useScheduleQueries";
 import { formatTime } from "../../utils/formatters";
 
 /**
@@ -12,74 +12,46 @@ import { formatTime } from "../../utils/formatters";
  * - Lưu ý: Các khung giờ này là "bản mẫu" để bác sĩ đăng ký lịch làm việc.
  */
 function AdminTimeSlotsPage() {
-  // State quản lý danh sách khung giờ và trạng thái tải
-  const [slots, setSlots] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // TanStack Query: Lấy danh sách khung giờ (auto-cache)
+  const { data: slotsRes, isLoading: loading } = useKhungGio();
+  const slots = slotsRes?.data || [];
   
-  // State điều khiển các Modal (Thêm mới & Xác nhận xóa)
+  // TanStack Query: Mutations (auto-invalidate)
+  const createMutation = useCreateKhungGio();
+  const deleteFn = useDeleteKhungGio();
+  
+  // State điều khiển các Modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
-  
-  // State quản lý dữ liệu form thêm mới
   const [newSlot, setNewSlot] = useState({ gioBatDau: "", gioKetThuc: "" });
-
-  /**
-   * Hàm lấy toàn bộ danh sách khung giờ từ server
-   * Sử dụng useCallback để tối ưu hiệu năng và tránh re-render vô ích
-   */
-  const fetchSlots = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await scheduleService.getAllKhungGio();
-      if (res.success) setSlots(res.data);
-    } catch (error) {
-      console.error(error);
-      toast.error("Lỗi khi tải danh sách khung giờ");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  /**
-   * Hook khởi tạo: Tự động gọi API khi component được gắn (mount)
-   */
-  useEffect(() => {
-    fetchSlots();
-  }, [fetchSlots]);
 
   /**
    * Xử lý hành động tạo mới khung giờ
    */
-  const handleCreate = async (e) => {
+  const handleCreate = (e) => {
     e.preventDefault();
-    try {
-      const res = await scheduleService.createKhungGio(newSlot);
-      if (res.success) {
+    createMutation.mutate(newSlot, {
+      onSuccess: () => {
         toast.success("Thêm khung giờ thành công");
-        setNewSlot({ gioBatDau: "", gioKetThuc: "" }); // Reset form
-        setShowAddModal(false); // Đóng modal
-        fetchSlots(); // Cập nhật lại danh sách hiển thị
-      }
-    } catch (error) {
-      toast.error(error.message || "Lỗi khi tạo khung giờ");
-    }
+        setNewSlot({ gioBatDau: "", gioKetThuc: "" });
+        setShowAddModal(false);
+      },
+      onError: (error) => toast.error(error.message || "Lỗi khi tạo khung giờ"),
+    });
   };
 
   /**
    * Thực hiện xóa khung giờ sau khi đã xác nhận
    */
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     if (!deleteModal.id) return;
-    try {
-      const res = await scheduleService.deleteKhungGio(deleteModal.id);
-      if (res.success) {
+    deleteFn.mutate(deleteModal.id, {
+      onSuccess: () => {
         toast.success("Xóa thành công");
-        setDeleteModal({ open: false, id: null }); // Đóng modal xác nhận
-        fetchSlots(); // Cập nhật lại danh sách
-      }
-    } catch (error) {
-       toast.error(error.message || "Lỗi khi xóa khung giờ (Có thể đang có lịch liên kết)");
-    }
+        setDeleteModal({ open: false, id: null });
+      },
+      onError: (error) => toast.error(error.message || "Lỗi khi xóa khung giờ (Có thể đang có lịch liên kết)"),
+    });
   };
 
   return (

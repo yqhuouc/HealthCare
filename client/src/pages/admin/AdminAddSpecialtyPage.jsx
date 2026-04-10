@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { specialtyService } from "../../services/specialtyService";
+import { useCreateSpecialty } from "../../hooks/queries/useSpecialtyQueries";
+import { specialtyService } from "../../services/specialtyService"; // Giữ lại cho uploadAnh (chưa có trong hooks)
 
 // Danh sách các biểu tượng (icon) được hỗ trợ cho chuyên khoa
 const ICON_OPTIONS = [
@@ -30,8 +31,9 @@ function AdminAddSpecialtyPage() {
   // Ref để tham chiếu đến thẻ input file ẩn
   const fileInputRef = useRef(null);
   
-  // Trạng thái xử lý gửi dữ liệu
-  const [loading, setLoading] = useState(false);
+  // TanStack Query: Mutation tạo chuyên khoa mới (auto-invalidate list)
+  const createMutation = useCreateSpecialty();
+  const loading = createMutation.isPending;
   
   // State quản lý thông tin cơ bản của chuyên khoa
   const [form, setForm] = useState({
@@ -75,16 +77,14 @@ function AdminAddSpecialtyPage() {
    * Gửi dữ liệu chuyên khoa mới lên server
    */
   const handleSave = async () => {
-    // Validate tên chuyên khoa
     if (!form.name.trim()) {
       toast.warn("Vui lòng nhập tên chuyên khoa.");
       return;
     }
     
-    setLoading(true);
     try {
-      // 1. Tạo record chuyên khoa trong cơ sở dữ liệu
-      const createRes = await specialtyService.create({
+      // 1. Tạo record chuyên khoa qua mutation
+      const createRes = await createMutation.mutateAsync({
         tenChuyenKhoa: form.name.trim(),
         icon: form.icon,
         moTaChuyenKhoa: form.description,
@@ -92,19 +92,15 @@ function AdminAddSpecialtyPage() {
       });
 
       // 2. Nếu tạo thành công và có chọn ảnh, tiến hành tải ảnh lên server
-      if (selectedFile && createRes.success) {
-        const specialtyId = createRes.data.id;
-        await specialtyService.uploadAnh(specialtyId, selectedFile);
+      if (selectedFile && createRes.data?.id) {
+        await specialtyService.uploadAnh(createRes.data.id, selectedFile);
       }
 
       toast.success(`Đã thêm chuyên khoa "${form.name}" thành công!`);
-      // Quay lại trang danh sách chuyên khoa
       navigate("/admin/specialties");
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi thêm chuyên khoa!");
-    } finally {
-      setLoading(false);
+      toast.error(error.message || "Có lỗi xảy ra khi thêm chuyên khoa!");
     }
   };
 

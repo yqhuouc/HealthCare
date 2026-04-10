@@ -14,31 +14,14 @@
  * Dữ liệu: API /api/dat-lich/:id (kèm donThuoc, benhNhan, bacSi nested)
  * ============================================================
  */
-import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { appointmentService } from "../../services/appointmentService";
+import { useAppointment } from "../../hooks/queries/useAppointmentQueries";
 import { formatTime, formatDate, formatPrice } from "../../utils/formatters";
-
-
 
 export default function MedicalResultPage() {
   const { id } = useParams();
-  const [appointment, setAppointment] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchResult = async () => {
-      try {
-        const res = await appointmentService.getById(id);
-        setAppointment(res.data);
-      } catch {
-        setAppointment(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchResult();
-  }, [id]);
+  const { data: aptRes, isLoading: loading } = useAppointment(id);
+  const appointment = aptRes?.data || null;
 
   /** Lệnh in phiếu kết quả */
   const handlePrint = () => {

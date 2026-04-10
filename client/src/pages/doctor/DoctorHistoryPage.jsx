@@ -15,47 +15,28 @@
  * Dữ liệu: Lấy từ API appointmentService.getByBacSi và lọc tại Client.
  * ============================================================
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { appointmentService } from "../../services/appointmentService";
+import { useAppointmentsByDoctor } from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
-import { toast } from "react-toastify";
 import { getInitials, formatDate } from "../../utils/formatters";
 
 
 
 function DoctorHistoryPage() {
-  // Lấy thông tin bác sĩ từ Store
   const { user } = useAuthStore();
   const bacSiId = user?.bacSi?.id;
 
-  // State quản lý dữ liệu và bộ lọc
-  const [appointments, setAppointments] = useState([]); // Lưu danh sách GỐC đã hoàn thành
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState(""); // Search tên/mã BN
-  const [dateFrom, setDateFrom] = useState(""); // Lọc ngày bắt đầu
-  const [dateTo, setDateTo] = useState(""); // Lọc ngày kết thúc
+  // TanStack Query: Lấy danh sách lịch hẹn (auto-cache)
+  const { data: aptRes, isLoading: loading } = useAppointmentsByDoctor(bacSiId);
+  const allAppointments = Array.isArray(aptRes?.data) ? aptRes.data : [];
+  // QUAN TRỌNG: Chỉ lấy những lịch có trạng thái Hoàn thành (2)
+  const appointments = allAppointments.filter((a) => a.trangThai === 2);
 
-  /**
-   * Effect: Tải dữ liệu lịch sử khi vào trang
-   */
-  useEffect(() => {
-    if (!bacSiId) return;
-    const fetchData = async () => {
-      try {
-        const res = await appointmentService.getByBacSi(bacSiId);
-        const all = Array.isArray(res.data) ? res.data : [];
-        // QUAN TRỌNG: Chỉ lấy những lịch có trạng thái Hoàn thành (2)
-        setAppointments(all.filter((a) => a.trangThai === 2));
-      } catch (err) {
-        console.error("History fetch error:", err);
-        toast.error("Không thể tải lịch sử khám");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [bacSiId]);
+  // State bộ lọc
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   /**
    * Logic Lọc (Filtering): Chạy mỗi khi user nhập search hoặc chọn ngày

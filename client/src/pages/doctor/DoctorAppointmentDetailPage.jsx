@@ -18,10 +18,10 @@
  * Dữ liệu: Kết hợp từ DatLich, DonThuoc và ChiTietDonThuoc.
  * ============================================================
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { appointmentService } from "../../services/appointmentService";
-import { prescriptionService } from "../../services/prescriptionService";
+import { useAppointment, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
+import { useCreatePrescription, useUpdatePrescription } from "../../hooks/queries/usePrescriptionQueries";
 import { toast } from "react-toastify";
 import { formatTime, formatDate, formatPrice } from "../../utils/formatters";
 
@@ -41,73 +41,55 @@ const EMPTY_MED = {
 
 
 function DoctorAppointmentDetailPage() {
-  const { id } = useParams(); // Lấy ID lịch hẹn từ URL
+  const { id } = useParams();
   const navigate = useNavigate();
 
-  // State quản lý dữ liệu chính
-  const [appointment, setAppointment] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
+  // TanStack Query: Lấy chi tiết lịch hẹn (auto-cache)
+  const { data: aptRes, isLoading: loading } = useAppointment(id);
+  const appointment = aptRes?.data || null;
+
+  // TanStack Query: Mutations
+  const statusMutation = useUpdateAppointmentStatus();
+  const createPrescription = useCreatePrescription();
+  const updatePrescriptionMutation = useUpdatePrescription();
+  const updating = statusMutation.isPending;
   const [submitting, setSubmitting] = useState(false);
 
-  const handleUpdateStatus = async (newStatus) => {
-    setUpdating(true);
-    try {
-      await appointmentService.updateTrangThai(id, newStatus);
-      toast.success("Cập nhật trạng thái thành công!");
-      // Refresh data
-      const res = await appointmentService.getById(id);
-      if (res.success) setAppointment(res.data);
-    } catch (err) {
-      console.error(err);
-      toast.error("Lỗi khi cập nhật trạng thái");
-    } finally {
-      setUpdating(false);
-    }
+  const handleUpdateStatus = (newStatus) => {
+    statusMutation.mutate(
+      { id, trangThai: newStatus },
+      {
+        onSuccess: () => toast.success("Cập nhật trạng thái thành công!"),
+        onError: () => toast.error("Lỗi khi cập nhật trạng thái"),
+      }
+    );
   };
 
   // State quản lý Form khám bệnh & đơn thuốc
   const [chanDoan, setChanDoan] = useState("");
   const [ghiChu, setGhiChu] = useState("");
   const [prescription, setPrescription] = useState([{ ...EMPTY_MED }]);
+  const [initialized, setInitialized] = useState(false);
 
-  /**
-   * Effect: Tải thông tin chi tiết ca khám khi vào trang
-   */
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await appointmentService.getById(id);
-        const data = res.data;
-        setAppointment(data);
-
-        // Trường hợp ĐÃ CÓ đơn thuốc (Ca khám đã hoàn thành hoặc đang bổ sung)
-        // Hệ thống sẽ tự động điền (Pre-fill) dữ liệu cũ vào các ô nhập
-        if (data.donThuoc) {
-          setChanDoan(data.donThuoc.chanDoan || "");
-          setGhiChu(data.donThuoc.ghiChu || "");
-          if (data.donThuoc.chiTietDonThuoc?.length) {
-            setPrescription(
-              data.donThuoc.chiTietDonThuoc.map((ct) => ({
-                tenThuoc: ct.tenThuoc || "",
-                soLuong: ct.soLuong || "",
-                donGia: ct.donGia || "",
-                lieuDung: ct.lieuDung || "",
-                ghiChu: ct.ghiChu || "",
-              })),
-            );
-          }
-        }
-      } catch (err) {
-        console.error("Fetch error:", err);
-        toast.error("Không tìm thấy thông tin lịch hẹn này.");
-        navigate("/doctor/appointments");
-      } finally {
-        setLoading(false);
+  // Pre-fill form khi data sẵn sàng (chỉ chạy 1 lần)
+  if (appointment && !initialized) {
+    if (appointment.donThuoc) {
+      setChanDoan(appointment.donThuoc.chanDoan || "");
+      setGhiChu(appointment.donThuoc.ghiChu || "");
+      if (appointment.donThuoc.chiTietDonThuoc?.length) {
+        setPrescription(
+          appointment.donThuoc.chiTietDonThuoc.map((ct) => ({
+            tenThuoc: ct.tenThuoc || "",
+            soLuong: ct.soLuong || "",
+            donGia: ct.donGia || "",
+            lieuDung: ct.lieuDung || "",
+            ghiChu: ct.ghiChu || "",
+          }))
+        );
       }
-    };
-    fetchData();
-  }, [id, navigate]);
+    }
+    setInitialized(true);
+  }
 
   // UI khi đang tải dữ liệu
   if (loading) {
@@ -196,7 +178,7 @@ function DoctorAppointmentDetailPage() {
     try {
       // 1. Cập nhật trạng thái lịch hẹn sang "Đã khám" (Trạng thái 2)
       if (appointment.trangThai !== 2) {
-        await appointmentService.updateTrangThai(id, 2);
+        await statusMutation.mutateAsync({ id, trangThai: 2 });
       }
 
       // 2. Chuẩn bị Payload gửi lên Server
@@ -215,13 +197,13 @@ function DoctorAppointmentDetailPage() {
 
       // 3. Gọi API tạo hoặc cập nhật đơn thuốc
       if (hasPrescription) {
-        await prescriptionService.update(
-          appointment.donThuoc.id,
-          prescriptionData,
-        );
+        await updatePrescriptionMutation.mutateAsync({
+          id: appointment.donThuoc.id,
+          data: prescriptionData,
+        });
         toast.success("Cập nhật bệnh án thành công!");
       } else {
-        await prescriptionService.create(prescriptionData);
+        await createPrescription.mutateAsync(prescriptionData);
         toast.success("Đã gửi đơn thuốc cho bệnh nhân thành công!");
       }
 

@@ -1,8 +1,6 @@
-import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import { patientService } from "../../services/patientService";
-import { appointmentService } from "../../services/appointmentService";
+import { useParams, Link } from "react-router-dom";
+import { usePatient } from "../../hooks/queries/usePatientQueries";
+import { useAppointmentsByPatient } from "../../hooks/queries/useAppointmentQueries";
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants";
 import { getInitials } from "../../utils/formatters";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
@@ -22,38 +20,14 @@ const STATUS_MAP = {
  * Chức năng: Hiển thị thông tin cá nhân đầy đủ, thống kê số lượng lịch khám và lịch sử các lần đặt khám.
  */
 function AdminPatientDetailPage() {
-  const { id } = useParams(); // Lấy ID bệnh nhân từ URL
-  const navigate = useNavigate();
+  const { id } = useParams();
   
-  // State lưu trữ thông tin bệnh nhân và danh sách lịch hẹn
-  const [patient, setPatient] = useState(null);
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  /**
-   * Effect tải đồng thời thông tin bệnh nhân và lịch sử đặt khám
-   */
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Sử dụng Promise.all để tối ưu thời gian tải dữ liệu
-        const [pRes, aRes] = await Promise.all([
-          patientService.getById(id),
-          appointmentService.getByBenhNhan(id),
-        ]);
-
-        if (pRes.success) setPatient(pRes.data);
-        if (aRes.success) setAppointments(aRes.data);
-      } catch (error) {
-        console.error(error);
-        toast.error("Không tìm thấy thông tin bệnh nhân!");
-        navigate("/admin/patients"); // Quay về danh sách nếu ID không hợp lệ hoặc có lỗi
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [id, navigate]);
+  // TanStack Query: Lấy thông tin bệnh nhân và lịch hẹn (auto-cache)
+  const { data: pRes, isLoading: loading } = usePatient(id);
+  const { data: aRes } = useAppointmentsByPatient(id);
+  
+  const patient = pRes?.data || null;
+  const appointments = aRes?.data || [];
 
   // Hiển thị vòng xoay chờ khi đang gọi API
   if (loading) {

@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { patientService } from "../../services/patientService";
+import { usePatients, useUpdatePatient, useDeletePatient } from "../../hooks/queries/usePatientQueries";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
@@ -18,56 +18,35 @@ export default function AdminPatientsPage() {
   // State quản lý tìm kiếm và phân trang
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalPatients, setTotalPatients] = useState(0);
 
   // State quản lý Modal xác nhận (Dùng chung cho Xóa, Khóa, Mở khóa)
-  const [modalMode, setModalMode] = useState(null); // 'delete' | 'lock' | 'unlock'
+  const [modalMode, setModalMode] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // State quản lý giá trị tìm kiếm đã debounce (để tránh gọi API liên tục khi gõ)
+  // Debounce tìm kiếm
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1); // Reset về trang 1 khi từ khóa tìm kiếm thay đổi
+      setPage(1);
     }, 500);
     return () => clearTimeout(timer);
   }, [search]);
 
-  /**
-   * Hàm lấy danh sách bệnh nhân từ Server dựa trên phân trang và từ khóa tìm kiếm
-   */
-  const fetchPatients = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await patientService.getAll({
-        page,
-        limit: ITEMS_PER_PAGE,
-        search: debouncedSearch,
-      });
-      if (res.success) {
-        setPatients(res.data || []);
-        setTotalPages(res.pagination?.totalPages || 1);
-        setTotalPatients(res.pagination?.total || 0);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Lỗi khi lấy danh sách bệnh nhân");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, debouncedSearch]);
+  // TanStack Query: Lấy danh sách bệnh nhân (auto-cache, auto-refetch)
+  const { data: patientsRes, isLoading: loading } = usePatients({
+    page,
+    limit: ITEMS_PER_PAGE,
+    search: debouncedSearch,
+  });
+  const patients = patientsRes?.data || [];
+  const totalPages = patientsRes?.pagination?.totalPages || 1;
+  const totalPatients = patientsRes?.pagination?.total || 0;
 
-  /**
-   * Tự động load lại dữ liệu khi page hoặc debouncedSearch thay đổi
-   */
-  useEffect(() => {
-    fetchPatients();
-  }, [fetchPatients]);
+  // TanStack Query: Mutations (auto-invalidate list)
+  const updateMutation = useUpdatePatient();
+  const deleteMutation = useDeletePatient();
 
   /**
    * Mở modal xác nhận cho các hành động nhạy cảm
@@ -93,26 +72,27 @@ export default function AdminPatientsPage() {
   const handleConfirmAction = async () => {
     if (!selectedPatient) return;
 
-    try {
-      if (modalMode === 'delete') {
-        // Hành động Xóa hồ sơ
-        await patientService.remove(selectedPatient.id);
-        toast.success(`Đã xóa hồ sơ bệnh nhân ${selectedPatient.hoTen}`);
-      } else {
-        // Hành động Khóa (0) hoặc Mở khóa (1) tài khoản
-        const newStatus = modalMode === 'lock' ? 0 : 1;
-        await patientService.update(selectedPatient.id, { 
-          trangThaiTaiKhoan: newStatus 
-        });
-        toast.success(`${modalMode === 'lock' ? "Khóa" : "Mở khóa"} tài khoản thành công!`);
-      }
-      // Sau khi thao tác thành công, tải lại danh sách để cập nhật UI
-      await fetchPatients();
-    } catch (err) {
-      toast.error(err.message || "Thao tác thất bại");
-    } finally {
+    const onSettled = () => {
       setIsModalOpen(false);
       setSelectedPatient(null);
+    };
+
+    if (modalMode === 'delete') {
+      deleteMutation.mutate(selectedPatient.id, {
+        onSuccess: () => toast.success(`Đã xóa hồ sơ bệnh nhân ${selectedPatient.hoTen}`),
+        onError: (err) => toast.error(err.message || "Thao tác thất bại"),
+        onSettled,
+      });
+    } else {
+      const newStatus = modalMode === 'lock' ? 0 : 1;
+      updateMutation.mutate(
+        { id: selectedPatient.id, data: { trangThaiTaiKhoan: newStatus } },
+        {
+          onSuccess: () => toast.success(`${modalMode === 'lock' ? "Khóa" : "Mở khóa"} tài khoản thành công!`),
+          onError: (err) => toast.error(err.message || "Thao tác thất bại"),
+          onSettled,
+        }
+      );
     }
   };
 

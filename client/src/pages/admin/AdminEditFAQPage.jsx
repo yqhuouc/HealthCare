@@ -1,89 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { faqService } from "../../services/faqService";
+import { useFAQ, useUpdateFAQ } from "../../hooks/queries/useFAQQueries";
 
 /**
  * Trang AdminEditFAQPage - Chỉnh sửa Câu hỏi thường gặp (FAQ)
- * Chức năng: Tải dữ liệu câu hỏi cũ theo ID và cho phép người dùng cập nhật nội dung hoặc trạng thái hiển thị.
+ * Kiến trúc: Wrapper (fetch + loading) → Child Form (để tránh setState trong useEffect)
  */
 function AdminEditFAQPage() {
-  const { id } = useParams(); // Lấy ID câu hỏi từ đường dẫn URL
-  const navigate = useNavigate();
-  
-  // State quản lý trạng thái tải và lưu dữ liệu
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  
-  // State quản lý dữ liệu form FAQ
-  const [form, setForm] = useState({
-    cauHoi: "",
-    traLoi: "",
-    dangHoatDong: 1, // 1: Hiển thị, 0: Ẩn
-  });
+  const { id } = useParams();
+  const { data: faqRes, isLoading: loading } = useFAQ(id);
 
-  /**
-   * Effect thực hiện tải dữ liệu FAQ từ API khi trang vừa được load
-   */
-  useEffect(() => {
-    const fetchFAQ = async () => {
-      try {
-        const res = await faqService.getById(id);
-        if (res.success) {
-          const item = res.data;
-          // Gán dữ liệu cũ vào state để hiển thị lên các ô nhập liệu
-          setForm({
-            cauHoi: item.cauHoi || "",
-            traLoi: item.traLoi || "",
-            dangHoatDong: item.dangHoatDong ?? 1,
-          });
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("Không tìm thấy câu hỏi!");
-        navigate("/admin/faqs"); // Quay lại danh sách nếu có lỗi (sai ID...)
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFAQ();
-  }, [id, navigate]);
-
-  /**
-   * Xử lý thay đổi dữ liệu trong form khi người dùng nhập liệu
-   */
-  const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "number" ? Number(value) : value, // Chuyển đổi thành số nếu là input số (trạng thái)
-    }));
-  };
-
-  /**
-   * Xử lý gửi yêu cầu cập nhật FAQ lên server
-   */
-  const handleSave = async () => {
-    // Kiểm tra dữ liệu đầu vào cơ bản
-    if (!form.cauHoi.trim() || !form.traLoi.trim()) {
-      toast.warn("Vui lòng nhập đầy đủ câu hỏi và câu trả lời.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await faqService.update(id, form);
-      toast.success("Cập nhật câu hỏi thành công!");
-      navigate("/admin/faqs"); // Sau khi cập nhật thành công, quay về trang danh sách
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi cập nhật!");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Hiển thị màn hình chờ khi đang tải dữ liệu từ API
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -93,6 +20,48 @@ function AdminEditFAQPage() {
       </div>
     );
   }
+
+  return <EditFAQForm faqData={faqRes?.data} faqId={id} />;
+}
+
+function EditFAQForm({ faqData, faqId }) {
+  const navigate = useNavigate();
+  const updateMutation = useUpdateFAQ();
+  const saving = updateMutation.isPending;
+  
+  // Khởi tạo form state trực tiếp từ props
+  const item = faqData || {};
+  const [form, setForm] = useState({
+    cauHoi: item.cauHoi || "",
+    traLoi: item.traLoi || "",
+    dangHoatDong: item.dangHoatDong ?? 1,
+  });
+
+  const handleChange = (e) => {
+    const { name, value, type } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "number" ? Number(value) : value,
+    }));
+  };
+
+  const handleSave = () => {
+    if (!form.cauHoi.trim() || !form.traLoi.trim()) {
+      toast.warn("Vui lòng nhập đầy đủ câu hỏi và câu trả lời.");
+      return;
+    }
+
+    updateMutation.mutate(
+      { id: faqId, data: form },
+      {
+        onSuccess: () => {
+          toast.success("Cập nhật câu hỏi thành công!");
+          navigate("/admin/faqs");
+        },
+        onError: (err) => toast.error(err.message || "Có lỗi xảy ra khi cập nhật!"),
+      }
+    );
+  };
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -113,7 +82,7 @@ function AdminEditFAQPage() {
           Chỉnh sửa câu hỏi
         </h2>
         <p className="text-slate-500 text-sm mt-1">
-          Cập nhật nội dung câu hỏi thường gặp ID #{id}.
+          Cập nhật nội dung câu hỏi thường gặp ID #{faqId}.
         </p>
       </div>
 

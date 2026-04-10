@@ -10,120 +10,77 @@
  * - Hoạt động gần đây: Danh sách 5 lịch hẹn khám mới nhất
  * - Responsive: Hỗ trợ hiển thị tốt trên cả máy tính và điện thoại
  *
- * State:
- * - stats: Dữ liệu tổng quan (số lượng BN, BS, Lịch hẹn, Chuyên khoa)
- * - chartData: Dữ liệu được xử lý để hiển thị lên biểu đồ cột
- * - recentAppointments: Danh sách các lịch hẹn mới nhất
- *
- * Dữ liệu: Lấy từ adminStatsService và appointmentService
+ * Data fetching: TanStack Query (useTongQuan, useLichHenStats, useAppointments)
  * ============================================================
  */
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { adminStatsService } from "../../services/adminStatsService";
-import { appointmentService } from "../../services/appointmentService";
-import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants"; // Cấu hình màu sắc trạng thái
+import { useTongQuan, useLichHenStats } from "../../hooks/queries/useStatsQueries";
+import { useAppointments } from "../../hooks/queries/useAppointmentQueries";
 
 function AdminDashboardPage() {
-  // State lưu trữ dữ liệu thống kê tổng quan
-  const [stats, setStats] = useState({
-    tongBenhNhan: 0,
-    tongBacSi: 0,
-    tongLichHen: 0,
-    tongChuyenKhoa: 0,
-  });
-
-  // State lưu trữ dữ liệu biểu đồ 14 ngày
-  const [chartData, setChartData] = useState([]);
-  // State lưu trữ danh sách lịch hẹn gần đây
-  const [recentAppointments, setRecentAppointments] = useState([]);
-  // Trạng thái đang tải dữ liệu
-  const [loading, setLoading] = useState(true);
-
-  // Effect lấy toàn bộ dữ liệu cần thiết cho Dashboard khi component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Xác định khoảng thời gian 14 ngày gần nhất cho biểu đồ
-        const today = new Date();
-        const pastDate = new Date();
-        pastDate.setDate(today.getDate() - 13); // Lấy từ 13 ngày trước đến nay
-
-        const tuNgay = pastDate.toISOString().split("T")[0];
-        const denNgay = today.toISOString().split("T")[0];
-
-        // Gọi đồng thời các API để tối ưu tốc độ tải trang
-        const [tongQuanRes, lichHenRes, appointmentsRes] = await Promise.all([
-          adminStatsService.getTongQuan(),
-          adminStatsService.getLichHenStats({ tuNgay, denNgay }),
-          appointmentService.getAllForAdmin({ page: 1, limit: 5 }),
-        ]);
-
-        // Cập nhật thống kê tổng quan
-        if (tongQuanRes.data) setStats(tongQuanRes.data);
-
-        // XỬ LÝ DỮ LIỆU BIỂU ĐỒ (Hoạt động 14 ngày qua)
-        if (lichHenRes.data && lichHenRes.data.lichHenTheoNgay) {
-          const rawDays = lichHenRes.data.lichHenTheoNgay;
-
-          // Chuyển đổi dữ liệu số lượng sang Number để đảm bảo tính toán chính xác
-          const cleanDays = rawDays.map((d) => ({
-            ...d,
-            soLuong: Number(d.soLuong || 0),
-          }));
-
-          // Chuẩn bị mảng 14 ngày liên tục (điền giá trị 0 cho những ngày không có dữ liệu từ API)
-          const formattedChart = [];
-          const maxCount = Math.max(...cleanDays.map((d) => d.soLuong), 1);
-
-          for (let i = 0; i < 14; i++) {
-            const d = new Date(pastDate);
-            d.setDate(d.getDate() + i);
-            const dateStr = d.toISOString().split("T")[0];
-            const dateLabel = `${d.getDate()}/${d.getMonth() + 1}`;
-
-            // Tìm dữ liệu tương ứng trong kết quả API
-            const match = cleanDays.find((rd) => {
-              const rdDate = new Date(rd.ngay).toISOString().split("T")[0];
-              return rdDate === dateStr;
-            });
-
-            const count = match ? match.soLuong : 0;
-
-            // Tính toán chiều cao tương đối của cột biểu đồ (%)
-            let heightPercent = "0px";
-            if (count > 0) {
-              // Nếu có bệnh nhân: Cao tối thiểu 15% để tránh cột quá lùn
-              heightPercent = Math.max(15, (count / maxCount) * 100) + "%";
-            } else {
-              // Nếu không có: Hiển thị một vạch nhỏ 4px đánh dấu
-              heightPercent = "4px";
-            }
-
-            formattedChart.push({
-              label: dateLabel,
-              height: heightPercent,
-              count: count,
-              isToday: dateStr === today.toISOString().split("T")[0],
-            });
-          }
-          setChartData(formattedChart);
-        }
-
-        // Cập nhật danh sách hoạt động gần đây
-        if (appointmentsRes.data) {
-          setRecentAppointments(appointmentsRes.data || []);
-        }
-      } catch (error) {
-        console.error("Lỗi khi tải dữ liệu dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
+  // Xác định khoảng thời gian 14 ngày gần nhất cho biểu đồ
+  const dateRange = useMemo(() => {
+    const today = new Date();
+    const pastDate = new Date();
+    pastDate.setDate(today.getDate() - 13);
+    return {
+      tuNgay: pastDate.toISOString().split("T")[0],
+      denNgay: today.toISOString().split("T")[0],
     };
-
-    fetchData();
   }, []);
+
+  // Gọi API bằng TanStack Query — tự cache + tự quản lý loading/error
+  const { data: tongQuanRes, isLoading: loadingStats } = useTongQuan();
+  const { data: lichHenRes, isLoading: loadingChart } = useLichHenStats(dateRange);
+  const { data: appointmentsRes, isLoading: loadingRecent } = useAppointments({ page: 1, limit: 5 });
+
+  // Trích xuất dữ liệu từ response
+  const stats = tongQuanRes?.data || { tongBenhNhan: 0, tongBacSi: 0, tongLichHen: 0, tongChuyenKhoa: 0 };
+  const recentAppointments = appointmentsRes?.data || [];
+
+  // Xử lý dữ liệu biểu đồ 14 ngày
+  const chartData = useMemo(() => {
+    if (!lichHenRes?.data?.lichHenTheoNgay) return [];
+
+    const rawDays = lichHenRes.data.lichHenTheoNgay;
+    const cleanDays = rawDays.map((d) => ({ ...d, soLuong: Number(d.soLuong || 0) }));
+
+    const today = new Date();
+    const pastDate = new Date();
+    pastDate.setDate(today.getDate() - 13);
+
+    const formattedChart = [];
+    const maxCount = Math.max(...cleanDays.map((d) => d.soLuong), 1);
+
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(pastDate);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split("T")[0];
+      const dateLabel = `${d.getDate()}/${d.getMonth() + 1}`;
+
+      const match = cleanDays.find((rd) => {
+        const rdDate = new Date(rd.ngay).toISOString().split("T")[0];
+        return rdDate === dateStr;
+      });
+
+      const count = match ? match.soLuong : 0;
+      let heightPercent = "0px";
+      if (count > 0) {
+        heightPercent = Math.max(15, (count / maxCount) * 100) + "%";
+      } else {
+        heightPercent = "4px";
+      }
+
+      formattedChart.push({
+        label: dateLabel,
+        height: heightPercent,
+        count: count,
+        isToday: dateStr === today.toISOString().split("T")[0],
+      });
+    }
+    return formattedChart;
+  }, [lichHenRes]);
 
   /** Cấu hình hiển thị cho 4 thẻ thống kê trên cùng */
   const dynamicStatsCards = [
@@ -158,7 +115,7 @@ function AdminDashboardPage() {
   ];
 
   // Hiển thị trạng thái Loading
-  if (loading) {
+  if (loadingStats && loadingChart && loadingRecent) {
     return (
       <div className="flex justify-center py-10">
         <span className="material-symbols-outlined animate-spin text-4xl text-primary">

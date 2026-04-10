@@ -9,11 +9,13 @@
  * - Quản lý trạng thái hiển thị (Hiển thị/Ẩn) của từng câu hỏi.
  * - Cho phép thêm mới, chỉnh sửa và xóa câu hỏi.
  * - Hỗ trợ phân trang dữ liệu từ Server.
+ *
+ * Data fetching: TanStack Query (useFAQsAdmin, useDeleteFAQ)
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { faqService } from "../../services/faqService";
+import { useFAQsAdmin, useDeleteFAQ } from "../../hooks/queries/useFAQQueries";
 
 // Bản đồ trạng thái dùng để hiển thị nhãn và màu sắc tương ứng
 const STATUS_MAP = {
@@ -25,38 +27,16 @@ const STATUS_MAP = {
 const ITEMS_PER_PAGE = 5;
 
 function AdminFAQsPage() {
-  // State quản lý phân trang và dữ liệu danh sách
+  // State quản lý phân trang
   const [page, setPage] = useState(1);
-  const [faqs, setFaqs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
 
-  /**
-   * Hàm lấy danh sách FAQ từ API Server
-   * Sử dụng useCallback để tránh việc hàm bị tạo lại vô ích khi component re-render
-   */
-  const fetchFaqs = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await faqService.getAllAdmin({ page, limit: ITEMS_PER_PAGE });
-      if (res.success) {
-        setFaqs(res.data || []);
-        setTotalPages(res.pagination?.totalPages || 1);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Lỗi khi lấy danh sách FAQ");
-    } finally {
-      setLoading(false);
-    }
-  }, [page]);
+  // TanStack Query: Lấy danh sách FAQ (auto-cache, auto-refetch khi page thay đổi)
+  const { data: faqsRes, isLoading: loading } = useFAQsAdmin({ page, limit: ITEMS_PER_PAGE });
+  const faqs = faqsRes?.data || [];
+  const totalPages = faqsRes?.pagination?.totalPages || 1;
 
-  /**
-   * Tự động tải lại danh sách mỗi khi trang (page) thay đổi
-   */
-  useEffect(() => {
-    fetchFaqs();
-  }, [fetchFaqs]);
+  // TanStack Query: Mutation xóa FAQ (auto-invalidate danh sách sau khi xóa)
+  const deleteMutation = useDeleteFAQ();
 
   /**
    * Xử lý xóa một câu hỏi dựa trên ID
@@ -65,14 +45,10 @@ function AdminFAQsPage() {
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa câu hỏi này không?")) return;
     
-    try {
-      await faqService.remove(id);
-      toast.success("Đã xóa câu hỏi thành công");
-      fetchFaqs(); // Tải lại danh sách sau khi xóa thành công
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Lỗi khi xóa câu hỏi");
-    }
+    deleteMutation.mutate(id, {
+      onSuccess: () => toast.success("Đã xóa câu hỏi thành công"),
+      onError: (err) => toast.error(err.message || "Lỗi khi xóa câu hỏi"),
+    });
   };
 
   return (
@@ -138,7 +114,7 @@ function AdminFAQsPage() {
                     </td>
                     {/* Cột Ngày tạo */}
                     <td className="px-5 py-4 text-slate-600">
-                      {new Date(item.ngayTao || Date.now()).toLocaleDateString("vi-VN")}
+                      {new Date(item.ngayTao || new Date()).toLocaleDateString("vi-VN")}
                     </td>
                     {/* Cột Trạng thái dot color */}
                     <td className="px-5 py-4">
@@ -188,7 +164,7 @@ function AdminFAQsPage() {
                   </div>
                 </div>
                 <p className="text-xs text-slate-500">
-                  {new Date(item.ngayTao || Date.now()).toLocaleDateString("vi-VN")}
+                  {new Date(item.ngayTao || new Date()).toLocaleDateString("vi-VN")}
                 </p>
                 <div className="flex items-center gap-2">
                   <Link

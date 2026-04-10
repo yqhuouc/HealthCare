@@ -20,7 +20,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { faqService } from "../../services/faqService";
+import { useCreateFAQ } from "../../hooks/queries/useFAQQueries";
 
 /**
  * Component AdminAddFAQPage - Cho phép quản trị viên tạo câu hỏi thường gặp mới
@@ -28,8 +28,9 @@ import { faqService } from "../../services/faqService";
 function AdminAddFAQPage() {
   const navigate = useNavigate();
   
-  // Trạng thái chờ khi đang gửi yêu cầu lên server
-  const [loading, setLoading] = useState(false);
+  // TanStack Query: Mutation tạo FAQ mới (auto-invalidate list)
+  const createMutation = useCreateFAQ();
+  const loading = createMutation.isPending;
   
   // State quản lý dữ liệu nhập liệu của form
   const [form, setForm] = useState({
@@ -49,8 +50,7 @@ function AdminAddFAQPage() {
   /**
    * Gửi dữ liệu FAQ mới lên server để lưu trữ
    */
-  const handleSave = async () => {
-    // Validate dữ liệu đầu vào
+  const handleSave = () => {
     if (!form.question.trim()) {
       toast.warn("Vui lòng nhập câu hỏi.");
       return;
@@ -60,23 +60,20 @@ function AdminAddFAQPage() {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Gọi service để tạo mới FAQ
-      await faqService.create({
+    createMutation.mutate(
+      {
         cauHoi: form.question,
         traLoi: form.answer,
         dangHoatDong: Number(form.status),
-      });
-      toast.success("Đã thêm FAQ mới thành công!");
-      // Chuyển hướng về trang danh sách FAQs
-      navigate("/admin/faqs");
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Lỗi khi thêm câu hỏi");
-    } finally {
-      setLoading(false);
-    }
+      },
+      {
+        onSuccess: () => {
+          toast.success("Đã thêm FAQ mới thành công!");
+          navigate("/admin/faqs");
+        },
+        onError: (err) => toast.error(err.message || "Lỗi khi thêm câu hỏi"),
+      }
+    );
   };
 
   return (

@@ -14,12 +14,10 @@
  * Dữ liệu: API /api/chuyen-khoa/:id
  * ============================================================
  */
-import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { formatPrice } from "../../utils/formatters";
-import { specialtyService } from "../../services/specialtyService";
+import { useSpecialty } from "../../hooks/queries/useSpecialtyQueries";
 
-/** Danh sách cam kết hiển thị ở sidebar */
 const COMMITMENTS = [
   "Thời gian chờ khám dưới 15 phút khi đặt lịch trước.",
   "Bác sĩ trực tiếp tư vấn 1:1 kỹ lưỡng.",
@@ -29,22 +27,8 @@ const COMMITMENTS = [
 
 export default function SpecialtyDetailPage() {
   const { id } = useParams();
-  const [specialty, setSpecialty] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchSpecialty = async () => {
-      try {
-        const res = await specialtyService.getById(id);
-        setSpecialty(res.data);
-      } catch {
-        setSpecialty(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSpecialty();
-  }, [id]);
+  const { data: specRes, isLoading: loading } = useSpecialty(id);
+  const specialty = specRes?.data || null;
 
   if (loading) {
     return (

@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { appointmentService } from "../../services/appointmentService";
+import { useAppointment, useUpdateAppointmentStatus, useUpdatePaymentStatus } from "../../hooks/queries/useAppointmentQueries";
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { getInitials } from "../../utils/formatters";
@@ -26,73 +25,42 @@ const PAYMENT_STATUS_OPTIONS = [
  * Cho phép cập nhật trạng thái lịch khám và trạng thái thanh toán.
  */
 function AdminAppointmentDetailPage() {
-  const { id } = useParams(); // Lấy ID lịch hẹn từ URL
+  const { id } = useParams();
   const navigate = useNavigate();
   
-  // State lưu trữ dữ liệu lịch hẹn
-  const [appointment, setAppointment] = useState(null);
-  // Trạng thái tải dữ liệu ban đầu
-  const [loading, setLoading] = useState(true);
-  // Trạng thái đang gọi API cập nhật
-  const [updating, setUpdating] = useState(false);
+  // TanStack Query: Lấy chi tiết lịch hẹn (auto-cache)
+  const { data: aptRes, isLoading: loading } = useAppointment(id);
+  const appointment = aptRes?.data || null;
 
-  // Lấy dữ liệu chi tiết lịch hẹn khi component mount hoặc ID thay đổi
-  useEffect(() => {
-    const fetchDetail = async () => {
-      try {
-        const res = await appointmentService.getById(id);
-        if (res.success) {
-          setAppointment(res.data);
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("Không tìm thấy thông tin lịch hẹn!");
-        navigate("/admin/appointments");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDetail();
-  }, [id, navigate]);
+  // TanStack Query: Mutations (auto-invalidate toàn bộ appointment queries)
+  const statusMutation = useUpdateAppointmentStatus();
+  const paymentMutation = useUpdatePaymentStatus();
+  const updating = statusMutation.isPending || paymentMutation.isPending;
 
   /**
-   * Cập nhật trạng thái của lịch khám (Chờ duyệt, Đã xác nhận, Hoàn thành, Đã hủy)
-   * @param {number} newStatus - Mã trạng thái mới
+   * Cập nhật trạng thái lịch khám
    */
-  const handleUpdateStatus = async (newStatus) => {
-    setUpdating(true);
-    try {
-      await appointmentService.updateTrangThai(id, newStatus);
-      toast.success("Cập nhật trạng thái thành công!");
-      // Tải lại dữ liệu sau khi cập nhật thành công
-      const res = await appointmentService.getById(id);
-      if (res.success) setAppointment(res.data);
-    } catch (err) {
-      console.error(err);
-      toast.error("Lỗi khi cập nhật trạng thái");
-    } finally {
-      setUpdating(false);
-    }
+  const handleUpdateStatus = (newStatus) => {
+    statusMutation.mutate(
+      { id, trangThai: newStatus },
+      {
+        onSuccess: () => toast.success("Cập nhật trạng thái thành công!"),
+        onError: () => toast.error("Lỗi khi cập nhật trạng thái"),
+      }
+    );
   };
 
   /**
-   * Cập nhật trạng thái thanh toán của lịch khám
-   * @param {number} newPaymentStatus - Mã trạng thái thanh toán mới
+   * Cập nhật trạng thái thanh toán
    */
-  const handleUpdatePayment = async (newPaymentStatus) => {
-    setUpdating(true);
-    try {
-      await appointmentService.updateThanhToan(id, newPaymentStatus);
-      toast.success("Cập nhật thanh toán thành công!");
-      // Tải lại dữ liệu sau khi cập nhật thành công
-      const res = await appointmentService.getById(id);
-      if (res.success) setAppointment(res.data);
-    } catch (err) {
-      console.error(err);
-      toast.error("Lỗi khi cập nhật thanh toán");
-    } finally {
-      setUpdating(false);
-    }
+  const handleUpdatePayment = (newPaymentStatus) => {
+    paymentMutation.mutate(
+      { id, trangThaiThanhToan: newPaymentStatus },
+      {
+        onSuccess: () => toast.success("Cập nhật thanh toán thành công!"),
+        onError: () => toast.error("Lỗi khi cập nhật thanh toán"),
+      }
+    );
   };
 
   // Hiển thị vòng xoay loading khi đang tải dữ liệu

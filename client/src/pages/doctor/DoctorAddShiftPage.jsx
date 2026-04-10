@@ -17,9 +17,9 @@
  * - User bấm Lưu → Gọi API createLichLamViec() → Chuyển hướng về trang Lịch trình.
  * ============================================================
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { scheduleService } from "../../services/scheduleService";
+import { useKhungGio, useCreateLichLamViec } from "../../hooks/queries/useScheduleQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
 import { formatTime } from "../../utils/formatters";
@@ -56,26 +56,14 @@ function DoctorAddShiftPage() {
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState(new Date().getDate());
 
-  // Quản lý dữ liệu Khung giờ từ API
+  // Quản lý dữ liệu Khung giờ từ TanStack Query
   const [selectedSlotId, setSelectedSlotId] = useState(null);
-  const [khungGios, setKhungGios] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
+  const { data: kgRes } = useKhungGio();
+  const khungGios = Array.isArray(kgRes?.data) ? kgRes.data : [];
 
-  /**
-   * Effect: Tải danh sách tất cả các khung giờ mà hệ thống hỗ trợ
-   */
-  useEffect(() => {
-    const fetchKhungGio = async () => {
-      try {
-        const res = await scheduleService.getAllKhungGio();
-        setKhungGios(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error("Fetch khung gio error:", err);
-        toast.error("Không thể tải danh sách khung giờ từ máy chủ");
-      }
-    };
-    fetchKhungGio();
-  }, []);
+  // TanStack Query: Mutation tạo ca làm việc
+  const createMutation = useCreateLichLamViec();
+  const submitting = createMutation.isPending;
 
   // Tính toán các thông số để render Calendar UI
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
@@ -167,30 +155,28 @@ function DoctorAddShiftPage() {
       return;
     }
 
-    // 2. Chẩn bị chuỗi ngày theo định dạng chuẩn SQL (YYYY-MM-DD)
+    // 2. Chuẩn bị chuỗi ngày theo định dạng chuẩn SQL (YYYY-MM-DD)
     const month = String(currentMonth + 1).padStart(2, "0");
     const day = String(selectedDate).padStart(2, "0");
     const ngayLamViec = `${currentYear}-${month}-${day}`;
 
-    // 3. Gọi API tạo mới
-    setSubmitting(true);
-    try {
-      await scheduleService.createLichLamViec({
+    // 3. Gọi mutation tạo mới
+    createMutation.mutate(
+      {
         bacSiId: Number(bacSiId),
         khungGioId: Number(selectedSlotId),
         ngayLamViec,
-      });
-
-      toast.success(
-        `Đã thêm thành công ca trực ngày ${day}/${month}/${currentYear}`,
-      );
-      navigate("/doctor/schedule"); // Quay về trang danh sách
-    } catch (err) {
-      const msg = err.response?.data?.message || "Lỗi khi đăng ký ca làm việc";
-      toast.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Đã thêm thành công ca trực ngày ${day}/${month}/${currentYear}`);
+          navigate("/doctor/schedule");
+        },
+        onError: (err) => {
+          toast.error(err.message || "Lỗi khi đăng ký ca làm việc");
+        },
+      }
+    );
   };
 
   return (
