@@ -127,3 +127,16 @@ export const useDeleteAppointment = () => {
     },
   });
 };
+
+/** Đổi phương thức thanh toán (Bệnh nhân) */
+export const useChangePaymentMethod = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, hinhThucThanhToanId }) =>
+      appointmentService.changePaymentMethod(id, hinhThucThanhToanId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: appointmentKeys.all });
+    },
+  });
+};
+

@@ -65,6 +65,16 @@ const remove = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Xóa lịch hẹn thành công" });
 });
 
+// PATCH /api/dat-lich/:id/payment-method — đổi phương thức thanh toán
+const changePaymentMethod = asyncHandler(async (req, res) => {
+  const datLich = await datLichService.changePaymentMethod(
+    req.params.id,
+    req.body.hinhThucThanhToanId,
+    req.user
+  );
+  res.json({ success: true, message: "Đã đổi phương thức thanh toán", data: datLich });
+});
+
 module.exports = {
   getAll,
   getSlotTrong,
@@ -75,4 +85,6 @@ module.exports = {
   updateTrangThai,
   updateThanhToan,
   remove,
+  changePaymentMethod,
 };
+

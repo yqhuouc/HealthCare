@@ -11,17 +11,15 @@
  * - Điều hướng người dùng về trang Lịch sử hoặc Trang chủ.
  */
 import { useEffect, useState } from "react";
-import { useSearchParams, Link, useNavigate } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { formatPrice } from "../../utils/formatters";
+import { paymentService } from "../../services/paymentService";
+
 
 export default function PaymentResultPage() {
   // Hook để lấy các tham số "query string" trên thanh địa chỉ (URL)
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   
-  // Trạng thái chờ để tạo hiệu ứng "Đang xác thực" cho chuyên nghiệp
-  const [loading, setLoading] = useState(true);
-
   // 1. TRÍCH XUẤT DỮ LIỆU TỪ VNPAY GỬI VỀ
   // Mã phản hồi: "00" là thành công, còn lại là lỗi
   const responseCode = searchParams.get("vnp_ResponseCode");
@@ -41,11 +39,31 @@ export default function PaymentResultPage() {
   // Biến cờ (flag) để kiểm tra nhanh giao dịch có thành công không
   const isSuccess = responseCode === "00";
 
+  // Trạng thái chờ: Chỉ "loading" nếu giao dịch thành công và cần xác thực với Backend
+  const [loading, setLoading] = useState(isSuccess);
+
   useEffect(() => {
-    // Giả lập thời gian load 1.5 giây để người dùng cảm thấy hệ thống đang kiểm tra bảo mật
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    // 2. GỬI DỮ LIỆU LÊN BACKEND ĐỂ XÁC THỰC & ĐỒNG BỘ DB
+    // Bước này cực kỳ quan trọng để localhost vẫn cập nhật được "Đã thanh toán"
+    if (isSuccess) {
+      // Chuyển searchParams thành object đơn giản để gửi API
+      const params = Object.fromEntries(searchParams.entries());
+      
+      paymentService
+        .verifyVnpayPayment(params)
+        .then(() => {
+          console.log("Đã đồng bộ trạng thái thanh toán thành công.");
+        })
+        .catch((err) => {
+          console.error("Lỗi đồng bộ thanh toán:", err);
+        })
+        .finally(() => {
+          // Sau khi xử lý xong (hoặc lỗi) thì mới tắt loading
+          setLoading(false);
+        });
+    }
+  }, [isSuccess, searchParams]);
+
 
   // Giao diện hiển thị lúc đang "xác thực"
   if (loading) {
@@ -86,7 +104,7 @@ export default function PaymentResultPage() {
             
             <div className="flex justify-between items-center text-sm border-t border-slate-50 pt-4">
               <span className="text-slate-400">Nội dung:</span>
-              <span className="text-slate-600 text-right max-w-[180px] break-words">{ordInfo}</span>
+              <span className="text-slate-600 text-right max-w-[180px] wrap-break-word">{ordInfo}</span>
             </div>
             
             <div className="flex justify-between items-center text-sm border-t border-slate-50 pt-4">

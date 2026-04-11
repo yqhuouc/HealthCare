@@ -73,8 +73,21 @@ const vnpayIpn = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+/**
+ * @desc    Xác thực chủ động từ Frontend (Verify & Sync)
+ * @route   POST /api/vnpay/verify
+ * @access  Public
+ */
+const verifyPayment = asyncHandler(async (req, res) => {
+  const vnpParams = req.body;
+  const result = await vnpayService.verifyAndSyncPayment(vnpParams);
+  res.status(200).json(result);
+});
+
 module.exports = {
   createPayment,
   vnpayReturn,
   vnpayIpn,
+  verifyPayment,
 };
+

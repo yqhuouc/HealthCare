@@ -18,4 +18,7 @@ export const paymentService = {
 
   /** Tạo link thanh toán VNPay */
   createVnpayPayment: (data) => api.post("/vnpay/create-payment", data),
+
+  /** Xác thực & đồng bộ thanh toán VNPay */
+  verifyVnpayPayment: (params) => api.post("/vnpay/verify", params),
 };

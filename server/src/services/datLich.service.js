@@ -610,6 +610,36 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
   };
 };
 
+/**
+ * Đổi hình thức thanh toán cho một lịch hẹn.
+ * Thường dùng khi thanh toán VNPay thất bại và muốn chuyển sang trả sau tại quầy.
+ */
+const changePaymentMethod = async (id, hinhThucId, requestUser) => {
+  const existing = await prisma.datLich.findUnique({
+    where: { id: BigInt(id) },
+  });
+
+  if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
+
+  // Phân quyền: Chỉ bệnh nhân chủ lịch hoặc Admin mới được đổi
+  if (requestUser.vaiTro === "benh_nhan") {
+    if (existing.benhNhanId !== requestUser.benhNhan?.id) {
+      throw new AppError("Bạn không có quyền đổi phương thức cho lịch hẹn này", 403);
+    }
+  }
+
+  // Nếu đã thanh toán rồi thì không cho đổi nữa
+  if (existing.trangThaiThanhToan > 0) {
+    throw new AppError("Lịch hẹn đã có phát sinh thanh toán, không thể đổi hình thức", 400);
+  }
+
+  return prisma.datLich.update({
+    where: { id: BigInt(id) },
+    data: { hinhThucThanhToanId: BigInt(hinhThucId) },
+    include: defaultInclude,
+  });
+};
+
 module.exports = {
   getAll,
   getById,
@@ -620,4 +650,6 @@ module.exports = {
   updateThanhToan,
   remove,
   getSlotTrong,
+  changePaymentMethod,
 };
+

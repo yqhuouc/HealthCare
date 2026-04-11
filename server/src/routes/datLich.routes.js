@@ -56,4 +56,8 @@ router.put(
 // DELETE /api/dat-lich/:id - Xóa lịch hẹn
 router.delete("/:id", authenticate, datLichController.remove);
 
+// PATCH /api/dat-lich/:id/payment-method - Đổi phương thức thanh toán (Bệnh nhân)
+router.patch("/:id/payment-method", authenticate, datLichController.changePaymentMethod);
+
 module.exports = router;
+

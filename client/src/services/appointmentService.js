@@ -45,4 +45,9 @@ export const appointmentService = {
   /** Cập nhật trạng thái thanh toán (admin) */
   updateThanhToan: (id, trangThaiThanhToan) =>
     api.put(`/dat-lich/${id}/thanh-toan`, { trangThaiThanhToan }),
+
+  /** Đổi phương thức thanh toán (Bệnh nhân) */
+  changePaymentMethod: (id, hinhThucThanhToanId) =>
+    api.patch(`/dat-lich/${id}/payment-method`, { hinhThucThanhToanId }),
 };
+

@@ -12,4 +12,8 @@ router.get("/return", vnpayController.vnpayReturn);
 // GET /api/vnpay/ipn - VNPay gọi thông báo kết quả (Auto-update DB)
 router.get("/ipn", vnpayController.vnpayIpn);
 
+// POST /api/vnpay/verify - Xác thực chủ động từ Frontend
+router.post("/verify", vnpayController.verifyPayment);
+
 module.exports = router;
+

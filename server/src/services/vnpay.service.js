@@ -67,12 +67,20 @@ const initiatePayment = async ({ datLichId, loaiGiaoDich, ipAddr, user }) => {
     if (!datLich.donThuoc) throw new AppError("Lịch hẹn chưa có đơn thuốc", 400);
     amount = Number(datLich.donThuoc.tongTien);
     if (datLich.trangThaiThanhToan >= 2) throw new AppError("Đơn thuốc đã được thanh toán", 400);
+  } else if (loaiGiaoDich === "TAT_CA") {
+    if (!datLich.donThuoc) throw new AppError("Lịch hẹn chưa có đơn thuốc để thanh toán gộp", 400);
+    amount = Number(datLich.giaKham) + Number(datLich.donThuoc.tongTien);
+    if (datLich.trangThaiThanhToan >= 2) throw new AppError("Toàn bộ hóa đơn đã được thanh toán", 400);
   } else {
     throw new AppError("Loại giao dịch không hợp lệ", 400);
   }
 
   const txnRef = `${datLichId}_${loaiGiaoDich}_${Date.now()}`;
-  const orderInfo = sanitizeOrderInfo(`Thanh toan ${loaiGiaoDich === "PHI_KHAM" ? "phi kham" : "don thuoc"} Ma ${datLichId}`);
+  const orderInfo = sanitizeOrderInfo(
+    `Thanh toan ${
+      loaiGiaoDich === "PHI_KHAM" ? "phi kham" : loaiGiaoDich === "TAT_CA" ? "tong hoa don" : "don thuoc"
+    } Ma ${datLichId}`
+  );
 
   const paymentUrl = vnpayInstance.buildPaymentUrl({
     vnp_Amount: amount,
@@ -112,23 +120,32 @@ const processIpn = async (vnpParams) => {
   const vnp_TxnRef = vnpParams["vnp_TxnRef"];
   const vnp_ResponseCode = vnpParams["vnp_ResponseCode"];
   const vnp_TransactionNo = vnpParams["vnp_TransactionNo"];
-  const vnp_Amount = Number(vnpParams["vnp_Amount"]) / 100; // Chia 100 để về đơn vị VND
+  const vnp_Amount = Number(vnpParams["vnp_Amount"]) / 100;
 
-  const [datLichIdStr, loaiGiaoDich] = vnp_TxnRef.split("_");
+  // Cấu trúc txnRef: {datLichId}_{loaiGiaoDich}_{timestamp}
+  // Ví dụ: 30_PHI_KHAM_123456789 -> parts: ["30", "PHI", "KHAM", "123456789"]
+  const parts = vnp_TxnRef.split("_");
+  const datLichIdStr = parts[0];
+  const loaiGiaoDich = parts.slice(1, -1).join("_"); // Ghép lại "PHI_KHAM"
   const datLichId = BigInt(datLichIdStr);
 
   const datLich = await prisma.datLich.findUnique({ where: { id: datLichId } });
   if (!datLich) return { RspCode: "01", Message: "Order not found" };
 
-  // Kiểm tra số tiền khớp với DB (Best practice từ code mẫu)
-  // Logic này quan trọng để tránh "man-in-the-middle"
-  // Ở đây chúng ta tạm bỏ qua để đơn giản, nhưng check là tốt nhất.
-
   if (verify.isSuccess && vnp_ResponseCode === "00") {
+    // Xác định trạng thái thanh toán mới
+    let newStatus = 0;
+    if (loaiGiaoDich === "PHI_KHAM") newStatus = 1;
+    else if (loaiGiaoDich === "DON_THUOC" || loaiGiaoDich === "TAT_CA") newStatus = 2;
+    
+    // Nếu loaiGiaoDich không khớp (do lỗi logic split cũ), log ra để debug
+    console.log(`[VNPAY IPN] datLichId: ${datLichId}, loai: ${loaiGiaoDich}, status: ${newStatus}`);
+
+
     await prisma.$transaction([
       prisma.datLich.update({
         where: { id: datLichId },
-        data: { trangThaiThanhToan: loaiGiaoDich === "PHI_KHAM" ? 1 : 2 },
+        data: { trangThaiThanhToan: newStatus },
       }),
       prisma.giaoDich.updateMany({
         where: { maThamChieu: vnp_TxnRef },
@@ -151,6 +168,31 @@ const processIpn = async (vnpParams) => {
   return { RspCode: "00", Message: "Confirm Success" };
 };
 
+/**
+ * Hàm xác thực chủ động dành cho Frontend (Verify & Sync)
+ * Giúp localhost vẫn cập nhật được DB mà không cần IPN.
+ */
+const verifyAndSyncPayment = async (vnpParams) => {
+  const verify = vnpayInstance.verifyReturnUrl(vnpParams);
+
+  if (!verify.isSuccess) {
+    throw new AppError("Chữ ký giao dịch không hợp lệ", 400);
+  }
+
+  const vnp_ResponseCode = vnpParams["vnp_ResponseCode"];
+  
+  // Nếu thành công, gọi processIpn để đồng bộ DB (tận dụng logic có sẵn)
+  if (vnp_ResponseCode === "00") {
+    await processIpn(vnpParams);
+  }
+
+  return {
+    success: vnp_ResponseCode === "00",
+    message: vnp_ResponseCode === "00" ? "Thanh toán thành công" : "Thanh toán thất bại",
+    vnp_ResponseCode,
+  };
+};
+
 const verifyReturnUrl = (vnpParams) => {
   return vnpayInstance.verifyReturnUrl(vnpParams);
 };
@@ -159,4 +201,5 @@ module.exports = {
   initiatePayment,
   processIpn,
   verifyReturnUrl,
+  verifyAndSyncPayment,
 };

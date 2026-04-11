@@ -44,8 +44,9 @@ export default function MedicalResultPage() {
         loaiGiaoDich: loaiGiaoDich, // "PHI_KHAM" hoặc "DON_THUOC"
       });
       if (res.paymentUrl) {
-        window.location.href = res.paymentUrl;
+        window.location.assign(res.paymentUrl);
       } else {
+
         toast.error("Không nhận được liên kết thanh toán từ hệ thống.");
       }
     } catch (err) {
@@ -97,127 +98,108 @@ export default function MedicalResultPage() {
   const totalAmount = examFee + medicineFee;
 
   return (
-    <div className="max-w-4xl mx-auto py-4 sm:py-8 px-2 sm:px-6">
+    <div className="max-w-4xl mx-auto py-6 sm:py-10 px-4 sm:px-6">
       {/* Nút điều hướng & In (Ẩn khi in) */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 print:hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10 print:hidden">
         <nav className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
-          <Link to="/" className="hover:text-primary">Trang chủ</Link>
+          <Link to="/" className="hover:text-primary transition-colors">Trang chủ</Link>
           <span className="material-symbols-outlined text-base">chevron_right</span>
-          <Link to="/appointments" className="hover:text-primary">Lịch sử</Link>
+          <Link to="/appointments" className="hover:text-primary transition-colors">Lịch sử</Link>
           <span className="material-symbols-outlined text-base">chevron_right</span>
-          <span className="text-slate-700 font-medium tracking-tight">Kết quả</span>
+          <span className="text-slate-900 font-semibold">Chi tiết kết quả</span>
         </nav>
         
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={handlePrint}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition font-medium text-sm shadow-sm"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-all font-semibold text-sm shadow-sm"
           >
-            <span className="material-symbols-outlined text-xl text-slate-500">print</span>
-            In kết quả
+            <span className="material-symbols-outlined text-lg">print</span>
+            In phiếu
           </button>
           <Link
             to="/appointments"
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition font-medium text-sm shadow-sm"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 active:scale-[0.98] transition-all font-semibold text-sm shadow-sm"
           >
-            <span className="material-symbols-outlined text-xl">history</span>
-            Lịch sử
+            <span className="material-symbols-outlined text-lg">history</span>
+            Lịch sử khám
           </Link>
         </div>
       </div>
 
       {/* TỜ PHIẾU KẾT QUẢ KHÁM BỆNH (Vùng In) */}
-      <div className="bg-white rounded-xl shadow-md border border-slate-100 p-4 sm:p-8 md:p-12 print:shadow-none print:border-none print:p-0">
-        {/* CLINIC HEADER (Giả lập thông tin phòng khám) */}
-        <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start text-center sm:text-left gap-6 border-b-2 border-primary/10 pb-8 mb-10">
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-white text-2xl sm:text-4xl">medical_services</span>
-            </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-none">HEALTHCARE</h2>
-              <p className="text-slate-500 text-[10px] sm:text-xs mt-1 font-medium italic">Chuyên nghiệp - Tận tâm</p>
-            </div>
+      <div className="bg-white border-2 border-slate-200 p-6 sm:p-10 md:p-14 print:border-none print:p-0">
+        {/* CLINIC HEADER */}
+        <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start text-center sm:text-left gap-6 border-b border-slate-200 pb-10 mb-12">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold text-primary tracking-tight">HEALTHCARE CLINIC</h2>
+            <p className="text-slate-500 text-xs font-medium italic">Hệ thống quản lý phòng khám chuyên nghiệp</p>
           </div>
-          <div className="text-xs text-slate-400 space-y-1 sm:text-right">
+          <div className="text-xs text-slate-500 space-y-1 sm:text-right font-medium">
             <p>Địa chỉ: 123 Đường Cầu Giấy, Hà Nội</p>
-            <p>Hotline: (024) 3333-8888</p>
+            <p>Điện thoại: (024) 3333-8888</p>
+            <p>Email: contact@healthcare.vn</p>
           </div>
         </div>
 
         {/* TIÊU ĐỀ PHIẾU */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight uppercase">
+        <div className="text-center mb-16">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight uppercase border-b-2 border-slate-900 inline-block pb-2 px-4">
             Phiếu Kết Quả Khám Bệnh
           </h1>
-          <p className="text-slate-500 text-sm mt-2 font-medium">
-            Số hiệu: #{String(appointment.id).padStart(6, "0")}
+          <p className="text-slate-500 text-sm mt-4 font-mono">
+            Mã số hồ sơ: #{String(appointment.id).padStart(6, "0")}
           </p>
         </div>
 
-        {/* GRID THÔNG TIN HÀNH CHÍNH */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-10 mb-12 bg-slate-50/50 p-4 sm:p-6 rounded-2xl border border-slate-100">
+        {/* THÔNG TIN HÀNH CHÍNH */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-16">
           {/* Bệnh nhân */}
-          <div>
-            <h3 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-base">person</span>
+          <div className="space-y-6">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="material-symbols-outlined text-lg">person</span>
               Thông tin bệnh nhân
             </h3>
-            <div className="space-y-3">
-              <p className="text-xs sm:text-sm font-semibold text-slate-700">
-                Họ và tên:{" "}
-                <span className="text-slate-900 border-b border-dotted border-slate-300 ml-1">
-                  {patient?.hoTen || "—"}
+            <div className="space-y-4 text-sm">
+              <div className="flex border-b border-slate-100 pb-2">
+                <span className="text-slate-500 w-32 border-r border-slate-100 mr-4">Họ và tên</span>
+                <span className="text-slate-900 font-bold">{patient?.hoTen || "—"}</span>
+              </div>
+              <div className="flex border-b border-slate-100 pb-2">
+                <span className="text-slate-500 w-32 border-r border-slate-100 mr-4">Điện thoại</span>
+                <span className="text-slate-900">{patient?.soDienThoai || "—"}</span>
+              </div>
+              <div className="flex border-b border-slate-100 pb-2">
+                <span className="text-slate-500 w-32 border-r border-slate-100 mr-4">Thời gian khám</span>
+                <span className="text-slate-900">
+                  {formatDate(appointment.ngayDat)} - {formatTime(appointment.gioBatDau)}
                 </span>
-              </p>
-              <p className="text-xs sm:text-sm text-slate-600">
-                Số điện thoại:{" "}
-                <span className="text-slate-800 border-b border-dotted border-slate-300 ml-1">
-                  {patient?.soDienThoai || "—"}
-                </span>
-              </p>
-              <div className="flex flex-wrap gap-x-4">
-                <p className="text-xs sm:text-sm text-slate-600">
-                  Ngày:{" "}
-                  <span className="text-slate-800 border-b border-dotted border-slate-300 ml-1">
-                    {formatDate(appointment.ngayDat)}
-                  </span>
-                </p>
-                <p className="text-xs sm:text-sm text-slate-600">
-                  Giờ:{" "}
-                  <span className="text-slate-800 border-b border-dotted border-slate-300 ml-1">
-                    {formatTime(appointment.gioBatDau)}
-                  </span>
-                </p>
               </div>
             </div>
           </div>
 
           {/* Bác sĩ & Chẩn đoán */}
-          <div>
-            <h3 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-base">
-                clinical_notes
-              </span>
-              Kết luận từ bác sĩ
+          <div className="space-y-6">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="material-symbols-outlined text-lg">clinical_notes</span>
+              Kết quả chuẩn đoán
             </h3>
-            <div className="space-y-3">
-              <p className="text-xs sm:text-sm font-semibold text-slate-800">
-                BS phụ trách:{" "}
-                <span className="text-slate-900">
+            <div className="space-y-4 text-sm">
+              <div className="flex border-b border-slate-100 pb-2">
+                <span className="text-slate-500 w-32 border-r border-slate-100 mr-4">Bác sĩ phụ trách</span>
+                <span className="text-slate-900 font-bold">
                   {doctor?.hocViChucDanh} {doctor?.tenBacSi}
                 </span>
-              </p>
-              <p className="text-xs sm:text-sm text-slate-500 italic">
-                Chuyên khoa: {doctor?.chuyenKhoa?.tenChuyenKhoa}
-              </p>
-              <div className="mt-4 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">
-                  Chẩn đoán chính:
-                </p>
-                <p className="text-xs sm:text-sm font-bold text-primary leading-relaxed">
+              </div>
+              <div className="flex border-b border-slate-100 pb-2">
+                <span className="text-slate-500 w-32 border-r border-slate-100 mr-4">Chuyên khoa</span>
+                <span className="text-slate-900">{doctor?.chuyenKhoa?.tenChuyenKhoa}</span>
+              </div>
+              <div className="pt-2">
+                <span className="text-xs font-bold text-slate-400 uppercase block mb-2">Chẩn đoán:</span>
+                <p className="text-primary font-bold leading-relaxed bg-primary/5 p-3 rounded-lg border border-primary/10">
                   {isLocked
-                    ? "— Đang chờ thanh toán —"
+                    ? "— Đang chờ thanh toán để xem chi tiết —"
                     : donThuoc?.chanDoan || "Chưa có kết luận cụ thể"}
                 </p>
               </div>
@@ -225,120 +207,75 @@ export default function MedicalResultPage() {
           </div>
         </div>
 
-        {/* LÝ DO KHÁM & GHI CHÚ */}
-        <div className="space-y-8 mb-12">
+        {/* CHI TIẾT TRIỆU CHỨNG */}
+        <div className="mb-16 space-y-10">
           <section>
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-              Triệu chứng & Lý do khám
-            </h3>
-            <p className="text-sm text-slate-700 bg-slate-50/30 p-4 rounded-lg border-l-4 border-slate-200 italic leading-relaxed">
-              "{appointment.lyDoKham || "Bệnh nhân không ghi chú lý do cụ thể."}
-              "
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Lý do khám bện</h3>
+            <p className="text-sm text-slate-700 bg-slate-50 p-5 rounded-lg border border-slate-200 italic">
+              "{appointment.lyDoKham || "Không có ghi chú cụ thể."}"
             </p>
           </section>
 
           {donThuoc && !isLocked && donThuoc.ghiChu && (
             <section>
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-                Lời dặn của bác sĩ
-              </h3>
-              <p className="text-sm text-slate-700 bg-blue-50/50 p-4 rounded-lg border-l-4 border-primary/40 leading-relaxed">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Lời dặn bác sĩ</h3>
+              <p className="text-sm text-slate-800 bg-blue-50/30 p-5 rounded-lg border border-blue-200/50">
                 {donThuoc.ghiChu}
               </p>
             </section>
           )}
         </div>
 
-        {/* ĐƠN THUỐC CHI TIẾT */}
-        <section className="mb-12">
-          <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-100">
-            <h3 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg">
-                medication
-              </span>
-              Chi tiết đơn thuốc
+        {/* ĐƠN THUỐC */}
+        <section className="mb-16">
+          <div className="flex items-center justify-between mb-8 pb-3 border-b-2 border-slate-900">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+              <span className="material-symbols-outlined text-xl">medication</span>
+              Đơn thuốc kê khai
             </h3>
-            <span className="text-xs text-slate-400 italic">
-              Hệ thống cấp đơn tự động
-            </span>
+            <span className="text-[10px] text-slate-400 font-medium italic">HealthCare Prescription System</span>
           </div>
 
           {!donThuoc ? (
-            <div className="bg-slate-50 rounded-xl p-8 text-center">
-              <p className="text-slate-400 text-sm">
-                Bác sĩ không kê đơn thuốc cho ca khám này.
-              </p>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-10 text-center text-slate-400 text-sm">
+              Bác sĩ không kê đơn thuốc cho ca khám này.
             </div>
           ) : isLocked ? (
-            /* ĐƠN THUỐC BỊ KHÓA */
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
-              <span className="material-symbols-outlined text-4xl text-amber-500 mb-3 block">
-                lock_person
-              </span>
-              <p className="text-amber-700 font-bold mb-2 uppercase tracking-tight">
-                {donThuoc.message}
-              </p>
-              <p className="text-amber-600 text-sm max-w-md mx-auto">
-                Vui lòng hoàn tất thanh toán hóa đơn để hệ thống tự động mở khóa
-                chi tiết đơn thuốc kê bởi bác sĩ.
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-10 text-center space-y-4">
+              <span className="material-symbols-outlined text-4xl text-amber-500">lock</span>
+              <p className="text-amber-800 font-bold uppercase text-sm tracking-tight">{donThuoc.message}</p>
+              <p className="text-amber-700/70 text-xs max-w-sm mx-auto font-medium">
+                Chi phí đơn thuốc chưa được thanh toán. Vui lòng hoàn tất giao dịch để mở khóa thông tin kê đơn.
               </p>
             </div>
           ) : (
-            /* BẢNG ĐƠN THUỐC (MAPPING SQL CHUẨN) */
-            <div className="border border-slate-200 rounded-2xl overflow-hidden">
+            <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[650px] text-xs sm:text-sm">
+                <table className="w-full text-left min-w-[700px] text-sm">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="py-4 px-6 font-bold text-slate-600 truncate">STT</th>
-                      <th className="py-4 px-6 font-bold text-slate-600">Tên thuốc</th>
-                      <th className="py-4 px-2 text-center font-bold text-slate-600">SL</th>
-                      <th className="py-4 px-4 text-right font-bold text-slate-600">Đơn giá</th>
-                      <th className="py-4 px-4 text-right font-bold text-slate-600">Thành tiền</th>
-                      <th className="py-4 px-6 font-bold text-slate-600">Liều & Cách dùng</th>
+                    <tr className="bg-slate-50 border-b-2 border-slate-200 text-slate-700 font-bold">
+                      <th className="py-4 px-6 w-16">STT</th>
+                      <th className="py-4 px-6">Tên thuốc / Hàm lượng</th>
+                      <th className="py-4 px-4 text-center">SL</th>
+                      <th className="py-4 px-6 text-right">Đơn giá</th>
+                      <th className="py-4 px-6 text-right">Thành tiền</th>
+                      <th className="py-4 px-8">Cách dùng</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-200">
                     {donThuoc.chiTietDonThuoc?.map((med, index) => {
                       const quantity = Number(med.soLuong || 1);
                       const unitPrice = Number(med.donGia || 0);
-                      const subtotal = quantity * unitPrice;
-
                       return (
-                        <tr
-                          key={index}
-                          className="hover:bg-slate-50 transition-colors"
-                        >
-                          <td className="py-4 px-6 text-slate-400 font-mono text-xs">
-                            {index + 1}
-                          </td>
-                          <td className="py-4 px-6 font-bold text-slate-800">
-                            {med.tenThuoc}
-                          </td>
-                          <td className="py-4 px-6 text-center font-bold text-primary">
-                            {quantity}
-                          </td>
-                          <td className="py-4 px-4 text-right text-slate-500 whitespace-nowrap">
-                            {formatPrice(unitPrice)}
-                          </td>
-                          <td className="py-4 px-4 text-right font-bold text-slate-700 whitespace-nowrap">
-                            {formatPrice(subtotal)}
-                          </td>
-                          <td className="py-4 px-6 text-[10px] sm:text-xs text-slate-500 leading-relaxed min-w-[200px]">
-                            <div>
-                              <span className="font-bold text-slate-400 uppercase text-[8px]">
-                                Liều:
-                              </span>{" "}
-                              {med.lieuDung || "—"}
-                            </div>
-                            {med.ghiChu && (
-                              <div className="mt-1 italic">
-                                <span className="font-bold text-slate-400 uppercase text-[8px]">
-                                  HD:
-                                </span>{" "}
-                                {med.ghiChu}
-                              </div>
-                            )}
+                        <tr key={index} className="text-slate-800">
+                          <td className="py-5 px-6 font-mono text-xs text-slate-400">{index + 1}</td>
+                          <td className="py-5 px-6 font-bold">{med.tenThuoc}</td>
+                          <td className="py-5 px-4 text-center font-bold text-primary">{quantity}</td>
+                          <td className="py-5 px-6 text-right font-medium text-slate-600">{formatPrice(unitPrice)}</td>
+                          <td className="py-5 px-6 text-right font-bold">{formatPrice(quantity * unitPrice)}</td>
+                          <td className="py-5 px-8 text-xs text-slate-500 leading-relaxed font-medium">
+                            <span className="text-slate-900 font-bold">Liều:</span> {med.lieuDung || "—"}
+                            {med.ghiChu && <div className="mt-1 italic text-primary/70">{med.ghiChu}</div>}
                           </td>
                         </tr>
                       );
@@ -346,92 +283,91 @@ export default function MedicalResultPage() {
                   </tbody>
                 </table>
               </div>
-              {/* Footer đơn thuốc: Tổng tiền thuốc */}
-              <div className="bg-slate-50/50 p-4 flex justify-end text-sm border-t border-slate-100">
-                <span className="text-slate-500 mr-3">Tổng phí thuốc:</span>
-                <span className="font-black text-slate-800">
-                  {formatPrice(donThuoc.tongTien)}
-                </span>
+              <div className="bg-slate-50 p-5 flex justify-end items-center gap-4 text-sm border-t border-slate-200">
+                <span className="text-slate-500 font-bold">Tổng phí thuốc:</span>
+                <span className="text-lg font-bold text-slate-900">{formatPrice(donThuoc.tongTien)}</span>
               </div>
             </div>
           )}
         </section>
 
-        {/* TÓM TẮT HÓA ĐƠN & THANH TOÁN */}
-        <div className="border-t-2 border-dashed border-slate-200 pt-10">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-3 h-3 rounded-full ${appointment.trangThaiThanhToan >= 1 ? "bg-green-500" : "bg-red-400 animate-pulse"}`}
-                />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  Trạng thái thanh toán
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm font-black text-slate-800">
-                {appointment.trangThaiThanhToan >= 2
-                  ? "Đã thanh toán toàn bộ"
-                  : appointment.trangThaiThanhToan === 1
-                    ? "Đang nợ phí thuốc"
-                    : "Chưa thanh toán"}
-              </p>
-              {appointment.hinhThucThanhToan && (
-                <p className="text-[9px] text-primary uppercase font-bold tracking-tight">
-                  Cổng: {appointment.hinhThucThanhToan.tenHinhThuc}
+        {/* TỔNG KẾT & THANH TOÁN */}
+        <div className="border-t border-slate-200 pt-16">
+          <div className="flex flex-col lg:flex-row justify-between items-start gap-12">
+            {/* Status Section */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tình trạng thanh toán</h3>
+              <div className="flex items-center gap-3">
+                <span className={`w-3 h-3 rounded-full ${appointment.trangThaiThanhToan >= 2 ? "bg-green-500" : "bg-red-500"}`} />
+                <p className="text-sm font-bold text-slate-900">
+                  {appointment.trangThaiThanhToan >= 2 
+                    ? "Đã hoàn tất thanh toán" 
+                    : appointment.trangThaiThanhToan === 1 
+                      ? "Đã trả phí khám - Còn nợ phí thuốc" 
+                      : "Chưa thanh toán hồ sơ"}
                 </p>
+              </div>
+              {appointment.hinhThucThanhToan && (
+                <div className="inline-block px-3 py-1 bg-slate-100 rounded text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+                  Phương thức: {appointment.hinhThucThanhToan.tenHinhThuc}
+                </div>
               )}
             </div>
 
-            <div className="w-full md:w-auto space-y-4">
-              <div className="space-y-2 bg-primary/5 p-5 sm:p-6 rounded-2xl border border-primary/10">
-                <div className="flex justify-between items-center gap-10 text-xs sm:text-sm">
-                  <span className="text-slate-500">Phí khám bệnh:</span>
-                  <span className="font-semibold text-slate-700">
-                    {formatPrice(examFee)}
-                  </span>
+            {/* Price Table & Buttons */}
+            <div className="w-full lg:w-96 space-y-6">
+              <div className="bg-slate-50 border border-slate-200 p-6 rounded-lg space-y-4 shadow-inner">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Tiền khám:</span>
+                  <span className="font-bold">{formatPrice(examFee)}</span>
                 </div>
-                <div className="flex justify-between items-center gap-10 text-xs sm:text-sm">
-                  <span className="text-slate-500">Chi phí thuốc:</span>
-                  <span className="font-semibold text-slate-700">
-                    {formatPrice(medicineFee)}
-                  </span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Tiền thuốc:</span>
+                  <span className="font-bold">{formatPrice(medicineFee)}</span>
                 </div>
-                <div className="flex justify-between items-center gap-10 pt-4 border-t border-primary/10">
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-tight">
-                    TỔNG CỘNG:
-                  </span>
-                  <span className="text-lg sm:text-2xl font-black text-primary">
-                    {formatPrice(totalAmount)}
-                  </span>
+                <div className="pt-4 border-t-2 border-slate-200 flex justify-between items-center text-primary">
+                  <span className="text-sm font-black uppercase">Tổng thanh toán:</span>
+                  <span className="text-2xl font-black">{formatPrice(totalAmount)}</span>
                 </div>
               </div>
 
-              {/* ACTION BUTTONS: THANH TOÁN ONLINE */}
-              <div className="flex flex-col gap-2 print:hidden">
-                {appointment.trangThaiThanhToan === 0 && (
+              {/* Action Buttons */}
+              <div className="space-y-3 print:hidden">
+                {appointment.trangThaiThanhToan === 0 && donThuoc && (
                   <button
-                    onClick={() => handlePayment("PHI_KHAM")}
+                    onClick={() => handlePayment("TAT_CA")}
                     disabled={paying}
-                    className="w-full py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-4 bg-primary text-white rounded-lg font-bold text-sm shadow-md hover:bg-primary/95 active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer"
                   >
                     <span className="material-symbols-outlined">payments</span>
-                    Thanh toán phí khám ({formatPrice(examFee)})
+                    Thanh toán toàn bộ ({formatPrice(totalAmount)})
                   </button>
                 )}
-                {appointment.trangThaiThanhToan === 1 && donThuoc && (
-                  <button
-                    onClick={() => handlePayment("DON_THUOC")}
-                    disabled={paying}
-                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined">medication</span>
-                    Thanh toán đơn thuốc ({formatPrice(medicineFee)})
-                  </button>
-                )}
-                {appointment.trangThaiThanhToan < 2 && appointment.maLoai !== "VNPAY" && (
-                  <p className="text-[10px] text-slate-400 text-center italic">
-                    * Bạn có thể chọn thanh toán online qua VNPay hoặc tại quầy.
+
+                <div className="grid grid-cols-2 gap-3">
+                  {appointment.trangThaiThanhToan === 0 && (
+                    <button
+                      onClick={() => handlePayment("PHI_KHAM")}
+                      disabled={paying}
+                      className="py-3 bg-white border-2 border-amber-500 text-amber-600 rounded-lg font-bold text-xs hover:bg-amber-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      Trả tiền khám
+                    </button>
+                  )}
+                  {(appointment.trangThaiThanhToan === 0 || appointment.trangThaiThanhToan === 1) && donThuoc && (
+                    <button
+                      onClick={() => handlePayment("DON_THUOC")}
+                      disabled={paying}
+                      className="py-3 bg-white border-2 border-emerald-500 text-emerald-600 rounded-lg font-bold text-xs hover:bg-emerald-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      Trả tiền thuốc
+                    </button>
+                  )}
+                </div>
+
+                {appointment.trangThaiThanhToan < 2 && (
+                  <p className="text-[10px] text-slate-400 text-center italic leading-normal">
+                    * Hỗ trợ thanh toán online qua thẻ ATM/Tín dụng (VNPay) <br /> hoặc trả tiền mặt tại quầy đón tiếp.
                   </p>
                 )}
               </div>
@@ -439,41 +375,42 @@ export default function MedicalResultPage() {
           </div>
         </div>
 
-        {/* CHỮ KÝ (Cho việc in ấn) */}
-        <div className="hidden print:flex mt-20 justify-end">
-          <div className="text-center w-64">
-            <p className="text-sm text-slate-800 mb-20 font-bold italic">
-              Bác sĩ kết luận (Ký tên)
+        {/* CHỮ KÝ */}
+        <div className="hidden print:flex mt-24 justify-end">
+          <div className="text-center w-72">
+            <p className="text-sm font-bold text-slate-900 mb-24 italic underline decoration-slate-200 underline-offset-8">
+              Chữ ký bác sĩ chuyên khoa
             </p>
-            <p className="text-lg font-black text-slate-800">
+            <p className="text-lg font-bold text-slate-900">
               {doctor?.tenBacSi}
             </p>
-            <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
-              HEALTHCARE CLINIC REPORT
+            <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-widest font-bold">
+              HealthCare Clinical Center
             </p>
           </div>
         </div>
       </div>
 
-      {/* FOOTER ĐIỀU HƯỚNG CUỐI TRANG */}
-      <div className="mt-8 flex justify-center print:hidden">
-        <p className="text-xs text-slate-400">
-          © 2026 HealthCare Provider. Phiếu này chỉ có giá trị tại cơ sở y tế
-          HealthCare.
+      {/* FOOTER */}
+      <div className="mt-12 text-center print:hidden border-t border-slate-100 pt-8">
+        <p className="text-xs text-slate-400 font-medium">
+          © 2026 HealthCare Provider. Phiếu được cấp điện tử và in trực tiếp từ hệ thống.
         </p>
       </div>
 
-      {/* CSS CHO IN ẤN */}
+      {/* PRINT CSS OVERRIDES */}
       <style>{`
         @media print {
-          body { background: white !important; margin: 0; padding: 0; }
-          .max-w-4xl { max-width: 100% !important; margin: 0 !important; }
-          header, footer, nav, .print\\:hidden { display: none !important; }
-          .bg-slate-50\\/50 { background-color: transparent !important; }
-          .bg-primary\\/5 { background-color: transparent !important; border: 1px solid #efefef !important; }
-          .p-8, .p-12 { padding: 0 !important; }
-          table { border-collapse: collapse !important; }
-          th, td { border: 1px solid #efefef !important; }
+          body { background: white !important; -webkit-print-color-adjust: exact; }
+          .max-w-4xl { max-width: 100% !important; margin: 0 !important; width: 100% !important; }
+          .p-6, .p-10, .p-14 { padding: 0 !important; }
+          .border-2 { border-width: 1px !important; border-color: #e2e8f0 !important; }
+          .print\\:hidden, nav, header, footer { display: none !important; }
+          .bg-slate-50, .bg-primary\\/5, .bg-blue-50\\/30 { background-color: transparent !important; border: 1px solid #e2e8f0 !important; }
+          table { border-collapse: collapse !important; width: 100% !important; }
+          th, td { border: 1px solid #e2e8f0 !important; padding: 12px !important; }
+          .text-primary { color: #000 !important; }
+          h1, h2, h3, .font-bold { color: #000 !important; }
         }
       `}</style>
     </div>
