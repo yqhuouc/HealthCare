@@ -1,21 +1,19 @@
 /**
  * ============================================================
- * TRANG: Chi tiết Lịch hẹn & Hồ sơ Khám bệnh (Bác sĩ)
+ * TRANG: CHI TIẾT HỒ SƠ KHÁM BỆNH (BÁC SĨ)
  * Đường dẫn: /doctor/appointments/:id
  * ============================================================
- *
- * Chức năng chính:
- * 1. Hiển thị thông tin chi tiết bệnh nhân & lý do khám.
- * 2. Ghi nhận Chẩn đoán & Lời dặn của bác sĩ.
- * 3. Kê đơn thuốc (Prescription):
- *    - Thêm/Xóa dòng thuốc linh hoạt.
- *    - Tự động tính tổng tiền đơn thuốc dựa trên số lượng & đơn giá.
- * 4. Luồng xử lý trạng thái:
- *    - Khi bấm gửi: Cập nhật trạng thái lịch hẹn sang "Đã khám" (2).
- *    - Tạo mới hoặc cập nhật bản ghi đơn thuốc trong CSDL.
- * 5. Chế độ Xem lại (Read-only): Nếu lịch đã hoàn thành, hiển thị lại đơn cũ.
- *
- * Dữ liệu: Kết hợp từ DatLich, DonThuoc và ChiTietDonThuoc.
+ * 
+ * CHỨC NĂNG CHÍNH:
+ * 1. Hiển thị thông tin hành chính của bệnh nhân (Họ tên, mã BN, SĐT...).
+ * 2. Ghi chép Chẩn đoán bệnh lý và Lời dặn của bác sĩ.
+ * 3. Kê đơn thuốc (Dynamic Form): Thêm/xóa thuốc, tính tổng tiền tự động.
+ * 4. Quản lý luồng trạng thái: Chờ xác nhận -> Đã xác nhận -> Đã khám.
+ * 
+ * PHONG CÁCH THIẾT KẾ:
+ * - Giao diện "Medical Record" (Bệnh án) trang trọng, tinh tế.
+ * - Sử dụng các khối nội dung ngăn cách bằng viền (Border) chuyên nghiệp.
+ * - Loại bỏ các hiệu ứng "đồ chơi" (Shadow quá đậm, gradients rực rỡ).
  * ============================================================
  */
 import { useState } from "react";
@@ -26,9 +24,7 @@ import { toast } from "react-toastify";
 import { formatPrice } from "../../utils/formatters";
 import { formatTime, formatDate } from "../../utils/dateUtils";
 
-/**
- * Cấu trúc mặc định của một dòng thuốc trong đơn
- */
+// Cấu trúc khởi tạo cho một dòng thuốc mới
 const EMPTY_MED = {
   tenThuoc: "",
   soLuong: "",
@@ -37,42 +33,36 @@ const EMPTY_MED = {
   ghiChu: "",
 };
 
-
-
-
-
 function DoctorAppointmentDetailPage() {
-  const { id } = useParams();
+  const { id } = useParams(); // Lấy ID lịch hẹn từ URL
   const navigate = useNavigate();
 
-  // TanStack Query: Lấy chi tiết lịch hẹn (auto-cache)
+  /**
+   * 1. GỌI DỮ LIỆU TỪ SERVER
+   */
   const { data: aptRes, isLoading: loading } = useAppointment(id);
   const appointment = aptRes?.data || null;
 
-  // TanStack Query: Mutations
+  /**
+   * 2. CÁC HÀM CẬP NHẬT TRẠNG THÁI & ĐƠN THUỐC
+   */
   const statusMutation = useUpdateAppointmentStatus();
   const createPrescription = useCreatePrescription();
   const updatePrescriptionMutation = useUpdatePrescription();
-  const updating = statusMutation.isPending;
+  
+  // Trạng thái cục bộ phục vụ việc hiển thị UI
   const [submitting, setSubmitting] = useState(false);
 
-  const handleUpdateStatus = (newStatus) => {
-    statusMutation.mutate(
-      { id, trangThai: newStatus },
-      {
-        onSuccess: () => toast.success("Cập nhật trạng thái thành công!"),
-        onError: () => toast.error("Lỗi khi cập nhật trạng thái"),
-      }
-    );
-  };
-
-  // State quản lý Form khám bệnh & đơn thuốc
+  // State quản lý Form nhập liệu chính
   const [chanDoan, setChanDoan] = useState("");
   const [ghiChu, setGhiChu] = useState("");
   const [prescription, setPrescription] = useState([{ ...EMPTY_MED }]);
   const [initialized, setInitialized] = useState(false);
 
-  // Pre-fill form khi data sẵn sàng (chỉ chạy 1 lần)
+  /**
+   * 3. LOGIC KHỞI TẠO DỮ LIỆU BAN ĐẦU (Pre-fill)
+   * Nếu ca khám này đã có hồ sơ cũ, ta đổ dữ liệu vào Form để bác sĩ sửa đổi.
+   */
   if (appointment && !initialized) {
     if (appointment.donThuoc) {
       setChanDoan(appointment.donThuoc.chanDoan || "");
@@ -92,102 +82,61 @@ function DoctorAppointmentDetailPage() {
     setInitialized(true);
   }
 
-  // UI khi đang tải dữ liệu
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
-          progress_activity
-        </span>
-      </div>
-    );
-  }
-
-  // UI khi không tìm thấy dữ liệu
-  if (!appointment) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <span className="material-symbols-outlined text-7xl text-slate-200 mb-4 font-light">
-          error
-        </span>
-        <h2 className="text-xl font-black text-slate-800">
-          Dữ liệu không tồn tại
-        </h2>
-        <button
-          onClick={() => navigate("/doctor/appointments")}
-          className="mt-6 text-primary font-bold"
-        >
-          Quay lại danh sách
-        </button>
-      </div>
-    );
-  }
-
-  const patient = appointment.benhNhan;
-  const hasPrescription = !!appointment.donThuoc;
-
   /**
-   * Xử lý ảnh đại diện bệnh nhân
+   * Hàm hỗ trợ thay đổi trạng thái nhanh (Xác nhận/Hủy)
    */
-  const getPatientAvatar = (anhDaiDien) => {
-    if (!anhDaiDien) return null;
-    if (anhDaiDien.startsWith("http")) return anhDaiDien;
-    return `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${anhDaiDien}`;
+  const handleUpdateStatus = (newStatus) => {
+    statusMutation.mutate(
+      { id, trangThai: newStatus },
+      {
+        onSuccess: () => toast.success("Cập nhật trạng thái thành công!"),
+        onError: () => toast.error("Lỗi khi cập nhật trạng thái"),
+      }
+    );
   };
 
-  const patientAvatarUrl = getPatientAvatar(patient?.taiKhoan?.anhDaiDien);
-
   /**
-   * LOGIC QUẢN LÝ ĐƠN THUỐC (Dynamic Table)
+   * LOGIC QUẢN LÝ BẢNG THUỐC (Dynamically add/remove rows)
    */
-  const handleAddMed = () =>
-    setPrescription((prev) => [...prev, { ...EMPTY_MED }]);
-
-  const handleRemoveMed = (index) => {
-    setPrescription((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      return next.length === 0 ? [{ ...EMPTY_MED }] : next;
+  const handleAddMed = () => setPrescription((p) => [...p, { ...EMPTY_MED }]);
+  const handleRemoveMed = (idx) => {
+    setPrescription((p) => {
+      const filtered = p.filter((_, i) => i !== idx);
+      return filtered.length === 0 ? [{ ...EMPTY_MED }] : filtered;
     });
   };
-
-  const handleMedChange = (index, field, value) => {
-    setPrescription((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
-    );
+  const handleMedChange = (idx, field, val) => {
+    setPrescription((p) => p.map((m, i) => (i === idx ? { ...m, [field]: val } : m)));
   };
 
-  /** Tính tổng giá trị đơn thuốc hiện tại */
+  // Tính tổng tiền đơn thuốc (Thành tiền = Số lượng * Đơn giá)
   const totalMedicine = prescription.reduce((sum, med) => {
     return sum + (Number(med.soLuong) || 0) * (Number(med.donGia) || 0);
   }, 0);
 
   /**
-   * XỬ LÝ GỬI KẾT QUẢ & ĐƠN THUỐC (Submission)
+   * 4. HÀM GỬI HỒ SƠ & ĐƠN THUỐC (Submit)
    */
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Kiểm tra tính hợp lệ của dữ liệu
     if (!chanDoan.trim()) {
-      toast.error("Bác sĩ vui lòng nhập Chẩn đoán bệnh.");
+      toast.warning("Vui lòng nhập chẩn đoán cho bệnh nhân.");
       return;
     }
 
-    const validMeds = prescription.filter((m) => m.tenThuoc.trim());
-
     setSubmitting(true);
     try {
-      // 1. Cập nhật trạng thái lịch hẹn sang "Đã khám" (Trạng thái 2)
+      // BƯỚC 1: Nếu chưa khám, cập nhật trạng thái lịch thành "Đã khám" (2)
       if (appointment.trangThai !== 2) {
         await statusMutation.mutateAsync({ id, trangThai: 2 });
       }
 
-      // 2. Chuẩn bị Payload gửi lên Server
-      const prescriptionData = {
+      // BƯỚC 2: Chuẩn bị dữ liệu Đơn thuốc
+      const payload = {
         datLichId: Number(id),
         chanDoan: chanDoan.trim(),
         ghiChu: ghiChu.trim() || null,
-        chiTietDonThuoc: validMeds.map((m) => ({
+        chiTietDonThuoc: prescription.filter(m => m.tenThuoc.trim()).map(m => ({
           tenThuoc: m.tenThuoc.trim(),
           soLuong: Number(m.soLuong) || 1,
           donGia: Number(m.donGia) || 0,
@@ -196,364 +145,252 @@ function DoctorAppointmentDetailPage() {
         })),
       };
 
-      // 3. Gọi API tạo hoặc cập nhật đơn thuốc
-      if (hasPrescription) {
-        await updatePrescriptionMutation.mutateAsync({
-          id: appointment.donThuoc.id,
-          data: prescriptionData,
-        });
-        toast.success("Cập nhật bệnh án thành công!");
+      // BƯỚC 3: Gọi API Lưu hồ sơ (Tạo mới hoặc Cập nhật)
+      if (appointment.donThuoc) {
+        await updatePrescriptionMutation.mutateAsync({ id: appointment.donThuoc.id, data: payload });
+        toast.success("Đã cập nhật hồ sơ thành công!");
       } else {
-        await createPrescription.mutateAsync(prescriptionData);
-        toast.success("Đã gửi đơn thuốc cho bệnh nhân thành công!");
+        await createPrescription.mutateAsync(payload);
+        toast.success("Đã hoàn tất ca khám và gửi đơn thuốc.");
       }
-
       navigate("/doctor/appointments");
     } catch (err) {
-      const msg = err.response?.data?.message || "Lỗi khi xử lý đơn thuốc";
-      toast.error(msg);
+      toast.error(err.response?.data?.message || "Lỗi khi lưu bệnh án");
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Màn hình Loading
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+        <p className="text-slate-500 font-bold tracking-tight uppercase text-xs">Phân tích dữ liệu hồ sơ...</p>
+      </div>
+    );
+  }
+
+  const patient = appointment.benhNhan;
+  const patientCode = `BN-${String(patient?.id || "").padStart(3, "0")}`;
+
   return (
-    <div className="sm:p-4 lg:p-8 max-w-5xl mx-auto space-y-6">
-      {/* THANH ĐIỀU CHỈNH (Header Actions) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-5xl mx-auto space-y-8 pb-20 p-4 sm:p-0 animate-in fade-in duration-700">
+      
+      {/* ---------------------------------------------------------
+          SECTION 1: HEADER ACTIONS (THANH CÔNG CỤ)
+          --------------------------------------------------------- */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-            Chi tiết hồ sơ ca khám
-          </h1>
-          <p className="text-slate-500 text-sm font-medium">
-            Bác sĩ vui lòng kiểm tra thông tin và kê đơn thuốc chính xác
-          </p>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Hồ sơ bệnh án chi tiết</h1>
+          <p className="text-slate-500 text-sm font-medium mt-1">Vui lòng ghi nhận chẩn đoán và hướng dẫn điều trị chính xác.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* LUỒNG CHỜ XÁC NHẬN (0) */}
-          {appointment.trangThai === 0 && (
+        
+        {/* Nhóm các nút điều khiển luồng ca trực */}
+        <div className="flex flex-wrap items-center gap-3">
+          {appointment.trangThai === 0 && ( /* Lịch đang chờ */
             <>
-              <button
-                onClick={() => handleUpdateStatus(1)}
-                disabled={updating}
-                className="px-5 py-2.5 bg-blue-600 text-white text-xs font-black rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center gap-2 uppercase tracking-widest"
-              >
-                <span className="material-symbols-outlined text-lg">check_circle</span>
+              <button onClick={() => handleUpdateStatus(1)} className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:opacity-90 transition-all flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm">check_circle</span>
                 Xác nhận lịch
               </button>
-              <button
-                onClick={() => handleUpdateStatus(3)}
-                disabled={updating}
-                className="px-5 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 text-xs font-black rounded-xl hover:bg-rose-100 transition flex items-center gap-2 uppercase tracking-widest"
-              >
-                <span className="material-symbols-outlined text-lg">cancel</span>
+              <button onClick={() => handleUpdateStatus(3)} className="px-4 py-2 border border-rose-200 text-rose-500 text-xs font-bold rounded-lg hover:bg-rose-50 transition-all">
                 Hủy lịch
               </button>
             </>
           )}
 
-          {/* LUỒNG ĐÃ XÁC NHẬN (1) */}
-          {appointment.trangThai === 1 && (
-            <>
-              <button
-                onClick={() => handleUpdateStatus(0)}
-                disabled={updating}
-                className="px-5 py-2.5 bg-slate-100 text-slate-500 text-xs font-black rounded-xl hover:bg-slate-200 transition flex items-center gap-2 uppercase tracking-widest"
-              >
-                <span className="material-symbols-outlined text-lg">undo</span>
-                Hoàn tác
-              </button>
-              <button
-                onClick={() => handleUpdateStatus(3)}
-                disabled={updating}
-                className="px-5 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 text-xs font-black rounded-xl hover:bg-rose-100 transition flex items-center gap-2 uppercase tracking-widest"
-              >
-                <span className="material-symbols-outlined text-lg">cancel</span>
-                Hủy lịch
-              </button>
-            </>
-          )}
-
-          {/* LUỒNG ĐÃ HỦY (3) */}
-          {appointment.trangThai === 3 && (
-            <button
-              onClick={() => handleUpdateStatus(1)}
-              disabled={updating}
-              className="px-5 py-2.5 bg-primary text-white text-xs font-black rounded-xl hover:bg-primary/90 transition shadow-lg shadow-primary/20 flex items-center gap-2 uppercase tracking-widest"
-            >
-              <span className="material-symbols-outlined text-lg">history</span>
-              Khôi phục lịch
+          {appointment.trangThai === 1 && ( /* Đã xác nhận */
+            <button onClick={() => handleUpdateStatus(3)} className="px-4 py-2 border border-rose-200 text-rose-500 text-xs font-bold rounded-lg hover:bg-rose-50 transition-all">
+              Bệnh nhân vắng mặt / Hủy lịch
             </button>
           )}
 
-          <div className="h-8 w-px bg-slate-200 mx-2 hidden sm:block" />
-
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-black bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm"
-          >
-            <span className="material-symbols-outlined text-sm font-bold">
-              arrow_back
-            </span>
+          <div className="w-px h-8 bg-slate-200 mx-1 hidden sm:block" />
+          
+          <button onClick={() => navigate(-1)} className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">arrow_back</span>
             Quay lại
           </button>
         </div>
       </div>
 
-      {/* HIỂN THỊ TRẠNG THÁI HIỆN TẠI (Current Status Badge) */}
-      <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 w-fit">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trạng thái hiện tại:</span>
-        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
-          appointment.trangThai === 0 ? "bg-amber-100 text-amber-600" :
-          appointment.trangThai === 1 ? "bg-blue-100 text-blue-600" :
-          appointment.trangThai === 2 ? "bg-emerald-100 text-emerald-600" :
-          "bg-rose-100 text-rose-600"
+      {/* ---------------------------------------------------------
+          SECTION 2: THÔNG TIÊU TRẠNG THÁI (STATUS BADGE)
+          --------------------------------------------------------- */}
+      <div className="inline-flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tiến độ hiện tại:</span>
+        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase transition-colors ${
+          appointment.trangThai === 0 ? "border-amber-200 text-amber-600 bg-amber-50" :
+          appointment.trangThai === 1 ? "border-blue-200 text-blue-600 bg-blue-50" :
+          appointment.trangThai === 2 ? "border-emerald-200 text-emerald-600 bg-emerald-50" : "border-rose-200 text-rose-600 bg-rose-50"
         }`}>
-          {appointment.trangThai === 0 ? "Chờ xác nhận" :
-           appointment.trangThai === 1 ? "Đã xác nhận" :
-           appointment.trangThai === 2 ? "Đã khám hoàn tất" : "Đã hủy"}
+          {appointment.trangThai === 0 ? "Bệnh nhân đang chờ" :
+           appointment.trangThai === 1 ? "Đã sẵn sàng khám" :
+           appointment.trangThai === 2 ? "Ca khám hoàn tất" : "Lịch đã bị hủy"}
         </span>
       </div>
 
-      {/* THÔNG TIN BỆNH NHÂN (Patient Info Section) */}
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-8 transition-all hover:shadow-md">
-        <div className="flex flex-col md:flex-row md:items-center gap-6 sm:gap-8">
-          {/* Avatar Area */}
-          <div className="size-20 sm:size-24 rounded-2xl overflow-hidden bg-slate-50 shrink-0 border-2 border-white shadow-lg ring-1 ring-slate-100 flex items-center justify-center">
-            {patientAvatarUrl ? (
-              <img
-                src={patientAvatarUrl}
-                alt={patient?.hoTen}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(patient?.hoTen || "BN")}&size=128&background=f1f5f9&color=64748b`;
-                }}
-              />
-            ) : (
-              <span className="material-symbols-outlined text-4xl text-slate-300 font-light">
-                account_circle
-              </span>
-            )}
-          </div>
-
-          {/* Text Area */}
-          <div className="flex-1 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <h3 className="text-xl sm:text-2xl font-black text-slate-800 leading-none">
-                {patient?.hoTen || "—"}
-              </h3>
-              <div className="flex items-center gap-2 px-3 py-1 bg-primary/5 border border-primary/10 rounded-lg">
-                <span className="text-[10px] font-black text-primary uppercase tracking-widest leading-none">
-                  Cấp mã:
-                </span>
-                <span className="text-xs font-black text-primary leading-none uppercase">
-                  BN-
-                  {String(
-                    patient?.id || appointment.benhNhanId || appointment.id,
-                  ).padStart(3, "0")}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-3 gap-x-4">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                  Số điện thoại
-                </span>
-                <span className="text-sm font-bold text-slate-700">
-                  {patient?.soDienThoai || "Chưa cập nhật"}
-                </span>
-              </div>
-              <div className="flex flex-col border-l border-slate-50 pl-4">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                  Giới tính
-                </span>
-                <span className="text-sm font-bold text-slate-700">
-                  {patient?.gioiTinh === 1
-                    ? "Nam"
-                    : patient?.gioiTinh === 2
-                      ? "Nữ"
-                      : "Khác"}
-                </span>
-              </div>
-              <div className="flex flex-col border-l border-slate-50 pl-4">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                  Ngày đặt khám
-                </span>
-                <span className="text-sm font-bold text-slate-700">
-                  {formatDate(appointment.ngayDat)}
-                </span>
-              </div>
-              <div className="flex flex-col border-l border-slate-50 pl-4">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                  Giờ khám
-                </span>
-                <span className="text-sm font-bold text-slate-700">
-                  {formatTime(appointment.gioBatDau)}
-                </span>
-              </div>
-            </div>
-          </div>
+      {/* ---------------------------------------------------------
+          SECTION 3: THÔNG TIN HÀNH CHÍNH (PATIENT CARD)
+          --------------------------------------------------------- */}
+      <section className="bg-white border-2 border-slate-100 rounded-xl p-6 sm:p-8 flex flex-col md:flex-row gap-8 items-start shadow-sm">
+        {/* Ảnh đại diện quy chuẩn */}
+        <div className="w-24 h-24 rounded-xl bg-slate-50 border-2 border-slate-200 shrink-0 overflow-hidden flex items-center justify-center">
+          {patient?.taiKhoan?.anhDaiDien ? (
+            <img 
+              src={import.meta.env.VITE_API_URL + patient?.taiKhoan?.anhDaiDien} 
+              alt="BN" 
+              className="w-full h-full object-cover"
+              onError={(e) => { e.target.src = "https://ui-avatars.com/api/?name=BN&background=f8fafc&color=94a3b8"; }}
+            />
+          ) : (
+            <span className="material-symbols-outlined text-4xl text-slate-200">person</span>
+          )}
         </div>
 
-        {/* Lý do khám - Hiển thị đặc biệt */}
-        {appointment.lyDoKham && (
-          <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-100 flex gap-4">
-            <span className="material-symbols-outlined text-slate-300 font-light select-none">
-              format_quote
-            </span>
+        {/* Thông tin văn bản */}
+        <div className="flex-1 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                Lý do bệnh nhân đến khám:
-              </p>
-              <p className="text-sm text-slate-700 font-medium leading-relaxed">
-                "{appointment.lyDoKham}"
-              </p>
+              <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{patientCode}</p>
+              <h2 className="text-2xl font-bold text-slate-900 mt-1">{patient?.hoTen || "Bệnh nhân ẩn danh"}</h2>
             </div>
           </div>
-        )}
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="space-y-1">
+              <span className="text-[10px] text-slate-400 font-bold uppercase block tracking-tighter">Ngày sinh / Giới tính</span>
+              <p className="text-sm font-bold text-slate-700">
+                {formatDate(patient?.ngaySinh) || "—"} / {patient?.gioiTinh === 1 ? "Nam" : "Nữ"}
+              </p>
+            </div>
+            <div className="space-y-1 border-l border-slate-100 pl-4">
+              <span className="text-[10px] text-slate-400 font-bold uppercase block tracking-tighter">Số điện thoại</span>
+              <p className="text-sm font-bold text-slate-700">{patient?.soDienThoai || "—"}</p>
+            </div>
+            <div className="space-y-1 border-l border-slate-100 pl-4">
+              <span className="text-[10px] text-slate-400 font-bold uppercase block tracking-tighter">Ngày đăng ký</span>
+              <p className="text-sm font-bold text-slate-700">{formatDate(appointment.ngayDat)}</p>
+            </div>
+            <div className="space-y-1 border-l border-slate-100 pl-4">
+              <span className="text-[10px] text-slate-400 font-bold uppercase block tracking-tighter">Giờ khám dự kiến</span>
+              <p className="text-sm font-bold text-slate-700">{formatTime(appointment.gioBatDau)}</p>
+            </div>
+          </div>
+
+          {/* Lý do bệnh nhân khai báo */}
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-4">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Triệu chứng & Lý do bệnh nhân khai báo:</p>
+            <p className="text-sm text-slate-600 italic font-medium">"{appointment.lyDoKham || "Không có nội dung mô tả"}"</p>
+          </div>
+        </div>
       </section>
 
-      {/* CHẨN ĐOÁN VÀ KẾT QUẢ (Medical Results) */}
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-8 space-y-6">
-        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary font-bold">
-            medical_information
-          </span>
-          Xác định bệnh lý & Chẩn đoán
-        </h3>
-        <div className="grid grid-cols-1 gap-6">
+      {/* ---------------------------------------------------------
+          SECTION 4: FORM CHẨN ĐOÁN (MEDICAL RESULTS)
+          --------------------------------------------------------- */}
+      <section className="bg-white border-2 border-slate-100 rounded-xl p-6 sm:p-8 space-y-6">
+        <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
+          <span className="material-symbols-outlined text-primary">analytics</span>
+          <h3 className="text-lg font-bold text-slate-900 tracking-tight">Kết quả chẩn đoán bệnh lý</h3>
+        </div>
+
+        <div className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-              Chẩn đoán bệnh lý <span className="text-red-500">*</span>
-            </label>
+            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Chẩn đoán của bác sĩ <span className="text-rose-500">*</span></label>
             <textarea
               value={chanDoan}
               onChange={(e) => setChanDoan(e.target.value)}
-              placeholder="Ví dụ: Viêm mũi dị ứng, Sốt xuất huyết độ 1..."
+              placeholder="Nhập tên bệnh lý, tình trạng sức khỏe cụ thể..."
               rows={3}
-              className="w-full rounded-xl border-slate-100 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white text-sm font-bold transition-all"
+              className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm font-bold transition-all bg-slate-50/30"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">
-              Lời dặn & Hướng dẫn sinh hoạt
-            </label>
-            <input
-              type="text"
+            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Lời dặn & Hướng dẫn sử dụng thuốc</label>
+            <textarea
               value={ghiChu}
               onChange={(e) => setGhiChu(e.target.value)}
-              placeholder="Uống nhiều nước, hạn chế đồ cay nóng, tái khám sau 7 ngày..."
-              className="w-full rounded-xl border-slate-100 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white text-sm font-bold transition-all"
+              placeholder="Uống thuốc đúng giờ, hạn chế đồ cay nóng, tái khám sau 7 ngày..."
+              rows={2}
+              className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm font-bold transition-all bg-slate-50/30"
             />
           </div>
         </div>
       </section>
 
-      {/* ĐƠN THUỐC CHI TIẾT (Prescription Table) */}
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-8 space-y-6 transition-all hover:shadow-md">
-        <div className="flex justify-between items-center sm:items-end">
-          <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary font-bold">
-              pill
-            </span>
-            Kê đơn thuốc
-          </h3>
-          <button
-            type="button"
+      {/* ---------------------------------------------------------
+          SECTION 5: KÊ ĐƠN THUỐC (PRESCRIPTION TABLE)
+          --------------------------------------------------------- */}
+      <section className="bg-white border-2 border-slate-100 rounded-xl p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">pill</span>
+            <h3 className="text-lg font-bold text-slate-900 tracking-tight">Đơn thuốc chỉ định</h3>
+          </div>
+          <button 
+            type="button" 
             onClick={handleAddMed}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-primary text-xs font-black uppercase tracking-widest rounded-xl hover:bg-primary hover:text-white transition-all border border-primary/10"
+            className="px-4 py-2 bg-primary/5 text-primary border border-primary/20 rounded-lg text-xs font-bold hover:bg-primary hover:text-white transition-all flex items-center gap-2 uppercase tracking-wide"
           >
-            <span className="material-symbols-outlined text-sm font-bold">
-              add_circle
-            </span>
+            <span className="material-symbols-outlined text-sm font-bold">add</span>
             Thêm loại thuốc
           </button>
         </div>
 
-        {/* Prescription Grid / Table */}
-        <div className="overflow-x-auto border border-slate-50 rounded-2xl">
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
-                <th className="px-6 py-4">Tên loại thuốc</th>
-                <th className="px-4 py-4 w-24">S.Lượng</th>
+        {/* Bảng kê đơn chuyên nghiệp */}
+        <div className="overflow-x-auto border border-slate-200 rounded-lg">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <th className="px-6 py-4">Tên thuốc</th>
+                <th className="px-4 py-4 w-24 text-center">S.Lượng</th>
                 <th className="px-4 py-4 w-32">Đơn giá (đ)</th>
-                <th className="px-4 py-4">Liều dùng (Cách dùng)</th>
-                <th className="px-4 py-4">Ghi chú</th>
-                <th className="px-6 py-4 w-12"></th>
+                <th className="px-4 py-4">Liều lượng & Cách dùng</th>
+                <th className="px-6 py-4 w-12 text-center">Xóa</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100">
               {prescription.map((item, index) => (
-                <tr key={index} className="group hover:bg-slate-50/30">
-                  <td className="px-6 py-4">
+                <tr key={index} className="hover:bg-slate-50/30">
+                  <td className="px-6 py-3">
                     <input
                       type="text"
                       value={item.tenThuoc}
-                      onChange={(e) =>
-                        handleMedChange(index, "tenThuoc", e.target.value)
-                      }
-                      placeholder="Tên thuốc..."
-                      className="w-full rounded-lg border-transparent bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
+                      onChange={(e) => handleMedChange(index, "tenThuoc", e.target.value)}
+                      placeholder="Tên biệt dược..."
+                      className="w-full bg-transparent outline-none text-sm font-bold text-slate-800 placeholder-slate-300"
                     />
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3">
                     <input
                       type="number"
                       value={item.soLuong}
-                      onChange={(e) =>
-                        handleMedChange(index, "soLuong", e.target.value)
-                      }
-                      placeholder="1"
-                      min="1"
-                      className="w-full rounded-lg border-transparent bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800 text-center"
+                      onChange={(e) => handleMedChange(index, "soLuong", e.target.value)}
+                      className="w-full bg-transparent outline-none text-sm font-bold text-slate-800 text-center"
                     />
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3">
                     <input
                       type="number"
                       value={item.donGia}
-                      onChange={(e) =>
-                        handleMedChange(index, "donGia", e.target.value)
-                      }
-                      placeholder="0"
-                      min="0"
-                      className="w-full rounded-lg border-transparent bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-primary font-mono"
+                      onChange={(e) => handleMedChange(index, "donGia", e.target.value)}
+                      className="w-full bg-transparent outline-none text-sm font-bold text-primary font-mono tracking-tighter"
                     />
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3">
                     <input
                       type="text"
                       value={item.lieuDung}
-                      onChange={(e) =>
-                        handleMedChange(index, "lieuDung", e.target.value)
-                      }
-                      placeholder="VD: 2v x 3 lần/ngày"
-                      className="w-full rounded-lg border-transparent bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-medium text-slate-600"
+                      onChange={(e) => handleMedChange(index, "lieuDung", e.target.value)}
+                      placeholder="Sáng 1v, chiều 1v..."
+                      className="w-full bg-transparent outline-none text-xs font-medium text-slate-500"
                     />
                   </td>
-                  <td className="px-4 py-4">
-                    <input
-                      type="text"
-                      value={item.ghiChu}
-                      onChange={(e) =>
-                        handleMedChange(index, "ghiChu", e.target.value)
-                      }
-                      placeholder="Sau ăn..."
-                      className="w-full rounded-lg border-transparent bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-medium text-slate-600"
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMed(index)}
-                      className="text-slate-300 hover:text-rose-500 transition-all"
-                    >
-                      <span className="material-symbols-outlined text-lg">
-                        cancel
-                      </span>
+                  <td className="px-6 py-3 text-center">
+                    <button onClick={() => handleRemoveMed(index)} className="text-slate-300 hover:text-rose-500 transition-colors">
+                      <span className="material-symbols-outlined text-lg">close</span>
                     </button>
                   </td>
                 </tr>
@@ -562,51 +399,37 @@ function DoctorAppointmentDetailPage() {
           </table>
         </div>
 
-        {/* TỔNG KẾT CHI PHÍ (Total Pricing) */}
-        {prescription.some((m) => m.tenThuoc) && (
-          <div className="flex justify-end pt-4 border-t border-slate-50">
-            <div className="flex items-center gap-6">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Thành tiền đơn thuốc:
-              </span>
-              <span className="text-2xl font-black text-primary tracking-tight">
-                {formatPrice(totalMedicine)}
-              </span>
-            </div>
+        {/* Tổng kết đơn thuốc */}
+        <div className="flex justify-end pt-4">
+          <div className="text-right">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tổng hóa đơn thuốc:</span>
+            <p className="text-2xl font-bold text-primary tracking-tighter mt-1">{formatPrice(totalMedicine)}</p>
           </div>
-        )}
+        </div>
       </section>
 
-      {/* NÚT GỬI KẾT QUẢ (Submit Section) */}
-      <div className="pt-6 pb-20">
+      {/* ---------------------------------------------------------
+          SECTION 6: SUBMIT ACTION (LƯU HỒ SƠ)
+          --------------------------------------------------------- */}
+      <div className="pt-8">
         <button
           onClick={handleSubmit}
           disabled={submitting || (appointment.trangThai !== 1 && appointment.trangThai !== 2)}
-          className="w-full flex items-center justify-center gap-3 py-5 bg-emerald-600 text-white text-base font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-200 hover:shadow-emerald-300 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none"
+          className="w-full py-5 bg-emerald-600 text-white rounded-xl text-base font-bold uppercase tracking-widest hover:bg-emerald-700 active:scale-[0.99] transition-all disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-3"
         >
           {submitting ? (
-            <span className="material-symbols-outlined animate-spin font-bold">
-              progress_activity
-            </span>
+            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
           ) : (
-            <span className="material-symbols-outlined font-bold">
-              {appointment.trangThai === 2 ? "edit_note" : "task_alt"}
-            </span>
+            <span className="material-symbols-outlined">{appointment.trangThai === 2 ? "save" : "task_alt"}</span>
           )}
-          {submitting
-            ? "Đang xử lý dữ liệu..."
-            : appointment.trangThai === 2
-              ? "Cập nhật hồ sơ bệnh án"
-              : appointment.trangThai === 1
-                ? "Hoàn tất khám & Gửi kết quả"
-                : "Vui lòng xác nhận lịch trước khi khám"}
+          {submitting ? "Đang xử lý hồ sơ..." : 
+           appointment.trangThai === 2 ? "Lưu các thay đổi bệnh án" : 
+           appointment.trangThai === 1 ? "Hoàn tất khám & Xuất đơn thuốc" : "Yêu cầu bác sĩ xác nhận lịch trước"}
         </button>
-        <div className="flex items-center justify-center gap-2 mt-6 text-slate-400 text-[10px] font-bold uppercase tracking-tighter italic">
-          <span className="material-symbols-outlined text-xs">
-            verified_user
-          </span>
-          Lưu ý: Kết quả sau khi gửi sẽ được bệnh nhân xem trực tiếp trên ứng
-          dụng cá nhân.
+        
+        <div className="flex items-center justify-center gap-2 mt-6 text-slate-400 text-[10px] font-bold uppercase tracking-widest italic">
+          <span className="material-symbols-outlined text-xs">shield_with_heart</span>
+          Thông tin được lưu trữ an toàn và bảo mật theo tiêu chuẩn y tế.
         </div>
       </div>
     </div>

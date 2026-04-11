@@ -1,20 +1,23 @@
 /**
  * ============================================================
- * TRANG: Lịch sử khám bệnh (Bác sĩ)
+ * TRANG: LỊCH SỬ KHÁM BỆNH (BÁC SĨ)
  * Đường dẫn: /doctor/history
  * ============================================================
- *
- * Chức năng chính:
- * 1. Hiển thị danh sách các ca khám đã HOÀN THÀNH (trangThai = 2).
- * 2. Bộ lọc tìm kiếm:
- *    - Theo tên bệnh nhân hoặc Mã BN (BN-XXX).
- *    - Theo khoảng ngày (Từ ngày... Đến ngày...).
- * 3. Xem nhanh chẩn đoán hoặc lý do khám từ danh sách.
- * 4. Truy cập chi tiết hồ sơ bệnh án/đơn thuốc của từng ca.
- *
- * Dữ liệu: Lấy từ API appointmentService.getByBacSi và lọc tại Client.
+ * 
+ * CHỨC NĂNG CHÍNH:
+ * 1. Hiển thị danh sách các ca khám đã HOÀN TẤT (Trạng thái 2).
+ * 2. Bộ lọc thông minh:
+ *    - Tìm kiếm theo tên bệnh nhân hoặc mã BN (BN-XXX).
+ *    - Lọc theo khoảng ngày (Từ ngày... Đến ngày...).
+ * 3. Truy cập chi tiết hồ sơ bệnh án và đơn thuốc cũ.
+ * 
+ * PHONG CÁCH THIẾT KẾ:
+ * - Giao diện "Archives" (Lưu trữ) trang trọng, tinh giản.
+ * - Sử dụng các đường kẻ mảnh (Border-2) thay vì hiệu ứng đổ bóng.
+ * - Tối ưu hiển thị bảng dữ liệu (Table) cho Desktop và dạng Thẻ (Card) cho Mobile.
  * ============================================================
  */
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppointmentsByDoctor } from "../../hooks/queries/useAppointmentQueries";
@@ -22,313 +25,213 @@ import useAuthStore from "../../stores/useAuthStore";
 import { getInitials } from "../../utils/formatters";
 import { formatDate, toDateString } from "../../utils/dateUtils";
 
-
-
 function DoctorHistoryPage() {
   const { user } = useAuthStore();
   const bacSiId = user?.bacSi?.id;
 
-  // TanStack Query: Lấy danh sách lịch hẹn (auto-cache)
+  /**
+   * 1. GỌI DỮ LIỆU TỪ SERVER & LỰC CHỌN TRẠNG THÁI
+   */
   const { data: aptRes, isLoading: loading } = useAppointmentsByDoctor(bacSiId);
   const allAppointments = Array.isArray(aptRes?.data) ? aptRes.data : [];
-  // QUAN TRỌNG: Chỉ lấy những lịch có trạng thái Hoàn thành (2)
-  const appointments = allAppointments.filter((a) => a.trangThai === 2);
+  
+  // Chỉ lấy những ca khám đã hoàn thành (Trạng thái 2)
+  const historyData = allAppointments.filter((a) => a.trangThai === 2);
 
-  // State bộ lọc
-  const [search, setSearch] = useState("");
+  /**
+   * 2. QUẢN LÝ BỘ LỌC (FILTER STATE)
+   */
+  const [keyword, setKeyword] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  /**
-   * Logic Lọc (Filtering): Chạy mỗi khi user nhập search hoặc chọn ngày
-   */
-  const filtered = appointments.filter((record) => {
-    // 1. Lọc theo chuỗi tìm kiếm (Tên hoặc BN-XXX)
-    const q = search.trim().toLowerCase();
-    const patientId = record.benhNhan?.id || record.benhNhanId || record.id;
-    const matchSearch =
-      !q ||
-      (record.benhNhan?.hoTen || "").toLowerCase().includes(q) ||
-      `BN-${String(patientId).padStart(3, "0")}`.toLowerCase().includes(q);
+  // Logic lọc dữ liệu phía Client
+  const filteredRecords = historyData.filter((item) => {
+    // Lọc theo từ khóa (Tên hoặc Mã BN)
+    const q = keyword.trim().toLowerCase();
+    const patientCode = `BN-${String(item.benhNhan?.id || item.benhNhanId).padStart(3, "0")}`.toLowerCase();
+    const matchKeyword = !q || (item.benhNhan?.hoTen || "").toLowerCase().includes(q) || patientCode.includes(q);
 
-    // 2. Lọc theo khoảng ngày
-    const aptDate = toDateString(record.ngayDat);
-    const matchFrom = !dateFrom || aptDate >= dateFrom;
-    const matchTo = !dateTo || aptDate <= dateTo;
+    // Lọc theo ngày đặt lịch
+    const recordDate = toDateString(item.ngayDat);
+    const matchFrom = !dateFrom || recordDate >= dateFrom;
+    const matchTo = !dateTo || recordDate <= dateTo;
 
-    return matchSearch && matchFrom && matchTo;
+    return matchKeyword && matchFrom && matchTo;
   });
 
-
-
   /**
-   * Xử lý URL ảnh đại diện bệnh nhân
+   * 3. HÀM HỖ TRỢ HIỂN THỊ
    */
-  const getPatientAvatar = (anhDaiDien) => {
-    if (!anhDaiDien) return null;
-    if (anhDaiDien.startsWith("http")) return anhDaiDien;
-    return `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${anhDaiDien}`;
+  const getAvatar = (path) => {
+    if (!path) return null;
+    return path.startsWith("http") ? path : `${import.meta.env.VITE_API_URL}${path}`;
   };
 
-  // UI Loading
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
-          progress_activity
-        </span>
+      <div className="flex flex-col items-center justify-center py-24">
+        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Đang truy xuất kho lưu trữ...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-black text-slate-800">
-            Lịch sử khám bệnh
-          </h1>
-          <p className="text-slate-500 text-sm font-medium">
-            Hệ thống lưu trữ hồ sơ bệnh án đã hoàn thành
-          </p>
-        </div>
+    <div className="space-y-8 animate-in fade-in duration-700 pb-20 p-4 sm:p-0">
+      
+      {/* --- TIÊU ĐỀ --- */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Lịch sử điều trị</h1>
+        <p className="text-slate-500 text-sm font-medium mt-1">Danh mục các ca khám và đơn thuốc đã được ghi nhận vào hệ thống.</p>
       </div>
 
-      {/* BỘ LỌC (Filters Section) */}
-      <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
-        <div className="grid md:grid-cols-12 gap-4">
-          {/* Ô tìm kiếm */}
-          <div className="md:col-span-6">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-              Tìm kiếm nhanh
-            </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">
-                search
-              </span>
-              <input
-                type="text"
-                placeholder="Nhập tên bệnh nhân hoặc mã BN (VD: BN-045)..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-transparent rounded-lg focus:ring-2 focus:ring-primary/20 focus:bg-white focus:border-primary text-sm font-medium outline-none transition-all"
+      {/* --- BỘ LỌC TÌM KIẾM --- */}
+      <section className="bg-white border-2 border-slate-100 rounded-3xl p-6 sm:p-8">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+          {/* Tìm kiếm */}
+          <div className="md:col-span-6 space-y-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Tìm bệnh nhân hoặc mã BN</label>
+            <div className="relative group">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors">search</span>
+              <input 
+                type="text" 
+                placeholder="Nhập tên, số điện thoại hoặc mã BN-XXX..."
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-primary/20 outline-none text-sm font-bold transition-all"
               />
             </div>
           </div>
 
-          {/* Lọc ngày: Từ ngày */}
-          <div className="md:col-span-3">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-              Từ ngày
-            </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl font-light">
-                calendar_today
-              </span>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 border-none rounded-lg focus:ring-2 focus:ring-primary/20 text-sm font-medium outline-none"
-              />
-            </div>
+          {/* Ngày bắt đầu */}
+          <div className="md:col-span-3 space-y-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Từ ngày</label>
+            <input 
+              type="date" 
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-primary/20 outline-none text-sm font-bold transition-all text-slate-600 uppercase"
+            />
           </div>
 
-          {/* Lọc ngày: Đến ngày */}
-          <div className="md:col-span-3">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-              Đến ngày
-            </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl font-light">
-                calendar_today
-              </span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 border-none rounded-lg focus:ring-2 focus:ring-primary/20 text-sm font-medium outline-none"
-              />
-            </div>
+          {/* Ngày kết thúc */}
+          <div className="md:col-span-3 space-y-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Đến ngày</label>
+            <input 
+              type="date" 
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-primary/20 outline-none text-sm font-bold transition-all text-slate-600 uppercase"
+            />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* DANH SÁCH KẾT QUẢ (History Content) */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        {/* Mobile: Hiển thị dạng Card */}
-        <div className="block md:hidden divide-y divide-slate-100 italic">
-          {filtered.length > 0 ? (
-            filtered.map((record) => {
-              const patientId =
-                record.benhNhan?.id || record.benhNhanId || record.id;
-              const code = `BN-${String(patientId).padStart(3, "0")}`;
-              return (
-                <div key={record.id} className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {record.benhNhan?.taiKhoan?.anhDaiDien ? (
-                        <img
-                          src={getPatientAvatar(
-                            record.benhNhan.taiKhoan.anhDaiDien,
-                          )}
-                          alt={record.benhNhan?.hoTen}
-                          className="size-10 rounded-full object-cover shrink-0 border-2 border-white shadow-sm"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(record.benhNhan?.hoTen || "BN")}&size=128&background=f1f5f9&color=64748b`;
-                          }}
-                        />
+      {/* --- DANH SÁCH KẾT QUẢ --- */}
+      <section className="bg-white border-2 border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+        
+        {/* MOBILE VIEW: Hiển thị dạng thẻ (Card) */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filteredRecords.length > 0 ? (
+            filteredRecords.map(item => (
+              <div key={item.id} className="p-5 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
+                      {getAvatar(item.benhNhan?.taiKhoan?.anhDaiDien) ? (
+                        <img src={getAvatar(item.benhNhan.taiKhoan.anhDaiDien)} alt="BN" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="size-10 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center text-xs font-black shrink-0 border border-slate-100">
-                          {getInitials(record.benhNhan?.hoTen)}
-                        </div>
+                        <span className="text-xs font-bold text-slate-400">{getInitials(item.benhNhan?.hoTen)}</span>
                       )}
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-800 truncate leading-tight">
-                          {record.benhNhan?.hoTen || "—"}
-                        </p>
-                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">
-                          {code}
-                        </p>
-                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[11px] font-black text-slate-400">
-                        {formatDate(record.ngayDat)}
-                      </p>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">{item.benhNhan?.hoTen}</p>
+                      <p className="text-[10px] font-bold text-primary tracking-widest">BN-{String(item.benhNhan?.id).padStart(3, "0")}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500 line-clamp-2 bg-slate-50 p-2 rounded">
-                    <span className="font-bold text-slate-700">Chẩn đoán:</span>{" "}
-                    {record.donThuoc?.chanDoan || record.lyDoKham || "—"}
-                  </p>
-                  <Link
-                    to={`/doctor/appointments/${record.id}`}
-                    className="flex items-center justify-center gap-2 w-full bg-primary text-white text-xs font-black uppercase py-2.5 rounded-lg hover:bg-primary/90 transition-all border border-primary/20 shadow-lg shadow-primary/10"
-                  >
-                    Xem hồ sơ chi tiết
-                    <span className="material-symbols-outlined text-sm">
-                      arrow_forward
-                    </span>
-                  </Link>
+                  <span className="text-[10px] font-bold text-slate-400">{formatDate(item.ngayDat)}</span>
                 </div>
-              );
-            })
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Chẩn đoán sau cùng:</p>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">{item.donThuoc?.chanDoan || item.lyDoKham || "Chưa có dữ liệu"}</p>
+                </div>
+                <Link to={`/doctor/appointments/${item.id}`} className="flex items-center justify-center gap-2 w-full py-3 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl uppercase tracking-widest hover:bg-primary hover:text-white transition-all">
+                  Chi tiết hồ sơ
+                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                </Link>
+              </div>
+            ))
           ) : (
-            <div className="px-6 py-12 text-center text-slate-400 text-sm font-medium">
-              Không có dữ liệu lịch sử nào phù hợp.
-            </div>
+            <div className="py-20 text-center text-slate-400 font-bold text-sm italic">Không tìm thấy hồ sơ nào...</div>
           )}
         </div>
 
-        {/* Desktop: Hiển thị dạng Bảng (Table) */}
-        <div className="overflow-x-auto hidden md:block">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="text-left px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                  Ngày khám
-                </th>
-                <th className="text-left px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                  Mã Bệnh Nhân
-                </th>
-                <th className="text-left px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                  Họ tên Bệnh Nhân
-                </th>
-                <th className="text-left px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                  Chẩn đoán / Lý do
-                </th>
-                <th className="text-center px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                  Thao tác
-                </th>
+        {/* DESKTOP VIEW: Bảng chuẩn Clinical */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b-2 border-slate-100">
+              <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <th className="px-8 py-5">Ngày công tác</th>
+                <th className="px-6 py-5">Bệnh nhân (Mã)</th>
+                <th className="px-6 py-5">Kết quả chẩn đoán lý thuyết</th>
+                <th className="px-8 py-5 text-center">Tác vụ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((record) => {
-                const patientId =
-                  record.benhNhan?.id || record.benhNhanId || record.id;
-                const code = `BN-${String(patientId).padStart(3, "0")}`;
-                return (
-                  <tr
-                    key={record.id}
-                    className="hover:bg-slate-50/30 transition-colors group"
-                  >
-                    <td className="px-6 py-4 text-sm font-bold text-slate-600 italic group-hover:text-primary transition-colors">
-                      {formatDate(record.ngayDat)}
+            <tbody className="divide-y divide-slate-100 transition-all">
+              {filteredRecords.length > 0 ? (
+                filteredRecords.map(item => (
+                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-8 py-5">
+                      <p className="text-sm font-bold text-slate-700">{formatDate(item.ngayDat)}</p>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-black text-primary/80 bg-primary/5 px-2 py-1 rounded border border-primary/10 tracking-widest uppercase">
-                        {code}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        {record.benhNhan?.taiKhoan?.anhDaiDien ? (
-                          <img
-                            src={getPatientAvatar(
-                              record.benhNhan.taiKhoan.anhDaiDien,
+                         <div className="size-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
+                            {getAvatar(item.benhNhan?.taiKhoan?.anhDaiDien) ? (
+                              <img src={getAvatar(item.benhNhan.taiKhoan.anhDaiDien)} alt="BN" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[10px] font-bold text-slate-400">{getInitials(item.benhNhan?.hoTen)}</span>
                             )}
-                            alt={record.benhNhan?.hoTen}
-                            className="size-9 rounded-full object-cover shrink-0 border border-slate-100"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(record.benhNhan?.hoTen || "BN")}&size=128&background=f1f5f9&color=64748b`;
-                            }}
-                          />
-                        ) : (
-                          <div className="size-9 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center text-xs font-black shrink-0 border border-slate-100">
-                            {getInitials(record.benhNhan?.hoTen)}
                           </div>
-                        )}
-                        <span className="text-sm font-bold text-slate-800">
-                          {record.benhNhan?.hoTen || "—"}
-                        </span>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{item.benhNhan?.hoTen}</p>
+                            <p className="text-[10px] font-bold text-primary tracking-widest uppercase">BN-{String(item.benhNhan?.id).padStart(3, "0")}</p>
+                          </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate italic">
-                      {record.donThuoc?.chanDoan || record.lyDoKham || "—"}
+                    <td className="px-6 py-5">
+                      <p className="text-xs text-slate-600 font-medium italic line-clamp-1 max-w-xs ring-1 ring-slate-100 bg-slate-50 py-1 px-3 rounded-md">
+                        {item.donThuoc?.chanDoan || item.lyDoKham || "—"}
+                      </p>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <Link
-                        to={`/doctor/appointments/${record.id}`}
-                        className="inline-flex items-center gap-2 bg-white text-primary text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-lg border border-primary/20 hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm"
+                    <td className="px-8 py-5 text-center">
+                      <Link 
+                        to={`/doctor/appointments/${item.id}`} 
+                        className="px-4 py-2 border-2 border-slate-100 text-[10px] font-bold text-slate-500 uppercase rounded-xl hover:border-primary/20 hover:text-primary hover:bg-primary/5 transition-all inline-flex items-center gap-2 tracking-widest"
                       >
-                        Hồ sơ bệnh án
-                        <span className="material-symbols-outlined text-sm font-bold">
-                          description
-                        </span>
+                        Hồ sơ án
+                        <span className="material-symbols-outlined text-sm">visibility</span>
                       </Link>
                     </td>
                   </tr>
-                );
-              })}
-
-              {/* Thông báo nếu không có dữ liệu sau khi lọc */}
-              {filtered.length === 0 && (
+                ))
+              ) : (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-20 text-center text-slate-400 font-bold italic"
-                  >
-                    Không tìm thấy lịch sử khám phù hợp với tiêu chí lọc.
-                  </td>
+                  <td colSpan={4} className="py-32 text-center text-slate-300 font-bold italic text-sm">Không tìm thấy kết quả phù hợp với bộ lọc</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
 
-        {/* PHẦN FOOTER TỔNG KẾT */}
-        <div className="bg-slate-50/50 border-t border-slate-100 px-6 py-4 flex items-center justify-between">
-          <span className="text-xs font-black text-slate-400 uppercase tracking-tighter">
-            Trình quản lý lịch sử: {filtered.length} bản ghi hoàn thành
-          </span>
-          <span className="material-symbols-outlined text-slate-300">
-            history_edu
-          </span>
+        {/* Footer ghi nhận */}
+        <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-t border-slate-100">
+          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter italic">Lưu trữ hệ thống @HealthCare</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hiển thị {filteredRecords.length} kết quả</p>
         </div>
-      </div>
+      </section>
+
     </div>
   );
 }

@@ -1,21 +1,20 @@
 /**
  * =============================================================================
- * TRANG: QUẢN LÝ LỊCH LÀM VIỆC & CA TRỰC (DÀNH CHO BÁC SĨ)
+ * TRANG: QUẢN LÝ LỊCH TRÌNH CÔNG TÁC (BÁC SĨ)
  * Đường dẫn: /doctor/schedule
  * =============================================================================
- *
+ * 
  * CHỨC NĂNG CHÍNH:
- * 1. Lịch mini (Mini Calendar): Giúp bác sĩ nhìn tổng quan cả tháng, ngày nào có ca trực
- *    thì sẽ có một dấu chấm xanh đánh dấu.
- * 2. Bộ lọc thông minh:
- *    - Khi bấm vào một ngày bất kỳ, danh sách bên phải sẽ chỉ hiện ca của ngày đó.
- *    - Bấm vào ngày đó lần nữa để bỏ lọc (xem lại toàn bộ ca trong tháng).
- * 3. Quản lý ca trực: Cho phép xem chi tiết giờ giấc, số bệnh nhân và xóa ca trực.
- * 4. Thống kê nhanh: Tổng số ca đã đăng ký và số ca sắp tới.
- *
- * PHÂN CHIA BỐ CỤC (UI Structure):
- * - Cột trái (1/3): Chứa bộ lịch nhỏ để chọn ngày.
- * - Cột phải (2/3): Chứa danh sách chi tiết các ca trực.
+ * 1. Lịch mini (Mini Calendar): Hiển thị tổng quan các ngày trong tháng.
+ *    - Các ngày có dấu chấm: Đã đăng ký ca trực.
+ *    - Chọn ngày: Lọc danh sách ca trực bên phải theo ngày đó.
+ * 2. Danh sách ca trực: Hiển thị chi tiết giờ giấc, số lượng bệnh nhân đã đặt.
+ * 3. Quản lý tác vụ: Cho phép bác sĩ đăng ký thêm ca mới hoặc hủy ca chưa diễn ra.
+ * 
+ * PHONG CÁCH THIẾT KẾ:
+ * - Ưu tiên sự gọn gàng, sử dụng các đường kẻ mảnh (Border-2) thay vì shadow.
+ * - Các thẻ thông tin mang phong cách "Hồ sơ y tế" sạch sẽ, chuyên nghiệp.
+ * - Chú thích tiếng Việt hỗ trợ việc đọc hiểu logic và giải trình đồ án.
  * =============================================================================
  */
 
@@ -26,485 +25,279 @@ import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
 import { formatTime, formatDate, toDateString, dayjs } from "../../utils/dateUtils";
 
-// Mảng định nghĩa tên các thứ trong tuần để hiển thị lên đầu bộ lịch
+// Tên các thứ trong tuần rút gọn
 const DAYS_OF_WEEK = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-
-
 /**
- * HÀM HỖ TRỢ: Tính xem một tháng có bao nhiêu ngày
+ * HÀM HỖ TRỢ: Tính toán số ngày trong tháng và thứ của ngày đầu tiên.
  */
-function getDaysInMonth(year, month) {
-  return dayjs().year(year).month(month).daysInMonth();
-}
-
-/**
- * HÀM HỖ TRỢ: Tìm xem ngày đầu tiên của tháng rơi vào thứ mấy
- */
-function getFirstDayOfMonth(year, month) {
-  return dayjs().year(year).month(month).startOf("month").day();
+function getMonthData(year, month) {
+  const d = dayjs().year(year).month(month);
+  return {
+    daysInMonth: d.daysInMonth(),
+    firstDayIdx: d.startOf("month").day(), // 0 = CN, 1 = T2...
+  };
 }
 
 function DoctorSchedulePage() {
   const { user } = useAuthStore();
   const bacSiId = user?.bacSi?.id;
 
+  /**
+   * 1. QUẢN LÝ TRẠNG THÁI LỊCH (CALENDAR STATE)
+   */
   const now = dayjs().tz("Asia/Ho_Chi_Minh");
-  const [selectedDate, setSelectedDate] = useState(now.date());
-  const [currentMonth, setCurrentMonth] = useState(now.month());
-  const [currentYear, setCurrentYear] = useState(now.year());
+  const [selectedDay, setSelectedDay] = useState(now.date());
+  const [month, setMonth] = useState(now.month());
+  const [year, setYear] = useState(now.year());
 
-  // TanStack Query: Lấy lịch làm việc theo bác sĩ (auto-cache)
+  /**
+   * 2. GỌI DỮ LIỆU TỪ SERVER (API)
+   */
   const { data: schRes, isLoading: loading } = useLichLamViec({ bacSiId });
   const schedules = Array.isArray(schRes?.data) ? schRes.data : [];
-
-  // TanStack Query: Mutation xóa ca trực (auto-invalidate)
   const deleteMutation = useDeleteLichLamViec();
 
   /**
-   * LOGIC QUAN TRỌNG: Tìm các ngày có ca trực trong tháng hiện tại
-   * Mục đích: Để hiển thị các "dấu chấm xanh" báo hiệu ngày có lịch trên Calendar.
-   */
-  const activeDays = schedules
-    .filter((s) => {
-      const d = dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh");
-      return d.month() === currentMonth && d.year() === currentYear;
-    })
-    .map((s) => dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh").date());
-
-  /**
-   * LOGIC QUAN TRỌNG: Phân loại trạng thái của ca trực (Hoàn thành / Hôm nay / Sắp tới)
+   * 3. LOGIC XÁC ĐỊNH TRẠNG THÁI CA TRỰC (Hôm nay, Sắp tới, Hoàn thành)
    */
   const todayStr = toDateString(dayjs());
+  
+  const getShiftStatus = (item) => {
+    const dStr = toDateString(item.ngayLamViec);
+    if (dStr < todayStr) return "completed";
+    if (dStr === todayStr) return "active";
+    return "upcoming";
+  };
 
-  const getShiftStatus = (schedule) => {
-    const shiftDate = toDateString(schedule.ngayLamViec);
-    if (shiftDate < todayStr) return "completed"; // Ngày trong quá khứ
-    if (shiftDate === todayStr) return "active"; // Chính là ngày hôm nay
-    return "upcoming"; // Các ngày trong tương lai
+  // Cấu hình hiển thị nhãn (Badge) theo trạng thái
+  const STATUS_CONFIG = {
+    active: { label: "Hôm nay", style: "border-blue-200 text-blue-700 bg-blue-50" },
+    upcoming: { label: "Sắp tới", style: "border-amber-200 text-amber-700 bg-amber-50" },
+    completed: { label: "Đã qua", style: "border-slate-200 text-slate-500 bg-slate-50" },
   };
 
   /**
-   * BẢN ĐỒ MÀU SẮC: Quy định nhãn (Tag) cho từng trạng thái ca trực
+   * 4. LOGIC XỬ LÝ BỘ LỊCH MINI
    */
-  const STATUS_MAP = {
-    active: {
-      label: "Hôm nay",
-      className: "bg-blue-100 text-blue-800 border border-blue-200",
-    },
-    upcoming: {
-      label: "Sắp tới",
-      className: "bg-amber-100 text-amber-800 border border-amber-200",
-    },
-    completed: {
-      label: "Hoàn thành",
-      className: "bg-emerald-100 text-emerald-800 border border-emerald-200",
-    },
+  const { daysInMonth, firstDayIdx } = getMonthData(year, month);
+  
+  // Chuyển tháng
+  const handleMonthChange = (offset) => {
+    let newMonth = month + offset;
+    let newYear = year;
+    if (newMonth < 0) { newMonth = 11; newYear--; }
+    else if (newMonth > 11) { newMonth = 0; newYear++; }
+    setMonth(newMonth);
+    setYear(newYear);
+    setSelectedDay(null); // Reset ngày chọn khi đổi tháng
   };
 
-  // Các biến phụ trợ để vẽ bộ lịch
-  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
-  const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
-
-  // CHỨC NĂNG: Chuyển sang tháng trước
-  const prevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear((y) => y - 1);
-    } else {
-      setCurrentMonth((m) => m - 1);
-    }
-    setSelectedDate(null); // Khi chuyển tháng thì bỏ chọn ngày cũ
-  };
-
-  // CHỨC NĂNG: Chuyển sang tháng kế tiếp
-  const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear((y) => y + 1);
-    } else {
-      setCurrentMonth((m) => m + 1);
-    }
-    setSelectedDate(null); // Khi chuyển tháng thì bỏ chọn ngày cũ
-  };
-
-  // Tên tháng hiển thị (Ví dụ: "Tháng 4 năm 2024")
-  const monthName = `Tháng ${currentMonth + 1} năm ${currentYear}`;
+  // Tìm các ngày có ca trực trong tháng đang xem để đánh dấu (dot)
+  const daysWithShift = schedules
+    .filter(s => {
+      const d = dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh");
+      return d.month() === month && d.year() === year;
+    })
+    .map(s => dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh").date());
 
   /**
-   * CHỨC NĂNG: Xóa một ca làm việc (Chỉ dành cho ca chưa diễn ra)
+   * 5. LOGIC LỌC DANH SÁCH CHI TIẾT
    */
-  const handleDelete = (shiftId) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa ca làm việc này?")) return;
-    deleteMutation.mutate(shiftId, {
-      onSuccess: () => toast.success("Đã xóa ca làm việc"),
-      onError: (err) => toast.error(err.message || "Lỗi xóa ca làm việc"),
-    });
-  };
-
-  /**
-   * LOGIC XẾP LỊCH: Tạo mảng các ô cho Calendar (bao gồm cả ô trống ở đầu tháng)
-   */
-  const calendarCells = [];
-  // Thêm các ô trống (null) vào đầu tháng để ngày mùng 1 rơi đúng thứ trong tuần
-  for (let i = 0; i < firstDay; i++) calendarCells.push(null);
-  // Thêm các con số ngày từ 1 đến hết tháng
-  for (let d = 1; d <= daysInMonth; d++) calendarCells.push(d);
-
-  // THỐNG KÊ NHANH
-  const totalShifts = schedules.length;
-  const upcomingShifts = schedules.filter(
-    (s) => getShiftStatus(s) === "upcoming",
-  ).length;
-
-  /**
-   * BỘ LỌC CHÍNH: Quyết định xem ca trực nào sẽ được hiển thị ở bảng bên phải
-   */
-  const filteredSchedules = schedules.filter((s) => {
+  const filteredList = schedules.filter(s => {
     const d = dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh");
-    // 1. Chỉ lấy ca thuộc Tháng/Năm đang xem trên lịch
-    if (d.month() !== currentMonth || d.year() !== currentYear)
-      return false;
-    // 2. Nếu bác sĩ có chọn một ngày cụ thể thì chỉ lấy ca của ngày đó
-    if (selectedDate !== null && d.date() !== selectedDate) return false;
+    if (d.month() !== month || d.year() !== year) return false;
+    if (selectedDay && d.date() !== selectedDay) return false;
     return true;
   });
 
-  // HIỂN THỊ KHI ĐANG TẢI DỮ LIỆU
+  // Thống kê nhanh số lượng
+  const totalCount = schedules.length;
+  const upcomingCount = schedules.filter(s => getShiftStatus(s) === "upcoming").length;
+
+  /**
+   * 6. HÀM XỬ LÝ HÀNH ĐỘNG
+   */
+  const handleDelete = (id) => {
+    if (!window.confirm("Bác sĩ có chắc chắn muốn hủy ca trực đã đăng ký này không?")) return;
+    deleteMutation.mutate(id, {
+      onSuccess: () => toast.success("Đã xóa ca trực thành công"),
+      onError: (err) => toast.error(err.message || "Không thể xóa ca trực"),
+    });
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
-          progress_activity
-        </span>
+      <div className="flex flex-col items-center justify-center py-24">
+        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Đang đồng bộ lịch trình...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* PHẦN ĐẦU TRANG: Tiêu đề và nút thêm ca trực */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      {/* --- HEADER --- */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">
-            Lịch trình làm việc
-          </h1>
-          <p className="text-slate-500 text-sm font-medium">
-            Theo dõi và quản lý các ca trực tại phòng khám
-          </p>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Quản lý lịch công tác</h1>
+          <p className="text-slate-500 text-sm font-medium mt-1">Cập nhật và theo dõi các khung giờ khám bệnh của bác sĩ</p>
         </div>
         <Link
           to="/doctor/schedule/add"
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all text-sm uppercase tracking-wide"
+          className="px-6 py-3 bg-primary text-white text-xs font-bold rounded-xl hover:opacity-90 transition-all flex items-center gap-2 uppercase tracking-widest"
         >
-          <span className="material-symbols-outlined text-xl">add_circle</span>
-          Đăng ký ca trực
+          <span className="material-symbols-outlined text-lg">add_circle</span>
+          Đăng ký ca trực mới
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* CỘT TRÁI: BỘ LỊCH NHỎ (Calendar) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* --- CỘT TRÁI: BỘ LỊCH MINI (CALENDAR) --- */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sticky top-6">
-            {/* Điều hướng Tháng/Năm */}
+          <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 sticky top-8">
             <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={prevMonth}
-                className="p-2 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all text-slate-400 hover:text-primary"
-              >
-                <span className="material-symbols-outlined text-xl">
-                  chevron_left
-                </span>
-              </button>
-              <h3 className="font-black text-slate-800 capitalize tracking-tight">
-                {monthName}
-              </h3>
-              <button
-                onClick={nextMonth}
-                className="p-2 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all text-slate-400 hover:text-primary"
-              >
-                <span className="material-symbols-outlined text-xl">
-                  chevron_right
-                </span>
-              </button>
+              <button onClick={() => handleMonthChange(-1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400"><span className="material-symbols-outlined">chevron_left</span></button>
+              <h3 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Tháng {month + 1}, {year}</h3>
+              <button onClick={() => handleMonthChange(1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400"><span className="material-symbols-outlined">chevron_right</span></button>
             </div>
 
-            {/* Tên các Thứ */}
+            {/* Header Thứ */}
             <div className="grid grid-cols-7 gap-1 mb-2">
-              {DAYS_OF_WEEK.map((day) => (
-                <div
+              {DAYS_OF_WEEK.map(d => (
+                <div key={d} className="text-center text-[10px] font-bold text-slate-300 py-1">{d}</div>
+              ))}
+            </div>
+
+            {/* Lưới Ngày */}
+            <div className="grid grid-cols-7 gap-1">
+              {Array(firstDayIdx).fill(null).map((_, i) => <div key={`empty-${i}`} />)}
+              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
+                <button
                   key={day}
-                  className="text-center text-[10px] font-black text-slate-300 py-1 uppercase"
+                  onClick={() => setSelectedDay(day === selectedDay ? null : day)}
+                  className={`aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-bold transition-all relative ${
+                    day === selectedDay 
+                      ? "bg-primary text-white border-2 border-primary" 
+                      : "text-slate-600 hover:bg-slate-50 border-2 border-transparent"
+                  }`}
                 >
                   {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Lưới các Ngày */}
-            <div className="grid grid-cols-7 gap-1">
-              {calendarCells.map((day, idx) => (
-                <div
-                  key={idx}
-                  className="aspect-square flex items-center justify-center"
-                >
-                  {day ? (
-                    <button
-                      onClick={() =>
-                        setSelectedDate(day === selectedDate ? null : day)
-                      }
-                      className={`w-10 h-10 rounded-xl text-sm font-bold transition-all relative flex items-center justify-center ${
-                        day === selectedDate
-                          ? "bg-primary text-white shadow-lg shadow-primary/25 scale-110"
-                          : "text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-100"
-                      }`}
-                    >
-                      {day}
-                      {/* Dấu chấm báo hiệu: Ngày này CÓ ca trực */}
-                      {activeDays.includes(day) && day !== selectedDate && (
-                        <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-primary" />
-                      )}
-                    </button>
-                  ) : (
-                    <span className="w-10 h-10" />
+                  {daysWithShift.includes(day) && (
+                    <div className={`w-1 h-1 rounded-full absolute bottom-1.5 ${day === selectedDay ? "bg-white" : "bg-primary"}`} />
                   )}
-                </div>
+                </button>
               ))}
             </div>
 
-            {/* Chú giải về trạng thái lọc */}
-            <div className="mt-6 pt-6 border-t border-slate-50">
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-8 bg-primary rounded-full" />
-                <div>
-                  <p className="text-xs font-black text-slate-800 uppercase tracking-tighter">
-                    {selectedDate
-                      ? `Đang xem: Ngày ${selectedDate}`
-                      : `Xem tất cả tháng ${currentMonth + 1}`}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                    {selectedDate
-                      ? "Bấm vào ngày lần nữa để bỏ chọn lọc."
-                      : "Chọn một ngày để xem danh sách ca chi tiết."}
-                  </p>
-                </div>
+            {/* Legend / Guide */}
+            <div className="mt-6 pt-6 border-t border-slate-100 flex items-center gap-3">
+              <div className="w-1.5 h-8 bg-primary/20 rounded-full" />
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-tight leading-normal">
+                {selectedDay ? `Ngày được chọn: ${selectedDay}` : `Đang xem toàn tháng ${month + 1}`}
+                <br />
+                <span className="text-slate-300 font-medium normal-case">Bấm vào ngày để lọc danh sách ca trực.</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* CỘT PHẢI: DANH SÁCH CHI TIẾT */}
+        {/* --- CỘT PHẢI: CHI TIẾT CA TRỰC --- */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Container danh sách (có giới hạn chiều cao và thanh cuộn) */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col h-[520px] overflow-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-5 border-b border-slate-50 shrink-0">
-              <h3 className="font-black text-slate-800 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">
-                  event_list
-                </span>
-                {selectedDate
-                  ? `Ca trực ngày ${selectedDate}/${currentMonth + 1}`
-                  : "Toàn bộ ca trực trong tháng"}
+          <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden min-h-[400px] flex flex-col shadow-sm">
+            <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">event_note</span>
+                {selectedDay ? `Bản kê ca trực ngày ${selectedDay}` : `Toàn bộ ca trực tháng ${month + 1}`}
               </h3>
-              {selectedDate !== null && (
-                <button
-                  onClick={() => setSelectedDate(null)}
-                  className="text-xs font-black text-primary hover:underline uppercase tracking-wider"
-                >
-                  Xem toàn bộ tháng
-                </button>
+              {selectedDay && (
+                <button onClick={() => setSelectedDay(null)} className="text-[10px] font-bold text-primary hover:underline uppercase">Hiện tất cả</button>
               )}
             </div>
 
-            <div className="overflow-y-auto flex-1 custom-scrollbar">
-              {filteredSchedules.length === 0 ? (
-                <div className="px-5 flex flex-col items-center justify-center h-full min-h-[300px]">
-                  <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                    <span className="material-symbols-outlined text-4xl text-slate-200">
-                      calendar_today
-                    </span>
-                  </div>
-                  <p className="text-slate-400 font-bold italic text-sm">
-                    Không tìm thấy ca trực nào phù hợp.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* GIẢI PHÁP MOBILE: Hiển thị dạng Card khi màn hình nhỏ */}
-                  <div className="block md:hidden divide-y divide-slate-50">
-                    {filteredSchedules.map((shift) => {
-                      const status = getShiftStatus(shift);
-                      const statusInfo = STATUS_MAP[status];
-                      const shiftDate = formatDate(shift.ngayLamViec);
+            <div className="flex-1 overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="border-b border-slate-100 bg-white sticky top-0">
+                  <tr className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                    <th className="px-6 py-4">Thời gian</th>
+                    <th className="px-6 py-4">Số lượng đăng ký</th>
+                    <th className="px-6 py-4">Trạng thái</th>
+                    <th className="px-6 py-4 text-center">Quản lý</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredList.length > 0 ? (
+                    filteredList.map(item => {
+                      const status = getShiftStatus(item);
+                      const config = STATUS_CONFIG[status];
                       return (
-                        <div key={shift.id} className="p-4 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-slate-800">
-                              {shiftDate}
-                            </span>
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${statusInfo.className}`}
-                            >
-                              {statusInfo.label}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
-                            <span className="material-symbols-outlined text-primary text-lg font-light">
-                              schedule
-                            </span>
-                            {formatTime(shift.khungGio?.gioBatDau)} —{" "}
-                            {formatTime(shift.khungGio?.gioKetThuc)}
-                          </div>
-                          <div className="flex items-center justify-between pt-1">
-                            <p className="text-[11px] text-slate-400 font-medium font-mono">
-                              BN: {shift.soBenhNhanHienTai} /{" "}
-                              {shift.soBenhNhanToiDa} (Slot)
+                        <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                          <td className="px-6 py-5">
+                            <p className="text-sm font-bold text-slate-800">{formatDate(item.ngayLamViec)}</p>
+                            <p className="text-xs text-primary font-bold mt-1">
+                              {formatTime(item.khungGio?.gioBatDau)} - {formatTime(item.khungGio?.gioKetThuc)}
                             </p>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex flex-col gap-1.5 w-32">
+                              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                <div className="h-full bg-primary" style={{ width: `${(item.soBenhNhanHienTai / item.soBenhNhanToiDa) * 100}%` }} />
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-400">
+                                {item.soBenhNhanHienTai} / {item.soBenhNhanToiDa} Bệnh nhân
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase ${config.style}`}>
+                              {config.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-5 text-center">
                             {status !== "completed" ? (
-                              <button
-                                onClick={() => handleDelete(shift.id)}
-                                className="px-3 py-1 rounded-lg text-[10px] font-black text-rose-500 bg-rose-50 uppercase border border-rose-100"
+                              <button 
+                                onClick={() => handleDelete(item.id)}
+                                className="size-8 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50 transition-all flex items-center justify-center mx-auto"
                               >
-                                Xóa
+                                <span className="material-symbols-outlined text-lg">delete</span>
                               </button>
                             ) : (
-                              <span className="text-[10px] text-emerald-500 font-bold italic">
-                                Đã xong
-                              </span>
+                              <span className="material-symbols-outlined text-emerald-400">verified_user</span>
                             )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* GIẢI PHÁP DESKTOP: Hiển thị dạng Bảng khi màn hình lớn */}
-                  <div className="hidden md:block">
-                    <table className="w-full relative">
-                      <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm border-b border-slate-100">
-                        <tr>
-                          <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Ngày trực
-                          </th>
-                          <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Khung giờ
-                          </th>
-                          <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Số lượng BN
-                          </th>
-                          <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Trạng thái
-                          </th>
-                          <th className="text-center py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Thao tác
-                          </th>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50 italic md:not-italic">
-                        {filteredSchedules.map((shift) => {
-                          const status = getShiftStatus(shift);
-                          const statusInfo = STATUS_MAP[status];
-                          const shiftDate = formatDate(shift.ngayLamViec);
-                          return (
-                            <tr
-                              key={shift.id}
-                              className="hover:bg-slate-50/50 transition-colors group"
-                            >
-                              <td className="py-4 px-6 text-sm font-bold text-slate-800">
-                                {shiftDate}
-                              </td>
-                              <td className="py-4 px-6 text-sm text-slate-600 font-medium">
-                                <span className="text-primary font-bold">
-                                  {formatTime(shift.khungGio?.gioBatDau)}
-                                </span>{" "}
-                                - {formatTime(shift.khungGio?.gioKetThuc)}
-                              </td>
-                              <td className="py-4 px-6">
-                                <div className="flex flex-col">
-                                  {/* Thanh tiến độ số lượng bệnh nhân */}
-                                  <div className="flex items-center gap-1.5 h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden mt-1 mb-1">
-                                    <div
-                                      className="h-full bg-primary"
-                                      style={{
-                                        width: `${(shift.soBenhNhanHienTai / shift.soBenhNhanToiDa) * 100}%`,
-                                      }}
-                                    ></div>
-                                  </div>
-                                  <span className="text-[10px] font-black text-slate-400">
-                                    {shift.soBenhNhanHienTai} /{" "}
-                                    {shift.soBenhNhanToiDa} BN
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="py-4 px-6">
-                                <span
-                                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${statusInfo.className}`}
-                                >
-                                  {statusInfo.label}
-                                </span>
-                              </td>
-                              <td className="py-4 px-6 text-center">
-                                {status !== "completed" ? (
-                                  <button
-                                    onClick={() => handleDelete(shift.id)}
-                                    className="p-2 rounded-lg hover:bg-rose-50 text-slate-300 hover:text-rose-500 transition-all"
-                                    title="Hủy ca trực"
-                                  >
-                                    <span className="material-symbols-outlined text-xl">
-                                      delete_forever
-                                    </span>
-                                  </button>
-                                ) : (
-                                  <span className="material-symbols-outlined text-emerald-300 text-lg">
-                                    verified
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="py-32 text-center text-slate-400 font-bold italic text-sm">Trống: Không tìm thấy ca trực phù hợp</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* CÁC THÔNG SỐ NHANH Ở DƯỚI CÙNG */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-4 transition-all hover:scale-[1.02]">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center border border-emerald-100">
-                <span className="material-symbols-outlined text-2xl text-emerald-500">
-                  assignment_turned_in
-                </span>
+          {/* --- KPI STATS --- */}
+          <div className="grid grid-cols-2 gap-4 pb-10">
+            <div className="bg-white border-2 border-slate-100 rounded-2xl p-5 flex items-center gap-4">
+              <div className="size-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                <span className="material-symbols-outlined">assignment_turned_in</span>
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Tổng ca đăng ký
-                </p>
-                <p className="text-2xl font-black text-slate-800">
-                  {totalShifts}{" "}
-                  <span className="text-xs text-slate-400 font-normal">
-                    lượt
-                  </span>
-                </p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tổng ca đăng ký</p>
+                <p className="text-xl font-bold text-slate-800">{totalCount}</p>
               </div>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-4 transition-all hover:scale-[1.02]">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
-                <span className="material-symbols-outlined text-2xl text-blue-500">
-                  pending_actions
-                </span>
+            <div className="bg-white border-2 border-slate-100 rounded-2xl p-5 flex items-center gap-4">
+              <div className="size-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                <span className="material-symbols-outlined">pending_actions</span>
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Ca chưa diễn ra
-                </p>
-                <p className="text-2xl font-black text-slate-800">
-                  {upcomingShifts}{" "}
-                  <span className="text-xs text-slate-400 font-normal">ca</span>
-                </p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ca trực sắp tới</p>
+                <p className="text-xl font-bold text-slate-800">{upcomingCount}</p>
               </div>
             </div>
           </div>

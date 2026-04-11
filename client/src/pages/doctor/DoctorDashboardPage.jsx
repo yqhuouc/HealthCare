@@ -5,118 +5,145 @@
  * ============================================================
  *
  * Chức năng chính:
- * 1. Hiển thị các chỉ số thống kê nhanh (Lịch hôm nay, Hoàn thành, Chờ xác nhận, Tổng BN).
- * 2. Liệt kê danh sách bệnh nhân có lịch hẹn trong ngày hôm nay.
- * 3. Thao tác nhanh: Xác nhận hoặc Hoàn thành lịch hẹn trực tiếp từ bảng.
- * 4. Đồng bộ dữ liệu realtime khi bác sĩ cập nhật trạng thái.
+ * 1. Hiển thị các con số thống kê nhanh trong ngày (Lịch hẹn, hoàn thành, tổng BN).
+ * 2. Liệt kê danh sách bệnh nhân cần khám trong hôm nay.
+ * 3. Cho phép bác sĩ nhanh chóng xác nhận hoặc hoàn thành lịch hẹn.
  *
- * Biến môi trường: VITE_API_URL dùng để gọi API backend.
- * State quản lý: appointments (danh sách), loading (trạng thái tải).
+ * Đặc điểm giao diện:
+ * - Phong cách thiết kế: "Clinical Style" sạch sẽ, tối giản.
+ * - Sử dụng Border thay vì Shadow để giao diện trông chuyên nghiệp, hàn lâm hơn.
+ * - Hỗ trợ hiển thị tốt trên cả Máy tính (Table) và Điện thoại (Cards).
  * ============================================================
  */
 import { Link } from "react-router-dom";
-import { useAppointmentsByDoctor, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
+import {
+  useAppointmentsByDoctor,
+  useUpdateAppointmentStatus,
+} from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
 import { getInitials } from "../../utils/formatters";
 import { formatTime, toDateString, dayjs } from "../../utils/dateUtils";
 
 /**
- * Cấu hình hiển thị cho các trạng thái lịch hẹn
- * Dùng để render Badge (nhãn) với màu sắc tương ứng.
+ * Cấu hình hiển thị cho các trạng thái lịch hẹn.
+ * Màu sắc được chọn theo tông Pastel nhẹ nhàng, chuyên nghiệp.
  */
 const STATUS_CONFIG = {
-  0: { label: "Chờ xác nhận", color: "bg-amber-100 text-amber-600" },
-  1: { label: "Đã xác nhận", color: "bg-blue-100 text-blue-600" },
-  2: { label: "Hoàn thành", color: "bg-emerald-100 text-emerald-600" },
-  3: { label: "Đã hủy", color: "bg-rose-100 text-rose-600" },
+  0: {
+    label: "Chờ xác nhận",
+    color: "border-amber-200 text-amber-700 bg-amber-50",
+  },
+  1: {
+    label: "Đã xác nhận",
+    color: "border-blue-200 text-blue-700 bg-blue-50",
+  },
+  2: {
+    label: "Hoàn thành",
+    color: "border-emerald-200 text-emerald-700 bg-emerald-50",
+  },
+  3: { label: "Đã hủy", color: "border-rose-200 text-rose-700 bg-rose-50" },
 };
 
 function DoctorDashboardPage() {
+  // Lấy thông tin bác sĩ đang đăng nhập từ Store (Zustand)
   const { user } = useAuthStore();
   const bacSiId = user?.bacSi?.id;
 
-  // TanStack Query: Lấy danh sách lịch hẹn theo bác sĩ (auto-cache)
+  /**
+   * 1. LẤY DỮ LIỆU TỪ SERVER (Dùng React Query)
+   * hook này tự động fetched dữ liệu và quản lý trạng thái loading.
+   */
   const { data: aptRes, isLoading: loading } = useAppointmentsByDoctor(bacSiId);
   const appointments = Array.isArray(aptRes?.data) ? aptRes.data : [];
 
-  // TanStack Query: Mutation cập nhật trạng thái (auto-invalidate)
+  /**
+   * 2. XỬ LÝ CẬP NHẬT TRẠNG THÁI (Mutation)
+   * Dùng để thay đổi trạng thái lịch hẹn khi bác sĩ bấm nút.
+   */
   const statusMutation = useUpdateAppointmentStatus();
 
   /**
-   * Xử lý lọc dữ liệu ngay tại Client
+   * 3. XỬ LÝ DỮ LIỆU HIỂN THỊ TRONG NGÀY
    */
-  // Lấy chuỗi ngày hôm nay theo định dạng YYYY-MM-DD (múi giờ VN)
-  const todayStr = toDateString(dayjs());
+  const todayStr = toDateString(dayjs()); // Lấy ngày hiện tại (YYYY-MM-DD)
 
-  // Lọc lấy các lịch hẹn của hôm nay
-  const todayAppointments = appointments.filter((a) => {
-    return toDateString(a.ngayDat) === todayStr;
-  });
+  // Lọc danh sách: Chỉ lấy những lịch hẹn của chính ngày hôm nay
+  const todayAppointments = appointments.filter(
+    (a) => toDateString(a.ngayDat) === todayStr,
+  );
 
   /**
-   * Tính toán các con số thống kê cho 4 Card ở đầu trang
+   * 4. TÍNH TOÁN CÁC CHỈ SỐ THỐNG KÊ (Stats)
    */
   const stats = [
     {
       label: "Lịch hôm nay",
       icon: "event_upcoming",
-      value: todayAppointments.filter((a) => a.trangThai !== 3).length, // Không tính lịch đã hủy
-      iconBg: "bg-primary/10",
-      iconColor: "text-primary",
+      value: todayAppointments.filter((a) => a.trangThai !== 3).length,
+      textColor: "text-primary",
+      borderColor: "border-primary/20",
     },
     {
       label: "Đã khám xong",
-      icon: "check_circle",
+      icon: "task_alt",
       value: todayAppointments.filter((a) => a.trangThai === 2).length,
-      iconBg: "bg-green-500/10",
-      iconColor: "text-green-600",
+      textColor: "text-emerald-600",
+      borderColor: "border-emerald-200",
     },
     {
       label: "Chờ xác nhận",
-      icon: "pending",
+      icon: "hourglass_empty",
       value: todayAppointments.filter((a) => a.trangThai === 0).length,
-      iconBg: "bg-amber-500/10",
-      iconColor: "text-amber-600",
+      textColor: "text-amber-600",
+      borderColor: "border-amber-200",
     },
     {
       label: "Tổng bệnh nhân",
-      icon: "group",
-      value: appointments.filter((a) => a.trangThai !== 3).length, // Tổng lịch (trừ hủy)
-      iconBg: "bg-purple-500/10",
-      iconColor: "text-purple-600",
+      icon: "groups",
+      value: appointments.filter((a) => a.trangThai !== 3).length,
+      textColor: "text-blue-600",
+      borderColor: "border-blue-200",
     },
   ];
 
+  /**
+   * Hàm xử lý khi bấm nút thay đổi trạng thái
+   */
   const handleUpdateStatus = (id, newStatus) => {
     const labels = { 1: "Đã xác nhận", 2: "Đã hoàn thành", 3: "Đã hủy" };
     statusMutation.mutate(
       { id, trangThai: newStatus },
       {
-        onSuccess: () => toast.success(labels[newStatus] || "Cập nhật thành công"),
-        onError: (err) => toast.error(err.message || "Lỗi cập nhật trạng thái"),
-      }
+        onSuccess: () => toast.success(`Đã cập nhật: ${labels[newStatus]}`),
+        onError: (err) =>
+          toast.error(err.message || "Không thể cập nhật trạng thái"),
+      },
     );
   };
 
   /**
-   * Render nhãn trạng thái (Badge) + ký hiệu đã kê đơn
+   * COMPONENT CON: Render Badge Trạng thái
    */
   const renderStatusBadge = (appointment) => {
-    const { trangThai, donThuoc } = appointment;
-    const config = STATUS_CONFIG[trangThai];
+    // Nếu truyền số trạng thái trực tiếp (tốt cho việc tái sử dụng)
+    const status =
+      typeof appointment === "object" ? appointment.trangThai : appointment;
+    const config = STATUS_CONFIG[status];
     if (!config) return null;
+
     return (
-      <div className="flex flex-col items-start gap-1">
+      <div className="flex flex-col gap-1">
         <span
-          className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase shadow-sm ${config.color}`}
+          className={`px-2.5 py-1 border rounded-md text-[10px] font-bold uppercase tracking-tight ${config.color}`}
         >
           {config.label}
         </span>
-        {donThuoc && (
-          <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-tighter">
+        {/* Nếu ca khám đã có đơn thuốc thì hiện thêm biểu tượng pill */}
+        {appointment?.donThuoc && (
+          <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 italic">
             <span className="material-symbols-outlined text-[10px]">pill</span>
-            Đã có đơn thuốc
+            Đã kê đơn
           </span>
         )}
       </div>
@@ -124,233 +151,211 @@ function DoctorDashboardPage() {
   };
 
   /**
-   * Render các nút thao tác tùy theo trạng thái lịch
+   * COMPONENT CON: Render các nút hành động (Xác nhận, Hoàn thành, Link chi tiết)
    */
   const renderActions = (appointment) => {
     const { id, trangThai } = appointment;
     return (
       <div className="flex items-center gap-2">
-        {/* Nút Xác nhận cho lịch đang "Chờ" */}
+        {/* Nút XÁC NHẬN nếu lịch đang ở trạng thái CHỜ (0) */}
         {trangThai === 0 && (
           <button
             onClick={() => handleUpdateStatus(id, 1)}
-            className="group size-8 flex items-center justify-center bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
-            title="Xác nhận lịch hẹn"
+            className="h-8 px-3 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-1"
           >
-            <span className="material-symbols-outlined text-lg font-bold">
-              check
-            </span>
-          </button>
-        )}
-        {/* Nút Hoàn thành cho lịch "Đã xác nhận" */}
-        {trangThai === 1 && (
-          <button
-            onClick={() => handleUpdateStatus(id, 2)}
-            className="group size-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-all shadow-sm shadow-emerald-600/20"
-            title="Đánh dấu hoàn thành"
-          >
-            <span className="material-symbols-outlined text-lg font-bold">
-              verified
-            </span>
+            <span className="material-symbols-outlined text-sm">check</span>
+            Xác nhận
           </button>
         )}
 
-        {/* Link Thao tác chính: Kết quả hoặc Quản lý */}
-        {trangThai === 2 ? (
-          <Link
-            to={`/doctor/appointments/${id}`}
-            className="px-4 py-1.5 bg-primary/5 text-primary text-[10px] font-black uppercase rounded-lg border border-primary/20 hover:bg-primary hover:text-white transition-all tracking-wider"
+        {/* Nút HOÀN THÀNH nếu lịch đã XÁC NHẬN (1) và đang khám */}
+        {trangThai === 1 && (
+          <button
+            onClick={() => handleUpdateStatus(id, 2)}
+            className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all flex items-center gap-1"
           >
-            Kết quả
-          </Link>
-        ) : (
-          <Link
-            to="/doctor/appointments"
-            className="px-4 py-1.5 bg-slate-100 text-slate-500 text-[10px] font-black uppercase rounded-lg border border-slate-200 hover:bg-slate-200 hover:text-slate-700 transition-all tracking-wider"
-          >
-            Quản lý
-          </Link>
+            <span className="material-symbols-outlined text-sm">done_all</span>
+            Xong
+          </button>
         )}
+
+        {/* Nút đi tới CHI TIẾT (Kê đơn / Xem kết quả) */}
+        <Link
+          to={`/doctor/appointments/${id}`}
+          className={`h-8 px-3 border rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+            trangThai === 2
+              ? "border-primary text-primary hover:bg-primary hover:text-white"
+              : "border-slate-300 text-slate-500 hover:bg-slate-50"
+          }`}
+        >
+          <span className="material-symbols-outlined text-sm">
+            {trangThai === 2 ? "visibility" : "clinical_notes"}
+          </span>
+          {trangThai === 2 ? "Xem hồ sơ" : "Khám bệnh"}
+        </Link>
       </div>
     );
   };
 
-  // Màn hình loading khi đang fetch dữ liệu
+  // Hiển thị vòng xoay khi đang tải dữ liệu
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
-          progress_activity
-        </span>
+      <div className="flex flex-col items-center justify-center py-32">
+        <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+        <p className="text-slate-500 font-medium">
+          Đang tải dữ liệu tổng quan...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* 1. Phần Thống kê nhanh (Stats Cards) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* SECTION 1: CÁC THẺ THỐNG KÊ (STAT CARDS) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((card) => (
           <div
             key={card.label}
-            className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3 sm:gap-4 transition-all hover:shadow-md"
+            className={`bg-white p-5 border-2 ${card.borderColor} rounded-xl flex items-center gap-4`}
           >
             <div
-              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${card.iconBg}`}
+              className={`w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center ${card.textColor}`}
             >
-              <span
-                className={`material-symbols-outlined text-xl sm:text-2xl ${card.iconColor}`}
-              >
+              <span className="material-symbols-outlined text-3xl font-light">
                 {card.icon}
               </span>
             </div>
-            <div className="min-w-0">
-              <p className="text-xl sm:text-2xl font-black text-slate-900">
-                {card.value}
-              </p>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium truncate">
+            <div>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
                 {card.label}
+              </p>
+              <p
+                className={`text-2xl font-bold ${card.textColor} leading-none`}
+              >
+                {card.value}
               </p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* 2. Bảng Danh sách lịch khám hôm nay */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Lịch làm việc hôm nay
-          </h2>
+      {/* SECTION 2: DANH SÁCH LỊCH KHÁM HÔM NAY */}
+      <div className="bg-white border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        {/* Header của bảng */}
+        <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+              Lịch làm việc hôm nay
+            </h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Danh sách bệnh nhân đăng ký khám trong ngày
+            </p>
+          </div>
           <Link
             to="/doctor/appointments"
-            className="text-sm text-primary font-bold hover:underline"
+            className="px-4 py-2 text-xs font-bold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-all"
           >
-            Xem toàn bộ
+            Xem toàn bộ lịch trình
           </Link>
         </div>
 
+        {/* Nội dung danh sách */}
         {todayAppointments.length === 0 ? (
-          <div className="px-5 py-20 text-center flex flex-col items-center">
-            <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-4xl text-slate-300">
-                event_busy
-              </span>
-            </div>
-            <p className="text-slate-500 font-medium">
-              Hôm nay bạn chưa có lịch khám nào.
+          /* Trường hợp không có lịch hẹn */
+          <div className="py-24 text-center">
+            <span className="material-symbols-outlined text-6xl text-slate-200 mb-4">
+              calendar_today
+            </span>
+            <p className="text-slate-500 font-bold">
+              Hôm nay bạn chưa có lịch hẹn nào
             </p>
             <p className="text-slate-400 text-xs mt-1">
-              Lịch hẹn mới sẽ được hiển thị tại đây.
+              Các yêu cầu khám mới sẽ xuất hiện tại đây
             </p>
           </div>
         ) : (
-          <>
-            {/* Chế độ hiển thị Mobile (Card dọc) */}
-            <div className="block md:hidden divide-y divide-slate-100">
-              {todayAppointments.map((appt) => (
-                <div key={appt.id} className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
-                        {getInitials(appt.benhNhan?.hoTen)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {appt.benhNhan?.hoTen || "—"}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {appt.benhNhan?.soDienThoai}
-                        </p>
-                      </div>
-                    </div>
-                    {renderStatusBadge(appt)}
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-slate-500">
-                    <span className="material-symbols-outlined text-sm text-primary">
-                      schedule
-                    </span>
-                    Giờ khám:{" "}
-                    <span className="font-bold">
-                      {formatTime(appt.gioBatDau)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 truncate italic">
-                    Lý do: {appt.lyDoKham}
-                  </p>
-                  <div className="pt-1">{renderActions(appt)}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Chế độ hiển thị Desktop (Bảng ngang) */}
-            <div className="overflow-x-auto hidden md:block">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-50/80">
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                      Giờ khám
-                    </th>
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                      Bệnh nhân
-                    </th>
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                      Số điện thoại
-                    </th>
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                      Lý do khám
-                    </th>
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                      Trạng thái
-                    </th>
-                    <th className="px-6 py-4 text-left text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
-                      Thao tác
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 italic md:not-italic">
-                  {todayAppointments.map((appt) => (
-                    <tr
-                      key={appt.id}
-                      className="hover:bg-slate-50 transition-colors group"
-                    >
-                      <td className="px-6 py-4 text-sm text-primary font-bold whitespace-nowrap">
+          /* Hiển thị bảng dữ liệu (Responsive) */
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-400 tracking-widest">
+                    Thời gian
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-400 tracking-widest">
+                    Bệnh nhân
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-400 tracking-widest hidden lg:table-cell">
+                    Lý do khám
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-400 tracking-widest">
+                    Trạng thái
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-400 tracking-widest text-right">
+                    Thao tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {todayAppointments.map((appt) => (
+                  <tr
+                    key={appt.id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
+                    {/* Cột: Giờ khám */}
+                    <td className="px-6 py-5 whitespace-nowrap">
+                      <div className="flex items-center gap-2 text-primary font-bold">
+                        <span className="material-symbols-outlined text-sm">
+                          schedule
+                        </span>
                         {formatTime(appt.gioBatDau)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                            {getInitials(appt.benhNhan?.hoTen)}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-slate-800">
-                              {appt.benhNhan?.hoTen || "—"}
-                            </p>
-                          </div>
+                      </div>
+                    </td>
+
+                    {/* Cột: Bệnh nhân */}
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 border border-slate-200 rounded-lg bg-white flex items-center justify-center text-xs font-bold text-slate-400">
+                          {getInitials(appt.benhNhan?.hoTen)}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 font-medium whitespace-nowrap">
-                        {appt.benhNhan?.soDienThoai || "—"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-500 max-w-[200px] truncate italic">
-                        {appt.lyDoKham || "—"}
-                      </td>
-                      <td className="px-6 py-4">
-                        {renderStatusBadge(appt.trangThai)}
-                      </td>
-                      <td className="px-6 py-4">{renderActions(appt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800 leading-none mb-1">
+                            {appt.benhNhan?.hoTen || "—"}
+                          </p>
+                          <p className="text-[11px] text-slate-500 leading-none">
+                            SĐT: {appt.benhNhan?.soDienThoai || "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Cột: Lý do (Ẩn trên mobile cho gọn) */}
+                    <td className="px-6 py-5 hidden lg:table-cell">
+                      <p className="text-xs text-slate-500 italic max-w-xs truncate">
+                        "{appt.lyDoKham || "Không có lý do cụ thể"}"
+                      </p>
+                    </td>
+
+                    {/* Cột: Trạng thái */}
+                    <td className="px-6 py-5">{renderStatusBadge(appt)}</td>
+
+                    {/* Cột: Thao tác */}
+                    <td className="px-6 py-5 text-right">
+                      <div className="inline-flex items-center">
+                        {renderActions(appt)}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
-        {/* Footer bảng */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-tighter">
-            Hôm nay bạn có {todayAppointments.length} ca trực cần xử lý
+        {/* Footer của bảng */}
+        <div className="px-6 py-4 bg-slate-50/30 border-t border-slate-100 italic">
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+            * Dữ liệu được cập nhật thời gian thực từ hệ thống quản lý trung tâm
           </p>
         </div>
       </div>
