@@ -507,6 +507,7 @@ const remove = async (id, requestUser) => {
   await prisma.$transaction(async (tx) => {
     // Dọn dẹp dữ liệu con
     await tx.donThuoc.deleteMany({ where: { datLichId: BigInt(id) } });
+    await tx.giaoDich.deleteMany({ where: { datLichId: BigInt(id) } });
 
     // Xóa bản ghi gốc
     await tx.datLich.delete({ where: { id: BigInt(id) } });
