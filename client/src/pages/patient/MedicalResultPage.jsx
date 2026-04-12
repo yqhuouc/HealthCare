@@ -46,7 +46,6 @@ export default function MedicalResultPage() {
       if (res.paymentUrl) {
         window.location.assign(res.paymentUrl);
       } else {
-
         toast.error("Không nhận được liên kết thanh toán từ hệ thống.");
       }
     } catch (err) {
@@ -60,9 +59,7 @@ export default function MedicalResultPage() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto py-20 text-center">
-        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
-          progress_activity
-        </span>
+        <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
         <p className="mt-4 text-slate-500">Đang tải kết quả khám...</p>
       </div>
     );
@@ -71,16 +68,9 @@ export default function MedicalResultPage() {
   if (!appointment) {
     return (
       <div className="max-w-4xl mx-auto py-12 px-4 text-center">
-        <span className="material-symbols-outlined text-6xl text-slate-300">
-          search_off
-        </span>
-        <h2 className="text-xl font-semibold text-slate-700 mt-4">
-          Không tìm thấy kết quả
-        </h2>
-        <Link
-          to="/appointments"
-          className="inline-block mt-6 px-6 py-2 bg-primary text-white rounded-lg"
-        >
+        <span className="material-symbols-outlined text-6xl text-slate-300">search_off</span>
+        <h2 className="text-xl font-semibold text-slate-700 mt-4">Không tìm thấy kết quả</h2>
+        <Link to="/appointments" className="inline-block mt-6 px-6 py-2 bg-primary text-white rounded-lg">
           Quay lại lịch sử
         </Link>
       </div>
@@ -102,13 +92,17 @@ export default function MedicalResultPage() {
       {/* Nút điều hướng & In (Ẩn khi in) */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10 print:hidden">
         <nav className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
-          <Link to="/" className="hover:text-primary transition-colors">Trang chủ</Link>
+          <Link to="/" className="hover:text-primary transition-colors">
+            Trang chủ
+          </Link>
           <span className="material-symbols-outlined text-base">chevron_right</span>
-          <Link to="/appointments" className="hover:text-primary transition-colors">Lịch sử</Link>
+          <Link to="/appointments" className="hover:text-primary transition-colors">
+            Lịch sử
+          </Link>
           <span className="material-symbols-outlined text-base">chevron_right</span>
           <span className="text-slate-900 font-semibold">Chi tiết kết quả</span>
         </nav>
-        
+
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={handlePrint}
@@ -298,12 +292,14 @@ export default function MedicalResultPage() {
             <div className="space-y-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tình trạng thanh toán</h3>
               <div className="flex items-center gap-3">
-                <span className={`w-3 h-3 rounded-full ${appointment.trangThaiThanhToan >= 2 ? "bg-green-500" : "bg-red-500"}`} />
+                <span
+                  className={`w-3 h-3 rounded-full ${appointment.trangThaiThanhToan >= 2 ? "bg-green-500" : "bg-red-500"}`}
+                />
                 <p className="text-sm font-bold text-slate-900">
-                  {appointment.trangThaiThanhToan >= 2 
-                    ? "Đã hoàn tất thanh toán" 
-                    : appointment.trangThaiThanhToan === 1 
-                      ? "Đã trả phí khám - Còn nợ phí thuốc" 
+                  {appointment.trangThaiThanhToan >= 2
+                    ? "Đã hoàn tất thanh toán"
+                    : appointment.trangThaiThanhToan === 1
+                      ? "Đã trả phí khám - Còn nợ phí thuốc"
                       : "Chưa thanh toán hồ sơ"}
                 </p>
               </div>
@@ -381,9 +377,7 @@ export default function MedicalResultPage() {
             <p className="text-sm font-bold text-slate-900 mb-24 italic underline decoration-slate-200 underline-offset-8">
               Chữ ký bác sĩ chuyên khoa
             </p>
-            <p className="text-lg font-bold text-slate-900">
-              {doctor?.tenBacSi}
-            </p>
+            <p className="text-lg font-bold text-slate-900">{doctor?.tenBacSi}</p>
             <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-widest font-bold">
               HealthCare Clinical Center
             </p>

@@ -10,17 +10,17 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 /**
  * Trang AdminEditDoctorPage - Chỉnh sửa thông tin Bác sĩ (Admin)
- * 
+ *
  * Kiến trúc: Tách thành 2 lớp component:
  * - AdminEditDoctorPage (wrapper): Chịu trách nhiệm fetch data, hiển thị loading.
  * - EditDoctorForm (child): Nhận initialData qua props, khởi tạo form state trực tiếp.
- * 
+ *
  * Lý do: React 19 cảnh báo nếu gọi setState trong useEffect (cascading render).
  * Bằng cách truyền data qua props, form state chỉ khởi tạo 1 lần khi mount → không cần useEffect sync.
  */
 function AdminEditDoctorPage() {
   const { id } = useParams();
-  
+
   // TanStack Query: Lấy chi tiết bác sĩ (auto-cache)
   const { data: docRes, isLoading: loadingDoc } = useDoctor(id);
 
@@ -43,7 +43,7 @@ function AdminEditDoctorPage() {
  */
 function EditDoctorForm({ doctorData, doctorId }) {
   const navigate = useNavigate();
-  
+
   // TanStack Query: Lấy danh sách chuyên khoa (auto-cache)
   const { data: specRes } = useSpecialties();
   const specialties = specRes?.data || [];
@@ -53,7 +53,7 @@ function EditDoctorForm({ doctorData, doctorId }) {
   const saving = updateMutation.isPending;
 
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Khởi tạo form state trực tiếp từ props — KHÔNG cần useEffect
   const doc = doctorData || {};
   const {
@@ -71,7 +71,7 @@ function EditDoctorForm({ doctorData, doctorId }) {
       moTaChiTiet: doc.moTaChiTiet || "",
       email: doc.taiKhoan?.email || "",
       matKhau: "",
-    }
+    },
   });
 
   /**
@@ -82,7 +82,7 @@ function EditDoctorForm({ doctorData, doctorId }) {
       ...data,
       giaKham: data.giaKham ? Number(data.giaKham) : null,
     };
-    
+
     if (!updateData.matKhau.trim()) {
       delete updateData.matKhau;
     }
@@ -92,7 +92,7 @@ function EditDoctorForm({ doctorData, doctorId }) {
       {
         onSuccess: () => toast.success(`Cập nhật bác sĩ "${data.tenBacSi}" thành công!`),
         onError: (err) => toast.error(err.message || "Có lỗi xảy ra khi cập nhật!"),
-      }
+      },
     );
   };
 
@@ -111,7 +111,10 @@ function EditDoctorForm({ doctorData, doctorId }) {
       <div className="mb-10 flex flex-col sm:flex-row items-end justify-between gap-4">
         <div className="text-center sm:text-left">
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Chỉnh sửa bác sĩ</h2>
-          <p className="text-slate-500 text-sm mt-2">Cập nhật thông tin chuyên môn và tài khoản đăng nhập cho BS{doctorId}.</p>
+          <p className="text-slate-500 text-sm mt-2">
+            Cập nhật thông tin chuyên môn và tài khoản đăng nhập cho BS
+            {doctorId}.
+          </p>
         </div>
         <span className="px-4 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest border border-slate-200">
           Chế độ chỉnh sửa
@@ -120,7 +123,6 @@ function EditDoctorForm({ doctorData, doctorId }) {
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-8 sm:p-12 space-y-10">
-          
           {/* SECTION: Tài khoản đăng nhập (Email & Mật khẩu) */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -129,7 +131,9 @@ function EditDoctorForm({ doctorData, doctorId }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Email đăng nhập <span className="text-rose-500">*</span></label>
+                <label className="text-sm font-bold text-slate-700">
+                  Email đăng nhập <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="email"
                   {...register("email")}
@@ -167,7 +171,7 @@ function EditDoctorForm({ doctorData, doctorId }) {
           </div>
 
           <hr className="border-slate-100" />
-          
+
           {/* SECTION: Thông tin công tác (Tên, Chuyên khoa) */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -176,7 +180,9 @@ function EditDoctorForm({ doctorData, doctorId }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Họ tên bác sĩ <span className="text-rose-500">*</span></label>
+                <label className="text-sm font-bold text-slate-700">
+                  Họ tên bác sĩ <span className="text-rose-500">*</span>
+                </label>
                 <input
                   {...register("tenBacSi")}
                   placeholder="VD: PGS. TS. Nguyễn Văn A"
@@ -185,7 +191,9 @@ function EditDoctorForm({ doctorData, doctorId }) {
                 {errors.tenBacSi && <p className="text-red-500 text-xs mt-1">{errors.tenBacSi.message}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Chuyên khoa <span className="text-rose-500">*</span></label>
+                <label className="text-sm font-bold text-slate-700">
+                  Chuyên khoa <span className="text-rose-500">*</span>
+                </label>
                 <select
                   {...register("chuyenKhoaId")}
                   className={`w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium appearance-none cursor-pointer ${errors.chuyenKhoaId ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
@@ -232,7 +240,7 @@ function EditDoctorForm({ doctorData, doctorId }) {
                 {errors.giaKham && <p className="text-red-500 text-xs mt-1">{errors.giaKham.message}</p>}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Mô tả ngắn gọn chuyên môn</label>
               <input

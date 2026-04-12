@@ -3,12 +3,12 @@
  * TRANG: ĐĂNG KÝ CA TRỰC MỚI (BÁC SĨ)
  * Đường dẫn: /doctor/schedule/add
  * ============================================================
- * 
+ *
  * CHỨC NĂNG CHÍNH:
  * 1. Hiển thị lịch để bác sĩ chọn ngày công tác.
  * 2. Hiển thị danh sách các khung giờ (Morning, Afternoon...) từ hệ thống.
  * 3. Ràng buộc: Không cho chọn ngày trong quá khứ hoặc giờ đã qua của hôm nay.
- * 
+ *
  * PHONG CÁCH THIẾT KẾ:
  * - Giao diện "Clinical Form" (Mẫu biểu y tế) tinh giản, rõ ràng.
  * - Sử dụng các khối nội dung được bao bọc bởi Border-2 mảnh.
@@ -86,18 +86,18 @@ function DoctorAddShiftPage() {
     if (month === today.month() && year === today.year()) return;
     if (month === 0) {
       setMonth(11);
-      setYear(y => y - 1);
+      setYear((y) => y - 1);
     } else {
-      setMonth(m => m - 1);
+      setMonth((m) => m - 1);
     }
   };
 
   const handleNextMonth = () => {
     if (month === 11) {
       setMonth(0);
-      setYear(y => y + 1);
+      setYear((y) => y + 1);
     } else {
-      setMonth(m => m + 1);
+      setMonth((m) => m + 1);
     }
   };
 
@@ -125,16 +125,17 @@ function DoctorAddShiftPage() {
           navigate("/doctor/schedule");
         },
         onError: (err) => toast.error(err.message || "Lỗi khi đăng ký ca"),
-      }
+      },
     );
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20 animate-in fade-in duration-700 p-4 sm:p-0">
-      
       {/* điều hướng rút gọn */}
       <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-        <Link to="/doctor/schedule" className="hover:text-primary transition-colors">Lịch trình</Link>
+        <Link to="/doctor/schedule" className="hover:text-primary transition-colors">
+          Lịch trình
+        </Link>
         <span className="material-symbols-outlined text-xs">chevron_right</span>
         <span className="text-slate-600">Đăng ký mới</span>
       </nav>
@@ -142,12 +143,13 @@ function DoctorAddShiftPage() {
       {/* Tiêu đề */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Thiết lập ca trực mới</h1>
-        <p className="text-slate-500 text-sm font-medium">Bác sĩ vui lòng chọn ngày và giờ công tác chính xác để hệ thống đồng bộ.</p>
+        <p className="text-slate-500 text-sm font-medium">
+          Bác sĩ vui lòng chọn ngày và giờ công tác chính xác để hệ thống đồng bộ.
+        </p>
       </div>
 
       <div className="bg-white border-2 border-slate-100 rounded-3xl overflow-hidden shadow-sm">
         <div className="p-6 sm:p-10 space-y-12">
-          
           {/* BƯỚC 1: CALENDAR PICKER */}
           <section className="space-y-6">
             <div className="flex items-center gap-3">
@@ -160,25 +162,36 @@ function DoctorAddShiftPage() {
             <div className="bg-slate-50/50 border-2 border-slate-100 rounded-2xl p-6 sm:p-8">
               {/* Month Controller */}
               <div className="flex items-center justify-between mb-8 max-w-sm mx-auto">
-                <button 
+                <button
                   onClick={handlePrevMonth}
                   className={`p-2 rounded-lg border border-slate-200 transition-all ${month === today.month() && year === today.year() ? "opacity-20 translate-x-1 grayscale" : "hover:bg-white text-slate-500"}`}
                 >
                   <span className="material-symbols-outlined">chevron_left</span>
                 </button>
-                <span className="text-sm font-bold text-slate-800 uppercase tracking-tighter">Tháng {month + 1}, {year}</span>
-                <button onClick={handleNextMonth} className="p-2 border border-slate-200 hover:bg-white rounded-lg text-slate-500">
+                <span className="text-sm font-bold text-slate-800 uppercase tracking-tighter">
+                  Tháng {month + 1}, {year}
+                </span>
+                <button
+                  onClick={handleNextMonth}
+                  className="p-2 border border-slate-200 hover:bg-white rounded-lg text-slate-500"
+                >
                   <span className="material-symbols-outlined">chevron_right</span>
                 </button>
               </div>
 
               {/* Grid Ngày */}
               <div className="grid grid-cols-7 gap-1 sm:gap-2 max-w-xl mx-auto">
-                {DAYS_OF_WEEK.map(d => (
-                  <div key={d} className="text-center text-[10px] font-bold text-slate-300 py-2 uppercase">{d}</div>
+                {DAYS_OF_WEEK.map((d) => (
+                  <div key={d} className="text-center text-[10px] font-bold text-slate-300 py-2 uppercase">
+                    {d}
+                  </div>
                 ))}
-                {Array(firstDayIdx).fill(null).map((_, i) => <div key={`empty-${i}`} />)}
-                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+                {Array(firstDayIdx)
+                  .fill(null)
+                  .map((_, i) => (
+                    <div key={`empty-${i}`} />
+                  ))}
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
                   const past = isPast(day);
                   const selected = selectedDay === day;
                   return (
@@ -187,8 +200,11 @@ function DoctorAddShiftPage() {
                       disabled={past}
                       onClick={() => setSelectedDay(day)}
                       className={`aspect-square flex items-center justify-center rounded-xl text-xs font-bold transition-all ${
-                        past ? "text-slate-200 cursor-not-allowed" :
-                        selected ? "bg-primary text-white scale-110 shadow-lg" : "text-slate-600 hover:bg-white border-2 border-transparent hover:border-primary/20"
+                        past
+                          ? "text-slate-200 cursor-not-allowed"
+                          : selected
+                            ? "bg-primary text-white scale-110 shadow-lg"
+                            : "text-slate-600 hover:bg-white border-2 border-transparent hover:border-primary/20"
                       }`}
                     >
                       {day}
@@ -210,9 +226,11 @@ function DoctorAddShiftPage() {
 
             <div className="flex flex-wrap gap-3 justify-center">
               {loadingKg ? (
-                <div className="py-4 text-slate-400 text-xs font-bold animate-pulse uppercase">Đang tải danh mục khung giờ...</div>
+                <div className="py-4 text-slate-400 text-xs font-bold animate-pulse uppercase">
+                  Đang tải danh mục khung giờ...
+                </div>
               ) : (
-                khungGios.map(slot => {
+                khungGios.map((slot) => {
                   const past = isPastTime(slot.gioBatDau);
                   const selected = selectedSlotId === slot.id;
                   return (
@@ -221,8 +239,11 @@ function DoctorAddShiftPage() {
                       disabled={past}
                       onClick={() => setSelectedSlotId(slot.id)}
                       className={`px-6 py-3 rounded-xl text-xs font-bold border-2 transition-all ${
-                        past ? "opacity-30 border-slate-100 text-slate-300 cursor-not-allowed strike-through" :
-                        selected ? "border-primary text-primary bg-primary/5 scale-105" : "border-slate-100 text-slate-500 hover:border-primary/20 hover:text-primary"
+                        past
+                          ? "opacity-30 border-slate-100 text-slate-300 cursor-not-allowed strike-through"
+                          : selected
+                            ? "border-primary text-primary bg-primary/5 scale-105"
+                            : "border-slate-100 text-slate-500 hover:border-primary/20 hover:text-primary"
                       }`}
                     >
                       {formatTime(slot.gioBatDau)} - {formatTime(slot.gioKetThuc)}
@@ -231,19 +252,32 @@ function DoctorAddShiftPage() {
                 })
               )}
             </div>
-            {!selectedSlotId && <p className="text-center text-[10px] text-amber-500 font-bold uppercase italic">* Yêu cầu bác sĩ chọn 1 khung giờ cụ thể</p>}
+            {!selectedSlotId && (
+              <p className="text-center text-[10px] text-amber-500 font-bold uppercase italic">
+                * Yêu cầu bác sĩ chọn 1 khung giờ cụ thể
+              </p>
+            )}
           </section>
         </div>
 
         {/* Action Footer */}
         <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-center justify-end gap-3">
-          <button onClick={() => navigate(-1)} className="w-full sm:w-auto px-10 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-slate-800 transition-colors">Hủy bỏ</button>
+          <button
+            onClick={() => navigate(-1)}
+            className="w-full sm:w-auto px-10 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-slate-800 transition-colors"
+          >
+            Hủy bỏ
+          </button>
           <button
             onClick={handleSave}
             disabled={createMutation.isPending || !selectedSlotId}
             className="w-full sm:w-auto px-10 py-3 bg-primary text-white text-xs font-bold rounded-xl uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:grayscale"
           >
-            {createMutation.isPending ? <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <span className="material-symbols-outlined text-lg">check_circle</span>}
+            {createMutation.isPending ? (
+              <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            ) : (
+              <span className="material-symbols-outlined text-lg">check_circle</span>
+            )}
             {createMutation.isPending ? "Đang lưu..." : "Lưu ca trực"}
           </button>
         </div>

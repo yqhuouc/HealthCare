@@ -16,7 +16,7 @@ const ITEMS_PER_PAGE = 8; // Số lượng bác sĩ hiển thị trên mỗi tra
  */
 export default function AdminDoctorsPage() {
   const navigate = useNavigate();
-  
+
   // State quản lý bộ lọc và tìm kiếm
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -82,7 +82,7 @@ export default function AdminDoctorsPage() {
       setSelectedDoctor(null);
     };
 
-    if (modalMode === 'delete') {
+    if (modalMode === "delete") {
       // Hành động XÓA bác sĩ
       deleteMutation.mutate(selectedDoctor.id, {
         onSuccess: () => toast.success(`Đã xóa hồ sơ bác sĩ ${selectedDoctor.tenBacSi}`),
@@ -91,14 +91,14 @@ export default function AdminDoctorsPage() {
       });
     } else {
       // Hành động KHÓA hoặc MỞ KHÓA (Cập nhật trạng thái tài khoản)
-      const newStatus = modalMode === 'lock' ? 0 : 1; // 0: Khóa, 1: Hoạt động
+      const newStatus = modalMode === "lock" ? 0 : 1; // 0: Khóa, 1: Hoạt động
       updateMutation.mutate(
         { id: selectedDoctor.id, data: { trangThaiTaiKhoan: newStatus } },
         {
-          onSuccess: () => toast.success(`${modalMode === 'lock' ? "Khóa" : "Mở khóa"} tài khoản bác sĩ thành công!`),
+          onSuccess: () => toast.success(`${modalMode === "lock" ? "Khóa" : "Mở khóa"} tài khoản bác sĩ thành công!`),
           onError: (err) => toast.error(err.message || "Thao tác thất bại"),
           onSettled,
-        }
+        },
       );
     }
   };
@@ -114,9 +114,7 @@ export default function AdminDoctorsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Danh sách bác sĩ</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Quản lý thông tin và trạng thái hoạt động của đội ngũ y bác sĩ.
-          </p>
+          <p className="text-slate-500 text-sm mt-1">Quản lý thông tin và trạng thái hoạt động của đội ngũ y bác sĩ.</p>
         </div>
         <Link
           to="/admin/doctors/add"
@@ -142,7 +140,7 @@ export default function AdminDoctorsPage() {
             className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-slate-200 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-medium"
           />
         </div>
-        
+
         {/* Lọc theo chuyên khoa */}
         <div className="w-full md:w-72 relative">
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -173,11 +171,19 @@ export default function AdminDoctorsPage() {
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã BS</th>
-                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Họ tên + Học vị</th>
-                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Chuyên khoa</th>
+                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Họ tên + Học vị
+                </th>
+                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Chuyên khoa
+                </th>
                 <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giá khám</th>
-                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng thái</th>
-                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Tùy chọn hành động</th>
+                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
+                  Trạng thái
+                </th>
+                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
+                  Tùy chọn hành động
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -209,7 +215,8 @@ export default function AdminDoctorsPage() {
                     </td>
                     <td className="py-5 px-6">
                       <p className="font-bold text-slate-900 text-sm">
-                        {doc.hocViChucDanh ? `${doc.hocViChucDanh} ` : ""}{doc.tenBacSi}
+                        {doc.hocViChucDanh ? `${doc.hocViChucDanh} ` : ""}
+                        {doc.tenBacSi}
                       </p>
                       <p className="text-[11px] text-slate-400 font-medium mt-0.5">{doc.taiKhoan?.email}</p>
                     </td>
@@ -251,11 +258,11 @@ export default function AdminDoctorsPage() {
                           <span className="material-symbols-outlined text-base">edit</span>
                           SỬA
                         </button>
-                        
+
                         {/* Nút Khóa / Mở khóa dựa trên trạng thái hiện tại */}
                         {doc.taiKhoan?.trangThaiTaiKhoan === 0 ? (
                           <button
-                            onClick={() => openActionModal(doc, 'unlock')}
+                            onClick={() => openActionModal(doc, "unlock")}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-all text-[10px] font-bold shadow-sm shadow-emerald-500/20"
                           >
                             <span className="material-symbols-outlined text-base">lock_open</span>
@@ -263,7 +270,7 @@ export default function AdminDoctorsPage() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => openActionModal(doc, 'lock')}
+                            onClick={() => openActionModal(doc, "lock")}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-900 transition-all text-[10px] font-bold shadow-sm shadow-slate-800/20"
                           >
                             <span className="material-symbols-outlined text-base">lock</span>
@@ -273,7 +280,7 @@ export default function AdminDoctorsPage() {
 
                         {/* Nút Xóa */}
                         <button
-                          onClick={() => openActionModal(doc, 'delete')}
+                          onClick={() => openActionModal(doc, "delete")}
                           className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all"
                           title="Xóa bác sĩ"
                         >
@@ -297,14 +304,14 @@ export default function AdminDoctorsPage() {
             <div className="flex gap-2">
               <button
                 disabled={page === 1}
-                onClick={() => setPage(p => p - 1)}
+                onClick={() => setPage((p) => p - 1)}
                 className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all shadow-sm"
               >
                 <span className="material-symbols-outlined text-xl">chevron_left</span>
               </button>
               <button
                 disabled={page === totalPages}
-                onClick={() => setPage(p => p + 1)}
+                onClick={() => setPage((p) => p + 1)}
                 className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all shadow-sm"
               >
                 <span className="material-symbols-outlined text-xl">chevron_right</span>
@@ -340,8 +347,12 @@ export default function AdminDoctorsPage() {
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Chuyên khoa</p>
             <div className="flex items-baseline gap-1 mt-1">
-              <h3 className="text-3xl font-black text-slate-900 leading-none">{stats.tongChuyenKhoa || specialties.length}</h3>
-              <p className="text-xs font-bold text-slate-400 underline decoration-amber-500/30 underline-offset-4">ngành y</p>
+              <h3 className="text-3xl font-black text-slate-900 leading-none">
+                {stats.tongChuyenKhoa || specialties.length}
+              </h3>
+              <p className="text-xs font-bold text-slate-400 underline decoration-amber-500/30 underline-offset-4">
+                ngành y
+              </p>
             </div>
           </div>
         </div>
@@ -353,31 +364,34 @@ export default function AdminDoctorsPage() {
         onClose={() => setIsModalOpen(false)}
         onConfirm={handleConfirmAction}
         title={
-          modalMode === 'delete' 
-            ? "Xác nhận xóa bác sĩ" 
-            : modalMode === 'lock' 
-              ? "Xác nhận khóa tài khoản" 
+          modalMode === "delete"
+            ? "Xác nhận xóa bác sĩ"
+            : modalMode === "lock"
+              ? "Xác nhận khóa tài khoản"
               : "Xác nhận mở khóa tài khoản"
         }
         message={
-          modalMode === 'delete' ? (
+          modalMode === "delete" ? (
             <>
-              Bạn có chắc chắn muốn xóa bác sĩ <strong>{selectedDoctor?.tenBacSi}</strong>? 
-              Tài khoản liên kết <strong>{selectedDoctor?.taiKhoan?.email}</strong> cũng sẽ bị xóa vĩnh viễn. Thao tác này <strong>không thể hoàn tác</strong>.
+              Bạn có chắc chắn muốn xóa bác sĩ <strong>{selectedDoctor?.tenBacSi}</strong>? Tài khoản liên kết{" "}
+              <strong>{selectedDoctor?.taiKhoan?.email}</strong> cũng sẽ bị xóa vĩnh viễn. Thao tác này{" "}
+              <strong>không thể hoàn tác</strong>.
             </>
-          ) : modalMode === 'lock' ? (
+          ) : modalMode === "lock" ? (
             <>
-              Tài khoản của bác sĩ <strong>{selectedDoctor?.tenBacSi}</strong> sẽ bị tạm ngưng. 
-              Bác sĩ sẽ không thể đăng nhập hoặc xem lịch hẹn cho đến khi được mở lại.
+              Tài khoản của bác sĩ <strong>{selectedDoctor?.tenBacSi}</strong> sẽ bị tạm ngưng. Bác sĩ sẽ không thể đăng
+              nhập hoặc xem lịch hẹn cho đến khi được mở lại.
             </>
           ) : (
-            <>Bạn có chắc muốn khôi phục quyền truy cập cho bác sĩ <strong>{selectedDoctor?.tenBacSi}</strong> không?</>
+            <>
+              Bạn có chắc muốn khôi phục quyền truy cập cho bác sĩ <strong>{selectedDoctor?.tenBacSi}</strong> không?
+            </>
           )
         }
         confirmText={
-          modalMode === 'delete' ? "Xóa vĩnh viễn" : modalMode === 'lock' ? "Khóa tài khoản ngay" : "Mở khóa ngay"
+          modalMode === "delete" ? "Xóa vĩnh viễn" : modalMode === "lock" ? "Khóa tài khoản ngay" : "Mở khóa ngay"
         }
-        type={modalMode === 'delete' || modalMode === 'lock' ? 'danger' : 'success'}
+        type={modalMode === "delete" || modalMode === "lock" ? "danger" : "success"}
       />
     </div>
   );

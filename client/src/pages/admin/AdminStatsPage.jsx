@@ -28,19 +28,13 @@ function StatCard({ icon, iconBg, label, value, subLabel }) {
   return (
     <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm hover:border-primary/30 transition-colors">
       <div className="flex items-center gap-3 mb-3">
-        <div
-          className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}
-        >
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
           <span className="material-symbols-outlined text-xl">{icon}</span>
         </div>
-        <p className="text-sm text-slate-500 font-medium leading-tight">
-          {label}
-        </p>
+        <p className="text-sm text-slate-500 font-medium leading-tight">{label}</p>
       </div>
       <p className="text-2xl font-bold text-slate-900">{value}</p>
-      {subLabel && (
-        <p className="text-xs text-slate-400 mt-1">{subLabel}</p>
-      )}
+      {subLabel && <p className="text-xs text-slate-400 mt-1">{subLabel}</p>}
     </div>
   );
 }
@@ -66,10 +60,20 @@ function AdminStatsPage() {
   const loading = l1 || l2 || l3;
 
   // Trích xuất dữ liệu từ query responses
-  const overview = useMemo(() => tongQuanRes?.data || {
-    tongLichHen: 0, tongBacSi: 0, tongBenhNhan: 0, tongChuyenKhoa: 0,
-    lichHenTheoTrangThai: [], doanhThuKham: 0, doanhThuThuoc: 0, tongDoanhThu: 0,
-  }, [tongQuanRes]);
+  const overview = useMemo(
+    () =>
+      tongQuanRes?.data || {
+        tongLichHen: 0,
+        tongBacSi: 0,
+        tongBenhNhan: 0,
+        tongChuyenKhoa: 0,
+        lichHenTheoTrangThai: [],
+        doanhThuKham: 0,
+        doanhThuThuoc: 0,
+        tongDoanhThu: 0,
+      },
+    [tongQuanRes],
+  );
 
   const revenueStats = useMemo(() => doanhThuRes?.data?.thongKeThang || [], [doanhThuRes]);
   const topDoctors = useMemo(() => lichHenRes?.data?.lichHenTheoBacSi || [], [lichHenRes]);
@@ -77,24 +81,25 @@ function AdminStatsPage() {
   // Xử lý chuẩn hóa dữ liệu 14 ngày cho biểu đồ
   const dailyAppointments = useMemo(() => {
     const rawDays = (lichHenRes?.data?.lichHenTheoNgay || []).map((d) => ({
-      ...d, soLuong: Number(d.soLuong || 0),
+      ...d,
+      soLuong: Number(d.soLuong || 0),
     }));
     const today = dayjs();
     const pastDate = today.subtract(13, "day");
     const formattedChart = [];
     for (let i = 0; i < 14; i++) {
-        const d = pastDate.add(i, "day");
-        const dateStr = toDateString(d);
-        const dateLabel = d.format("D/M");
-        const match = rawDays.find((rd) => {
-            const rdDate = toDateString(rd.ngay);
-            return rdDate === dateStr;
-        });
-        formattedChart.push({
-            label: dateLabel,
-            count: match ? match.soLuong : 0,
-            isToday: dateStr === toDateString(today),
-        });
+      const d = pastDate.add(i, "day");
+      const dateStr = toDateString(d);
+      const dateLabel = d.format("D/M");
+      const match = rawDays.find((rd) => {
+        const rdDate = toDateString(rd.ngay);
+        return rdDate === dateStr;
+      });
+      formattedChart.push({
+        label: dateLabel,
+        count: match ? match.soLuong : 0,
+        isToday: dateStr === toDateString(today),
+      });
     }
     return formattedChart;
   }, [lichHenRes]);
@@ -120,18 +125,33 @@ function AdminStatsPage() {
     });
 
     return [
-      { status: 2, label: "Đã hoàn thành", count: hoanThanh, percent: Math.round((hoanThanh / total) * 100), color: "bg-emerald-500" },
-      { status: 1, label: "Đã xác nhận", count: xacNhan, percent: Math.round((xacNhan / total) * 100), color: "bg-blue-500" },
-      { status: 0, label: "Chờ xác nhận", count: choXacNhan, percent: Math.round((choXacNhan / total) * 100), color: "bg-amber-500" },
+      {
+        status: 2,
+        label: "Đã hoàn thành",
+        count: hoanThanh,
+        percent: Math.round((hoanThanh / total) * 100),
+        color: "bg-emerald-500",
+      },
+      {
+        status: 1,
+        label: "Đã xác nhận",
+        count: xacNhan,
+        percent: Math.round((xacNhan / total) * 100),
+        color: "bg-blue-500",
+      },
+      {
+        status: 0,
+        label: "Chờ xác nhận",
+        count: choXacNhan,
+        percent: Math.round((choXacNhan / total) * 100),
+        color: "bg-amber-500",
+      },
       { status: 3, label: "Đã hủy", count: huy, percent: Math.round((huy / total) * 100), color: "bg-rose-500" },
     ];
   }, [overview]);
 
   /** maxDailyCount: Tìm giá trị cao nhất để thiết lập tỷ lệ chiều cao biểu đồ cột. */
-  const maxDailyCount = Math.max(
-    ...dailyAppointments.map((d) => d.count),
-    1
-  );
+  const maxDailyCount = Math.max(...dailyAppointments.map((d) => d.count), 1);
 
   /** revenueBreakdown: Tỷ lệ so sánh doanh thu từ Phí khám vs Phí thuốc */
   const revenueBreakdown = useMemo(() => {
@@ -154,9 +174,7 @@ function AdminStatsPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-10">
-        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
-          progress_activity
-        </span>
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
       </div>
     );
   }
@@ -166,17 +184,11 @@ function AdminStatsPage() {
       {/* ── HEADER & BỘ LỌC THEO NĂM ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-            Thống kê hệ thống
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Tổng hợp dữ liệu hoạt động của hệ thống đặt lịch khám bệnh
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Thống kê hệ thống</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Tổng hợp dữ liệu hoạt động của hệ thống đặt lịch khám bệnh</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-slate-400 text-lg">
-            calendar_today
-          </span>
+          <span className="material-symbols-outlined text-slate-400 text-lg">calendar_today</span>
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
@@ -228,12 +240,8 @@ function AdminStatsPage() {
         {/* Biểu đồ doanh thu dạng cột */}
         <div className="xl:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-bold text-slate-900">
-              Doanh thu theo tháng
-            </h3>
-            <span className="text-xs text-slate-400 font-medium">
-              Năm {selectedYear}
-            </span>
+            <h3 className="text-base font-bold text-slate-900">Doanh thu theo tháng</h3>
+            <span className="text-xs text-slate-400 font-medium">Năm {selectedYear}</span>
           </div>
           <div className="flex items-end gap-2 h-44 sm:h-52 px-2 border-b border-slate-100">
             {revenueStats.length > 0 ? (
@@ -241,14 +249,11 @@ function AdminStatsPage() {
                 const revenue = Number(m.tongDoanhThu || 0);
                 const thuoc = Number(m.doanhThuThuoc || 0);
                 const hasRevenue = revenue > 0;
-                const maxRevenueVal = Math.max(...revenueStats.map(s => Number(s.tongDoanhThu || 0)), 1);
+                const maxRevenueVal = Math.max(...revenueStats.map((s) => Number(s.tongDoanhThu || 0)), 1);
                 const heightVal = hasRevenue ? Math.max((revenue / maxRevenueVal) * 100, 15) : 2;
-                
+
                 return (
-                  <div
-                    key={m.thang}
-                    className="flex-1 flex flex-col items-center justify-end group relative h-full"
-                  >
+                  <div key={m.thang} className="flex-1 flex flex-col items-center justify-end group relative h-full">
                     {/* Tooltip hiển thị giá trị khi hover */}
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 whitespace-nowrap">
                       {hasRevenue ? `${revenue.toLocaleString("vi-VN")}đ` : "0đ"}
@@ -256,23 +261,25 @@ function AdminStatsPage() {
 
                     <div
                       className="w-7 sm:w-8 rounded-t-sm transition-all duration-300 relative"
-                      style={{ 
-                        height: `${heightVal}%`, 
-                        backgroundColor: hasRevenue ? '#3b82f6' : '#e2e8f0',
-                        minHeight: hasRevenue ? '20px' : '4px'
+                      style={{
+                        height: `${heightVal}%`,
+                        backgroundColor: hasRevenue ? "#3b82f6" : "#e2e8f0",
+                        minHeight: hasRevenue ? "20px" : "4px",
                       }}
                     >
                       {/* Phân bổ phí thuốc lồng trong cột doanh thu tổng */}
                       {hasRevenue && thuoc > 0 && (
-                        <div 
+                        <div
                           className="absolute bottom-0 left-0 right-0 bg-emerald-500 rounded-t-sm"
                           style={{ height: `${(thuoc / revenue) * 100}%`, opacity: 0.9 }}
                         />
                       )}
                     </div>
-                    <span className={`mt-2 text-[10px] sm:text-xs font-bold ${
-                      hasRevenue ? "text-blue-600" : "text-slate-400"
-                    }`}>
+                    <span
+                      className={`mt-2 text-[10px] sm:text-xs font-bold ${
+                        hasRevenue ? "text-blue-600" : "text-slate-400"
+                      }`}
+                    >
                       T{m.thang}
                     </span>
                   </div>
@@ -297,9 +304,7 @@ function AdminStatsPage() {
 
         {/* Biểu đồ Donut: Trạng thái lịch khám */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
-          <h3 className="text-base font-bold text-slate-900 mb-5">
-            Trạng thái lịch khám
-          </h3>
+          <h3 className="text-base font-bold text-slate-900 mb-5">Trạng thái lịch khám</h3>
           <div className="flex flex-col items-center gap-5">
             <div
               className="w-36 h-36 rounded-full relative"
@@ -313,12 +318,8 @@ function AdminStatsPage() {
               }}
             >
               <div className="absolute inset-4 bg-white rounded-full flex flex-col items-center justify-center">
-                <span className="text-lg font-bold text-slate-900">
-                  {overview.tongLichHen.toLocaleString("vi-VN")}
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Tổng cộng
-                </span>
+                <span className="text-lg font-bold text-slate-900">{overview.tongLichHen.toLocaleString("vi-VN")}</span>
+                <span className="text-[10px] text-slate-400 font-medium">Tổng cộng</span>
               </div>
             </div>
             <div className="w-full space-y-2.5">
@@ -341,12 +342,8 @@ function AdminStatsPage() {
         <div className="xl:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
             <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Lịch khám 14 ngày qua
-              </h3>
-              <p className="text-[11px] text-slate-500">
-                Số lượng lịch hẹn được đặt theo ngày
-              </p>
+              <h3 className="text-base font-bold text-slate-900">Lịch khám 14 ngày qua</h3>
+              <p className="text-[11px] text-slate-500">Số lượng lịch hẹn được đặt theo ngày</p>
             </div>
           </div>
           <div className="p-4 sm:p-6 overflow-x-auto">
@@ -368,14 +365,18 @@ function AdminStatsPage() {
                         }`}
                         style={{ height: heightStyle }}
                       />
-                      <span className={`text-[10px] font-semibold ${bar.isToday ? "text-orange-500" : "text-slate-400"}`}>
+                      <span
+                        className={`text-[10px] font-semibold ${bar.isToday ? "text-orange-500" : "text-slate-400"}`}
+                      >
                         {bar.label}
                       </span>
                     </div>
                   );
                 })
               ) : (
-                <div className="w-full flex items-center justify-center text-slate-400 text-xs py-10">Chưa có dữ liệu</div>
+                <div className="w-full flex items-center justify-center text-slate-400 text-xs py-10">
+                  Chưa có dữ liệu
+                </div>
               )}
             </div>
           </div>
@@ -383,9 +384,7 @@ function AdminStatsPage() {
 
         {/* Phân bổ doanh thu dạng tỉ lệ phần trăm */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
-          <h3 className="text-base font-bold text-slate-900 mb-5">
-            Phân bổ doanh thu
-          </h3>
+          <h3 className="text-base font-bold text-slate-900 mb-5">Phân bổ doanh thu</h3>
           <div className="flex flex-col items-center gap-5">
             <div
               className="w-36 h-36 rounded-full relative"
@@ -414,7 +413,10 @@ function AdminStatsPage() {
                   <span className="text-sm font-semibold text-slate-900">{revenueBreakdown.khamPercent}%</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${revenueBreakdown.khamPercent}%` }} />
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${revenueBreakdown.khamPercent}%` }}
+                  />
                 </div>
                 <p className="text-[11px] text-slate-400 mt-0.5">{overview.doanhThuKham.toLocaleString("vi-VN")}đ</p>
               </div>
@@ -428,7 +430,10 @@ function AdminStatsPage() {
                   <span className="text-sm font-semibold text-slate-900">{revenueBreakdown.thuocPercent}%</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2">
-                  <div className="bg-emerald-500 h-2 rounded-full transition-all duration-500" style={{ width: `${revenueBreakdown.thuocPercent}%` }} />
+                  <div
+                    className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${revenueBreakdown.thuocPercent}%` }}
+                  />
                 </div>
                 <p className="text-[11px] text-slate-400 mt-0.5">{overview.doanhThuThuoc.toLocaleString("vi-VN")}đ</p>
               </div>
@@ -450,8 +455,12 @@ function AdminStatsPage() {
             .reduce((sum, m) => sum + (m.tongDoanhThu || 0), 0);
           return (
             <div key={q.label} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 text-center">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{q.label} / {selectedYear}</p>
-              <p className="text-lg font-bold text-slate-900">{(total / 1000000).toFixed(1)} <span className="text-xs font-medium text-slate-400">Tr</span></p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                {q.label} / {selectedYear}
+              </p>
+              <p className="text-lg font-bold text-slate-900">
+                {(total / 1000000).toFixed(1)} <span className="text-xs font-medium text-slate-400">Tr</span>
+              </p>
               <p className="text-[11px] text-slate-400 mt-0.5">{total.toLocaleString("vi-VN")}đ</p>
             </div>
           );
@@ -463,7 +472,9 @@ function AdminStatsPage() {
         <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-900">Top bác sĩ được đặt lịch nhiều nhất</h3>
-            <p className="text-[11px] text-slate-500">14 ngày gần nhất · Dữ liệu được tính dựa trên số lịch xác nhận/hoàn thành</p>
+            <p className="text-[11px] text-slate-500">
+              14 ngày gần nhất · Dữ liệu được tính dựa trên số lịch xác nhận/hoàn thành
+            </p>
           </div>
         </div>
 
@@ -477,7 +488,11 @@ function AdminStatsPage() {
               const barPercent = Math.round((doc.soLuong / maxDoc) * 100);
               return (
                 <div key={doc.bacSiId} className="p-4 flex items-start gap-3">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx === 0 ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-500"}`}>{idx + 1}</div>
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx === 0 ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-500"}`}
+                  >
+                    {idx + 1}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-900 truncate">{doc.tenBacSi}</p>
                     <div className="flex items-center gap-2 mt-1.5">
@@ -498,14 +513,24 @@ function AdminStatsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500 w-12">#</th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Bác sĩ</th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500 w-80">Số lịch khám</th>
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500 w-12">
+                  #
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Bác sĩ
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500 w-80">
+                  Số lịch khám
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {topDoctors.length === 0 ? (
-                <tr><td colSpan={3} className="text-center p-4 text-sm text-slate-500">Chưa có dữ liệu</td></tr>
+                <tr>
+                  <td colSpan={3} className="text-center p-4 text-sm text-slate-500">
+                    Chưa có dữ liệu
+                  </td>
+                </tr>
               ) : (
                 topDoctors.map((doc, idx) => {
                   const maxDoc = topDoctors[0]?.soLuong || 1;
@@ -513,7 +538,11 @@ function AdminStatsPage() {
                   return (
                     <tr key={doc.bacSiId} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? "bg-amber-100 text-amber-600" : (idx === 1 ? "bg-slate-200 text-slate-600" : "bg-slate-100 text-slate-500")}`}>{idx + 1}</div>
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? "bg-amber-100 text-amber-600" : idx === 1 ? "bg-slate-200 text-slate-600" : "bg-slate-100 text-slate-500"}`}
+                        >
+                          {idx + 1}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div>
@@ -524,7 +553,10 @@ function AdminStatsPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex-1 bg-slate-100 rounded-full h-2">
-                            <div className="bg-primary h-2 rounded-full transition-all duration-500" style={{ width: `${barPercent}%` }} />
+                            <div
+                              className="bg-primary h-2 rounded-full transition-all duration-500"
+                              style={{ width: `${barPercent}%` }}
+                            />
                           </div>
                           <span className="text-sm font-bold text-slate-900 w-8 text-right">{doc.soLuong}</span>
                         </div>

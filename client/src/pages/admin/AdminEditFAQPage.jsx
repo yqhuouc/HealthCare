@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useFAQ, useUpdateFAQ } from "../../hooks/queries/useFAQQueries";
@@ -17,9 +16,7 @@ function AdminEditFAQPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
-          progress_activity
-        </span>
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
       </div>
     );
   }
@@ -31,7 +28,7 @@ function EditFAQForm({ faqData, faqId }) {
   const navigate = useNavigate();
   const updateMutation = useUpdateFAQ();
   const saving = updateMutation.isPending;
-  
+
   // Khởi tạo form state trực tiếp từ props
   const item = faqData || {};
   const {
@@ -44,7 +41,7 @@ function EditFAQForm({ faqData, faqId }) {
       cauHoi: item.cauHoi || "",
       traLoi: item.traLoi || "",
       dangHoatDong: item.dangHoatDong ?? 1,
-    }
+    },
   });
 
   const onSubmit = (data) => {
@@ -56,7 +53,7 @@ function EditFAQForm({ faqData, faqId }) {
           navigate("/admin/faqs");
         },
         onError: (err) => toast.error(err.message || "Có lỗi xảy ra khi cập nhật!"),
-      }
+      },
     );
   };
 
@@ -64,10 +61,7 @@ function EditFAQForm({ faqData, faqId }) {
     <div className="max-w-3xl mx-auto">
       {/* Breadcrumb dẫn hướng */}
       <div className="flex items-center gap-2 mb-6 text-sm">
-        <Link
-          to="/admin/faqs"
-          className="text-slate-500 hover:text-primary transition-colors"
-        >
+        <Link to="/admin/faqs" className="text-slate-500 hover:text-primary transition-colors">
           Quản lý FAQs
         </Link>
         <span className="text-slate-300">/</span>
@@ -75,12 +69,8 @@ function EditFAQForm({ faqData, faqId }) {
       </div>
 
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900">
-          Chỉnh sửa câu hỏi
-        </h2>
-        <p className="text-slate-500 text-sm mt-1">
-          Cập nhật nội dung câu hỏi thường gặp ID #{faqId}.
-        </p>
+        <h2 className="text-2xl font-bold text-slate-900">Chỉnh sửa câu hỏi</h2>
+        <p className="text-slate-500 text-sm mt-1">Cập nhật nội dung câu hỏi thường gặp ID #{faqId}.</p>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -115,9 +105,7 @@ function EditFAQForm({ faqData, faqId }) {
 
           {/* Lựa chọn trạng thái hiển thị */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Trạng thái hiển thị
-            </label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Trạng thái hiển thị</label>
             <select
               {...register("dangHoatDong")}
               className={`w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary ${errors.dangHoatDong ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
@@ -142,15 +130,11 @@ function EditFAQForm({ faqData, faqId }) {
             onClick={handleSubmit(onSubmit)}
             disabled={saving}
             className={`w-full sm:w-auto px-6 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
-              saving
-                ? "bg-slate-300"
-                : "bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
+              saving ? "bg-slate-300" : "bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
             }`}
           >
             {saving ? (
-              <span className="material-symbols-outlined animate-spin text-sm">
-                progress_activity
-              </span>
+              <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
             ) : (
               <span className="material-symbols-outlined text-sm">save</span>
             )}

@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { usePatient, useUpdatePatient } from "../../hooks/queries/usePatientQueries";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { patientSchema } from "../../validations/adminSchema";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
@@ -31,14 +30,14 @@ function EditPatientForm({ patientData, patientId }) {
   const navigate = useNavigate();
   const updateMutation = useUpdatePatient();
   const submitting = updateMutation.isPending;
-  
+
   // Khởi tạo form state trực tiếp từ props — KHÔNG cần useEffect
   const p = patientData || {};
   const {
     register,
     handleSubmit,
-    watch,
-    formState: { errors }
+    control,
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(patientSchema),
     defaultValues: {
@@ -48,10 +47,13 @@ function EditPatientForm({ patientData, patientId }) {
       diaChi: p.taiKhoan?.diaChi || "",
       ngaySinh: p.taiKhoan?.ngaySinh ? p.taiKhoan.ngaySinh.split("T")[0] : "",
       gioiTinh: p.taiKhoan?.gioiTinh ?? 1,
-    }
+    },
   });
 
-  const gioiTinhValue = watch("gioiTinh");
+  const gioiTinhValue = useWatch({
+    control,
+    name: "gioiTinh",
+  });
 
   const onSubmit = (data) => {
     const payload = {
@@ -60,7 +62,7 @@ function EditPatientForm({ patientData, patientId }) {
       emailLienHe: data.email,
       diaChi: data.diaChi,
       ngaySinh: data.ngaySinh,
-      gioiTinh: Number(data.gioiTinh)
+      gioiTinh: Number(data.gioiTinh),
     };
 
     updateMutation.mutate(
@@ -68,7 +70,7 @@ function EditPatientForm({ patientData, patientId }) {
       {
         onSuccess: () => toast.success("Cập nhật thông tin bệnh nhân thành công"),
         onError: (err) => toast.error(err.message || "Lỗi khi cập nhật"),
-      }
+      },
     );
   };
 
@@ -76,27 +78,18 @@ function EditPatientForm({ patientData, patientId }) {
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
       {/* Breadcrumb dẫn hướng */}
       <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Link
-          to="/admin/patients"
-          className="hover:text-primary transition-colors"
-        >
+        <Link to="/admin/patients" className="hover:text-primary transition-colors">
           Quản lý bệnh nhân
         </Link>
         <span>/</span>
-        <span className="text-slate-900 font-medium">
-          Chỉnh sửa hồ sơ BN#{patientId}
-        </span>
+        <span className="text-slate-900 font-medium">Chỉnh sửa hồ sơ BN#{patientId}</span>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
         {/* Header Section */}
         <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-          <h2 className="text-xl font-bold text-slate-900">
-            Chi tiết hồ sơ bệnh nhân
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Cập nhật thông tin cá nhân và trạng thái tài khoản.
-          </p>
+          <h2 className="text-xl font-bold text-slate-900">Chi tiết hồ sơ bệnh nhân</h2>
+          <p className="text-sm text-slate-500 mt-1">Cập nhật thông tin cá nhân và trạng thái tài khoản.</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 sm:p-8 space-y-8">
@@ -107,9 +100,7 @@ function EditPatientForm({ patientData, patientId }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">
-                  Họ và tên
-                </label>
+                <label className="text-sm font-bold text-slate-700">Họ và tên</label>
                 <input
                   type="text"
                   {...register("hoTen")}
@@ -118,9 +109,7 @@ function EditPatientForm({ patientData, patientId }) {
                 {errors.hoTen && <p className="text-red-500 text-xs mt-1">{errors.hoTen.message}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">
-                  Số điện thoại
-                </label>
+                <label className="text-sm font-bold text-slate-700">Số điện thoại</label>
                 <input
                   type="tel"
                   {...register("soDienThoai")}
@@ -129,9 +118,7 @@ function EditPatientForm({ patientData, patientId }) {
                 {errors.soDienThoai && <p className="text-red-500 text-xs mt-1">{errors.soDienThoai.message}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">
-                  Email (ID hồ sơ)
-                </label>
+                <label className="text-sm font-bold text-slate-700">Email (ID hồ sơ)</label>
                 <input
                   type="email"
                   disabled
@@ -143,9 +130,7 @@ function EditPatientForm({ patientData, patientId }) {
                 </p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">
-                  Địa chỉ
-                </label>
+                <label className="text-sm font-bold text-slate-700">Địa chỉ</label>
                 <input
                   type="text"
                   {...register("diaChi")}
@@ -163,9 +148,7 @@ function EditPatientForm({ patientData, patientId }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">
-                  Ngày sinh
-                </label>
+                <label className="text-sm font-bold text-slate-700">Ngày sinh</label>
                 <input
                   type="date"
                   {...register("ngaySinh")}
@@ -174,21 +157,14 @@ function EditPatientForm({ patientData, patientId }) {
                 {errors.ngaySinh && <p className="text-red-500 text-xs mt-1">{errors.ngaySinh.message}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">
-                  Giới tính
-                </label>
+                <label className="text-sm font-bold text-slate-700">Giới tính</label>
                 <div className="flex gap-4">
                   {[1, 2].map((val) => (
                     <label
                       key={val}
                       className="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-white transition-all peer-checked:bg-primary/5 peer-checked:border-primary"
                     >
-                      <input
-                        type="radio"
-                        {...register("gioiTinh")}
-                        value={val}
-                        className="peer hidden"
-                      />
+                      <input type="radio" {...register("gioiTinh")} value={val} className="peer hidden" />
                       <span
                         className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${Number(gioiTinhValue) === val ? "border-primary" : "border-slate-300"}`}
                       >

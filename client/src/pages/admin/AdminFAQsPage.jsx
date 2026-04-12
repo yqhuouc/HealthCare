@@ -32,7 +32,10 @@ function AdminFAQsPage() {
   const [page, setPage] = useState(1);
 
   // TanStack Query: Lấy danh sách FAQ (auto-cache, auto-refetch khi page thay đổi)
-  const { data: faqsRes, isLoading: loading } = useFAQsAdmin({ page, limit: ITEMS_PER_PAGE });
+  const { data: faqsRes, isLoading: loading } = useFAQsAdmin({
+    page,
+    limit: ITEMS_PER_PAGE,
+  });
   const faqs = faqsRes?.data || [];
   const totalPages = faqsRes?.pagination?.totalPages || 1;
 
@@ -45,7 +48,7 @@ function AdminFAQsPage() {
    */
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa câu hỏi này không?")) return;
-    
+
     deleteMutation.mutate(id, {
       onSuccess: () => toast.success("Đã xóa câu hỏi thành công"),
       onError: (err) => toast.error(err.message || "Lỗi khi xóa câu hỏi"),
@@ -71,7 +74,6 @@ function AdminFAQsPage() {
 
       {/* Container chính chứa bảng danh sách */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        
         {/* VIEW: DESKTOP (Hiển thị dạng bảng Table) */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
@@ -89,7 +91,9 @@ function AdminFAQsPage() {
                 // Hiển thị trạng thái đang tải
                 <tr>
                   <td colSpan="5" className="text-center py-10">
-                    <span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span>
+                    <span className="material-symbols-outlined animate-spin text-primary text-3xl">
+                      progress_activity
+                    </span>
                   </td>
                 </tr>
               ) : faqs.length === 0 ? (
@@ -99,51 +103,55 @@ function AdminFAQsPage() {
                     Chưa có câu hỏi nào được lưu trong hệ thống.
                   </td>
                 </tr>
-              ) : faqs.map((item) => {
-                const statusInfo = STATUS_MAP[item.dangHoatDong] || STATUS_MAP[0];
-                return (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                    {/* Cột Nội dung câu hỏi */}
-                    <td className="px-5 py-4 max-w-[320px]">
-                      <p className="line-clamp-1 text-slate-800 font-medium" title={item.cauHoi}>{item.cauHoi}</p>
-                    </td>
-                    {/* Cột Chuyên mục */}
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary`}>
-                        {item.cauHoiThuongGap_ChuyenMuc?.tenChuyenMuc || "Hệ thống"}
-                      </span>
-                    </td>
-                    {/* Cột Ngày tạo */}
-                    <td className="px-5 py-4 text-slate-600">
-                      {formatDate(item.ngayTao || dayjs())}
-                    </td>
-                    {/* Cột Trạng thái dot color */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`size-2 rounded-full ${statusInfo.dotClass}`} />
-                        <span className="text-slate-700">{statusInfo.label}</span>
-                      </div>
-                    </td>
-                    {/* Cột Nút hành động */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-1">
-                        <Link
-                          to={`/admin/faqs/edit/${item.id}`}
-                          className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors"
+              ) : (
+                faqs.map((item) => {
+                  const statusInfo = STATUS_MAP[item.dangHoatDong] || STATUS_MAP[0];
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                      {/* Cột Nội dung câu hỏi */}
+                      <td className="px-5 py-4 max-w-[320px]">
+                        <p className="line-clamp-1 text-slate-800 font-medium" title={item.cauHoi}>
+                          {item.cauHoi}
+                        </p>
+                      </td>
+                      {/* Cột Chuyên mục */}
+                      <td className="px-5 py-4">
+                        <span
+                          className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary`}
                         >
-                          <span className="material-symbols-outlined text-xl">edit</span>
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-500 transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-xl">delete</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                          {item.cauHoiThuongGap_ChuyenMuc?.tenChuyenMuc || "Hệ thống"}
+                        </span>
+                      </td>
+                      {/* Cột Ngày tạo */}
+                      <td className="px-5 py-4 text-slate-600">{formatDate(item.ngayTao || dayjs())}</td>
+                      {/* Cột Trạng thái dot color */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`size-2 rounded-full ${statusInfo.dotClass}`} />
+                          <span className="text-slate-700">{statusInfo.label}</span>
+                        </div>
+                      </td>
+                      {/* Cột Nút hành động */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-1">
+                          <Link
+                            to={`/admin/faqs/edit/${item.id}`}
+                            className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-xl">edit</span>
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="size-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-500 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-xl">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -164,9 +172,7 @@ function AdminFAQsPage() {
                     <span className="text-xs text-slate-600">{statusInfo.label}</span>
                   </div>
                 </div>
-                <p className="text-xs text-slate-500">
-                  {formatDate(item.ngayTao || dayjs())}
-                </p>
+                <p className="text-xs text-slate-500">{formatDate(item.ngayTao || dayjs())}</p>
                 <div className="flex items-center gap-2">
                   <Link
                     to={`/admin/faqs/edit/${item.id}`}

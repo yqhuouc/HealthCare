@@ -46,17 +46,15 @@ function HeroSection() {
     <section className="relative overflow-hidden py-12 lg:py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-
           {/* Cột trái: Tiêu đề + mô tả + nút hành động */}
           <div className="space-y-8 flex flex-col justify-center">
             <div className="space-y-4">
               <h2 className="text-4xl md:text-5xl lg:text-[3.25rem] xl:text-6xl font-black leading-tight tracking-tight text-slate-900">
-                Đặt lịch khám bệnh{" "}
-                <span className="text-primary">nhanh chóng</span> và tiện lợi
+                Đặt lịch khám bệnh <span className="text-primary">nhanh chóng</span> và tiện lợi
               </h2>
               <p className="text-lg text-slate-600 max-w-xl">
-                Kết nối với đội ngũ bác sĩ uy tín và đặt lịch khám chỉ trong vài
-                phút. Giải pháp y tế hiện đại ngay trong tầm tay bạn.
+                Kết nối với đội ngũ bác sĩ uy tín và đặt lịch khám chỉ trong vài phút. Giải pháp y tế hiện đại ngay
+                trong tầm tay bạn.
               </p>
             </div>
 
@@ -89,7 +87,6 @@ function HeroSection() {
               />
             </div>
           </div>
-
         </div>
       </div>
     </section>
@@ -104,9 +101,7 @@ function SpecialtyCard({ specialty }) {
   return (
     <div className="group bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
       <div className="w-14 h-14 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-5 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-        <span className="material-symbols-outlined text-3xl">
-          {specialty.icon || DEFAULT_ICON}
-        </span>
+        <span className="material-symbols-outlined text-3xl">{specialty.icon || DEFAULT_ICON}</span>
       </div>
       <h4 className="text-xl font-bold mb-2">{specialty.tenChuyenKhoa}</h4>
       <p className="text-slate-500 text-sm mb-4 line-clamp-2">
@@ -116,8 +111,7 @@ function SpecialtyCard({ specialty }) {
         to={`/specialties/${specialty.id}`}
         className="text-primary font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all"
       >
-        Xem chi tiết{" "}
-        <span className="material-symbols-outlined text-sm">arrow_forward</span>
+        Xem chi tiết <span className="material-symbols-outlined text-sm">arrow_forward</span>
       </Link>
     </div>
   );
@@ -133,9 +127,7 @@ function SpecialtiesSection({ specialties, loading }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Tiêu đề section + gạch chân */}
         <div className="mb-12">
-          <h3 className="text-3xl font-bold text-slate-900">
-            Chuyên khoa phổ biến
-          </h3>
+          <h3 className="text-3xl font-bold text-slate-900">Chuyên khoa phổ biến</h3>
           <div className="h-1.5 w-20 bg-primary mt-4 rounded-full"></div>
         </div>
 
@@ -169,11 +161,7 @@ function DoctorCard({ doctor }) {
       <div className="relative w-32 h-32 mx-auto mb-4">
         <div className="w-full h-full rounded-full border-4 border-primary/20 bg-primary/5 flex items-center justify-center overflow-hidden">
           {doctor.taiKhoan?.anhDaiDien ? (
-            <img
-              alt={doctor.tenBacSi}
-              className="w-full h-full object-cover"
-              src={avatarUrl}
-            />
+            <img alt={doctor.tenBacSi} className="w-full h-full object-cover" src={avatarUrl} />
           ) : (
             <span className="material-symbols-outlined text-5xl text-primary/40">person</span>
           )}
@@ -181,12 +169,8 @@ function DoctorCard({ doctor }) {
       </div>
       <h5 className="text-lg font-bold text-slate-900">{doctor.tenBacSi}</h5>
       <p className="text-primary text-sm font-medium mb-1">{specialtyName}</p>
-      {doctor.hocViChucDanh && (
-        <p className="text-slate-500 text-xs mb-3">{doctor.hocViChucDanh}</p>
-      )}
-      {doctor.giaKham && (
-        <p className="text-primary font-bold mb-3">{formatPrice(doctor.giaKham)}</p>
-      )}
+      {doctor.hocViChucDanh && <p className="text-slate-500 text-xs mb-3">{doctor.hocViChucDanh}</p>}
+      {doctor.giaKham && <p className="text-primary font-bold mb-3">{formatPrice(doctor.giaKham)}</p>}
       <Link
         to={`/doctors/${doctor.id}`}
         className="block w-full py-2 bg-slate-50 hover:bg-primary hover:text-white text-primary rounded-lg text-sm font-bold transition-all border border-primary/10"
@@ -208,15 +192,10 @@ function FeaturedDoctorsSection({ doctors, loading }) {
         {/* Header: Tiêu đề + link xem tất cả */}
         <div className="flex justify-between items-end mb-12">
           <div>
-            <h3 className="text-3xl font-bold text-slate-900">
-              Bác sĩ nổi bật
-            </h3>
+            <h3 className="text-3xl font-bold text-slate-900">Bác sĩ nổi bật</h3>
             <div className="h-1.5 w-20 bg-primary mt-4 rounded-full"></div>
           </div>
-          <Link
-            to="/doctors"
-            className="text-primary font-bold hover:underline hidden sm:block"
-          >
+          <Link to="/doctors" className="text-primary font-bold hover:underline hidden sm:block">
             Xem tất cả bác sĩ
           </Link>
         </div>

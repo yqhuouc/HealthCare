@@ -15,11 +15,11 @@ function AdminTimeSlotsPage() {
   // TanStack Query: Lấy danh sách khung giờ (auto-cache)
   const { data: slotsRes, isLoading: loading } = useKhungGio();
   const slots = slotsRes?.data || [];
-  
+
   // TanStack Query: Mutations (auto-invalidate)
   const createMutation = useCreateKhungGio();
   const deleteFn = useDeleteKhungGio();
-  
+
   // State điều khiển các Modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
@@ -78,38 +78,52 @@ function AdminTimeSlotsPage() {
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">ID</th>
               <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Thời gian</th>
-              <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">Hành động</th>
+              <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">
+                Hành động
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               // Trạng thái đang tải dữ liệu
-              <tr><td colSpan="3" className="py-20 text-center"><span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span></td></tr>
-            ) : slots.length === 0 ? (
-              // Trạng thái danh sách trống
-              <tr><td colSpan="3" className="py-20 text-center text-slate-400 italic">Chưa có khung giờ nào</td></tr>
-            ) : slots.map((slot) => (
-              <tr key={slot.id} className="hover:bg-slate-50/50 transition-colors group">
-                <td className="px-6 py-4 text-slate-500 font-medium font-mono text-sm">#{slot.id}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                      {/* Hiển thị khoảng thời gian đã được định dạng (HH:mm) */}
-                     <span className="px-3 py-1 bg-primary/10 text-primary font-bold rounded-lg text-sm">
-                       {formatTime(slot.gioBatDau)} - {formatTime(slot.gioKetThuc)}
-                     </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  {/* Nút Kích hoạt Modal xóa */}
-                  <button
-                    onClick={() => setDeleteModal({ open: true, id: slot.id })}
-                    className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                  >
-                    <span className="material-symbols-outlined text-xl">delete</span>
-                  </button>
+              <tr>
+                <td colSpan="3" className="py-20 text-center">
+                  <span className="material-symbols-outlined animate-spin text-primary text-4xl">
+                    progress_activity
+                  </span>
                 </td>
               </tr>
-            ))}
+            ) : slots.length === 0 ? (
+              // Trạng thái danh sách trống
+              <tr>
+                <td colSpan="3" className="py-20 text-center text-slate-400 italic">
+                  Chưa có khung giờ nào
+                </td>
+              </tr>
+            ) : (
+              slots.map((slot) => (
+                <tr key={slot.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-6 py-4 text-slate-500 font-medium font-mono text-sm">#{slot.id}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      {/* Hiển thị khoảng thời gian đã được định dạng (HH:mm) */}
+                      <span className="px-3 py-1 bg-primary/10 text-primary font-bold rounded-lg text-sm">
+                        {formatTime(slot.gioBatDau)} - {formatTime(slot.gioKetThuc)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {/* Nút Kích hoạt Modal xóa */}
+                    <button
+                      onClick={() => setDeleteModal({ open: true, id: slot.id })}
+                      className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                    >
+                      <span className="material-symbols-outlined text-xl">delete</span>
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -147,7 +161,9 @@ function AdminTimeSlotsPage() {
                   />
                 </div>
               </div>
-              <p className="text-xs text-slate-500 italic">* Lưu ý: Khung giờ sẽ được áp dụng cho tất cả bác sĩ khi tạo lịch.</p>
+              <p className="text-xs text-slate-500 italic">
+                * Lưu ý: Khung giờ sẽ được áp dụng cho tất cả bác sĩ khi tạo lịch.
+              </p>
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -177,16 +193,17 @@ function AdminTimeSlotsPage() {
             </div>
             <h3 className="text-xl font-bold text-slate-900 mb-2">Xác nhận xóa?</h3>
             <p className="text-sm text-slate-500 mb-6 px-4">
-              Bạn có chắc chắn muốn xóa khung giờ này? Hành động không thể hoàn tác và có thể lỗi nếu đã có lịch khám gắn với khung giờ này.
+              Bạn có chắc chắn muốn xóa khung giờ này? Hành động không thể hoàn tác và có thể lỗi nếu đã có lịch khám
+              gắn với khung giờ này.
             </p>
             <div className="flex gap-3">
-              <button 
-                onClick={() => setDeleteModal({ open: false, id: null })} 
+              <button
+                onClick={() => setDeleteModal({ open: false, id: null })}
                 className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-all"
               >
                 Hủy bỏ
               </button>
-              <button 
+              <button
                 onClick={confirmDelete}
                 className="flex-1 py-3 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20"
               >

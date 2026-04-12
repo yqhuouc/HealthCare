@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useSpecialty, useUpdateSpecialty } from "../../hooks/queries/useSpecialtyQueries";
 import { specialtyService } from "../../services/specialtyService"; // Giữ lại cho uploadAnh
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { specialtySchema } from "../../validations/adminSchema";
 
@@ -47,17 +47,17 @@ function AdminEditSpecialtyPage() {
 function EditSpecialtyForm({ specialtyData, specialtyId }) {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  
+
   const updateMutation = useUpdateSpecialty();
   const saving = updateMutation.isPending;
-  
+
   // Khởi tạo form state trực tiếp từ props
   const item = specialtyData || {};
   const {
     register,
     handleSubmit,
-    watch,
-    formState: { errors }
+    control,
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(specialtySchema),
     defaultValues: {
@@ -65,10 +65,13 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
       icon: item.icon || "medical_services",
       moTa: item.moTaChuyenKhoa || "",
       thoiLuongKham: item.thoiLuongKham || 20,
-    }
+    },
   });
 
-  const iconValue = watch("icon");
+  const iconValue = useWatch({
+    control,
+    name: "icon",
+  });
 
   // State quản lý tệp tin ảnh và preview
   const [selectedFile, setSelectedFile] = useState(null);
@@ -159,9 +162,7 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Thời lượng khám trung bình (Phút)
-                </label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Thời lượng khám trung bình (Phút)</label>
                 <input
                   type="number"
                   {...register("thoiLuongKham")}
@@ -195,7 +196,7 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
               <span className="material-symbols-outlined text-xl text-primary">category</span>
               Biểu tượng (Icon)
             </label>
-            
+
             <div className="space-y-4">
               <select
                 {...register("icon")}
@@ -228,7 +229,7 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
               Ảnh chuyên khoa
             </label>
 
-            <div 
+            <div
               onClick={() => fileInputRef.current?.click()}
               className="relative aspect-video rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group overflow-hidden flex flex-col items-center justify-center gap-2"
             >
@@ -239,8 +240,12 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
                 <img src={currentImageUrl} alt="Current" className="w-full h-full object-cover" />
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-3xl text-slate-300 group-hover:text-primary transition-colors">add_photo_alternate</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Click tải ảnh mới</span>
+                  <span className="material-symbols-outlined text-3xl text-slate-300 group-hover:text-primary transition-colors">
+                    add_photo_alternate
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Click tải ảnh mới
+                  </span>
                 </>
               )}
               {/* Lớp overlay khi hover */}
@@ -249,13 +254,7 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
               </div>
             </div>
             {/* Input file ẩn */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/*"
-              className="hidden"
-            />
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
           </div>
         </div>
       </div>
@@ -288,4 +287,3 @@ function EditSpecialtyForm({ specialtyData, specialtyId }) {
 }
 
 export default AdminEditSpecialtyPage;
-

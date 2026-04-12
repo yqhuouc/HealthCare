@@ -77,18 +77,12 @@ export default function DoctorListPage() {
         {/* Loading state */}
         {loading ? (
           <div className="text-center py-20">
-            <span className="material-symbols-outlined text-5xl text-primary animate-spin">
-              progress_activity
-            </span>
+            <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
           </div>
         ) : doctors.length === 0 ? (
           <div className="text-center py-20">
-            <span className="material-symbols-outlined text-6xl text-slate-300 mb-4 block">
-              person_search
-            </span>
-            <p className="text-slate-500 text-lg">
-              Không tìm thấy bác sĩ phù hợp
-            </p>
+            <span className="material-symbols-outlined text-6xl text-slate-300 mb-4 block">person_search</span>
+            <p className="text-slate-500 text-lg">Không tìm thấy bác sĩ phù hợp</p>
           </div>
         ) : (
           <>
@@ -112,34 +106,20 @@ export default function DoctorListPage() {
                     {/* Avatar */}
                     <div className="w-20 h-20 rounded-full border-4 border-primary/20 bg-primary/5 flex items-center justify-center overflow-hidden mb-4">
                       {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt={doctor.tenBacSi}
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={avatarUrl} alt={doctor.tenBacSi} className="w-full h-full object-cover" />
                       ) : (
                         <span className="material-symbols-outlined text-4xl text-primary/40">person</span>
                       )}
                     </div>
 
-                    <h2 className="text-lg font-bold text-slate-800">
-                      {doctor.tenBacSi}
-                    </h2>
+                    <h2 className="text-lg font-bold text-slate-800">{doctor.tenBacSi}</h2>
 
-                    <p className="text-primary text-sm font-medium mt-1">
-                      {specialtyName}
-                    </p>
+                    <p className="text-primary text-sm font-medium mt-1">{specialtyName}</p>
 
-                    {doctor.hocViChucDanh && (
-                      <p className="text-slate-500 text-sm mt-2">
-                        {doctor.hocViChucDanh}
-                      </p>
-                    )}
+                    {doctor.hocViChucDanh && <p className="text-slate-500 text-sm mt-2">{doctor.hocViChucDanh}</p>}
 
                     {doctor.giaKham && (
-                      <p className="text-primary font-bold text-lg mt-3">
-                        {formatPrice(doctor.giaKham)}
-                      </p>
+                      <p className="text-primary font-bold text-lg mt-3">{formatPrice(doctor.giaKham)}</p>
                     )}
 
                     {/* Nút hành động */}

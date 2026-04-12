@@ -22,11 +22,11 @@ const STATUS_MAP = {
  */
 function AdminPatientDetailPage() {
   const { id } = useParams();
-  
+
   // TanStack Query: Lấy thông tin bệnh nhân và lịch hẹn (auto-cache)
   const { data: pRes, isLoading: loading } = usePatient(id);
   const { data: aRes } = useAppointmentsByPatient(id);
-  
+
   const patient = pRes?.data || null;
   const appointments = aRes?.data || [];
 
@@ -46,7 +46,9 @@ function AdminPatientDetailPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Breadcrumb dẫn hướng */}
       <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Link to="/admin/patients" className="hover:text-primary transition-colors italic">Quản lý bệnh nhân</Link>
+        <Link to="/admin/patients" className="hover:text-primary transition-colors italic">
+          Quản lý bệnh nhân
+        </Link>
         <span>/</span>
         <span className="text-slate-900 font-medium">Chi tiết hồ sơ #BN{id}</span>
       </div>
@@ -58,11 +60,7 @@ function AdminPatientDetailPage() {
             {/* Ảnh đại diện: Nếu không có ảnh thì hiển thị chữ cái đầu tên */}
             <div className="size-24 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center overflow-hidden">
               {patient.taiKhoan?.anhDaiDien ? (
-                <img 
-                  src={patient.taiKhoan.anhDaiDien} 
-                  alt={patient.hoTen} 
-                  className="w-full h-full object-cover"
-                />
+                <img src={patient.taiKhoan.anhDaiDien} alt={patient.hoTen} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-3xl font-bold">{getInitials(patient.hoTen)}</span>
               )}
@@ -95,15 +93,21 @@ function AdminPatientDetailPage() {
             <div className="space-y-4">
               <div className="flex justify-between py-2 border-b border-slate-50">
                 <span className="text-slate-500">Giới tính:</span>
-                <span className="font-medium text-slate-900">{patient.taiKhoan?.gioiTinh === 1 ? "Nam" : patient.taiKhoan?.gioiTinh === 2 ? "Nữ" : "Chưa cập nhật"}</span>
+                <span className="font-medium text-slate-900">
+                  {patient.taiKhoan?.gioiTinh === 1 ? "Nam" : patient.taiKhoan?.gioiTinh === 2 ? "Nữ" : "Chưa cập nhật"}
+                </span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-50">
                 <span className="text-slate-500">Ngày sinh:</span>
-                <span className="font-medium text-slate-900">{patient.taiKhoan?.ngaySinh ? formatDate(patient.taiKhoan.ngaySinh) : "Chưa cập nhật"}</span>
+                <span className="font-medium text-slate-900">
+                  {patient.taiKhoan?.ngaySinh ? formatDate(patient.taiKhoan.ngaySinh) : "Chưa cập nhật"}
+                </span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-50">
                 <span className="text-slate-500">Địa chỉ:</span>
-                <span className="font-medium text-slate-900 text-right">{patient.taiKhoan?.diaChi || "Chưa cập nhật"}</span>
+                <span className="font-medium text-slate-900 text-right">
+                  {patient.taiKhoan?.diaChi || "Chưa cập nhật"}
+                </span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-50">
                 <span className="text-slate-500">Trạng thái tài khoản:</span>
@@ -120,7 +124,7 @@ function AdminPatientDetailPage() {
                 )}
               </div>
             </div>
-          </div>  
+          </div>
 
           {/* CỘT PHẢI: Số liệu thống kê lịch khám của bệnh nhân */}
           <div>
@@ -133,15 +137,21 @@ function AdminPatientDetailPage() {
                 <span className="text-xs text-slate-500">Tổng lịch hẹn</span>
               </div>
               <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 flex flex-col items-center">
-                <span className="text-2xl font-bold text-emerald-600">{appointments.filter(a => a.trangThai === 2).length}</span>
+                <span className="text-2xl font-bold text-emerald-600">
+                  {appointments.filter((a) => a.trangThai === 2).length}
+                </span>
                 <span className="text-xs text-slate-500">Đã hoàn thành</span>
               </div>
               <div className="p-4 bg-amber-50/50 rounded-xl border border-amber-100 flex flex-col items-center">
-                <span className="text-2xl font-bold text-amber-600">{appointments.filter(a => a.trangThai === 0 || a.trangThai === 1).length}</span>
+                <span className="text-2xl font-bold text-amber-600">
+                  {appointments.filter((a) => a.trangThai === 0 || a.trangThai === 1).length}
+                </span>
                 <span className="text-xs text-slate-500">Sắp tới / Chờ</span>
               </div>
               <div className="p-4 bg-rose-50/50 rounded-xl border border-rose-100 flex flex-col items-center">
-                <span className="text-2xl font-bold text-rose-600">{appointments.filter(a => a.trangThai === 3).length}</span>
+                <span className="text-2xl font-bold text-rose-600">
+                  {appointments.filter((a) => a.trangThai === 3).length}
+                </span>
                 <span className="text-xs text-slate-500">Đã hủy</span>
               </div>
             </div>
@@ -168,28 +178,38 @@ function AdminPatientDetailPage() {
             <tbody className="divide-y divide-slate-100">
               {appointments.length === 0 ? (
                 // Hiển thị khi chưa từng đặt lịch
-                <tr><td colSpan="5" className="text-center py-6 text-slate-500 italic">Bệnh nhân chưa có lịch hẹn nào.</td></tr>
-              ) : appointments.map(apt => {
-                // Lấy config hiển thị (label, color) từ mã trạng thái
-                const statusStr = STATUS_MAP[apt.trangThai] || "pending";
-                const cfg = APPOINTMENT_STATUS_CONFIG[statusStr];
-                return (
-                  <tr key={apt.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-slate-900">LK{apt.id}</td>
-                    <td className="px-6 py-4 text-slate-700">{apt.bacSi?.tenBacSi}</td>
-                    <td className="px-6 py-4 text-slate-500">
-                      {formatDate(apt.ngayDat)}
-                    </td>
-                    <td className="px-6 py-4">
-                      {cfg && <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${cfg.className}`}>{cfg.label}</span>}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {/* Nút xem chi tiết của lịch hẹn cụ thể */}
-                      <Link to={`/admin/appointments/${apt.id}`} className="text-primary hover:underline font-medium">Chi tiết</Link>
-                    </td>
-                  </tr>
-                )
-              })}
+                <tr>
+                  <td colSpan="5" className="text-center py-6 text-slate-500 italic">
+                    Bệnh nhân chưa có lịch hẹn nào.
+                  </td>
+                </tr>
+              ) : (
+                appointments.map((apt) => {
+                  // Lấy config hiển thị (label, color) từ mã trạng thái
+                  const statusStr = STATUS_MAP[apt.trangThai] || "pending";
+                  const cfg = APPOINTMENT_STATUS_CONFIG[statusStr];
+                  return (
+                    <tr key={apt.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-bold text-slate-900">LK{apt.id}</td>
+                      <td className="px-6 py-4 text-slate-700">{apt.bacSi?.tenBacSi}</td>
+                      <td className="px-6 py-4 text-slate-500">{formatDate(apt.ngayDat)}</td>
+                      <td className="px-6 py-4">
+                        {cfg && (
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${cfg.className}`}>
+                            {cfg.label}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {/* Nút xem chi tiết của lịch hẹn cụ thể */}
+                        <Link to={`/admin/appointments/${apt.id}`} className="text-primary hover:underline font-medium">
+                          Chi tiết
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

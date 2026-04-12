@@ -96,7 +96,10 @@ export default function BookingPage() {
         <span className="material-symbols-outlined text-6xl text-slate-300">error</span>
         <h2 className="text-xl font-semibold text-slate-700 mt-4">Không tìm thấy bác sĩ</h2>
         <p className="text-slate-500 mt-2">Bác sĩ bạn đang tìm không tồn tại hoặc đã bị xóa.</p>
-        <Link to="/doctors" className="inline-block mt-6 px-6 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition">
+        <Link
+          to="/doctors"
+          className="inline-block mt-6 px-6 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition"
+        >
           Quay lại danh sách bác sĩ
         </Link>
       </div>
@@ -149,7 +152,9 @@ export default function BookingPage() {
                 }
               })
               .catch(() => {
-                toast.warning("Đặt lịch thành công nhưng không thể tạo liên kết thanh toán. Bạn có thể thử lại sau trong phần Lịch sử.");
+                toast.warning(
+                  "Đặt lịch thành công nhưng không thể tạo liên kết thanh toán. Bạn có thể thử lại sau trong phần Lịch sử.",
+                );
                 navigate("/appointments");
               });
           } else {
@@ -160,10 +165,9 @@ export default function BookingPage() {
         onError: (err) => {
           toast.error(err?.message || "Đặt lịch thất bại. Vui lòng thử lại.");
         },
-      }
+      },
     );
   };
-
 
   const selectedDayInfo = next14Days.find((d) => d.value === selectedDate);
 
@@ -171,9 +175,13 @@ export default function BookingPage() {
     <div className="max-w-3xl mx-auto py-12 px-4">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-slate-500 mb-8">
-        <Link to="/" className="hover:text-primary transition">Trang chủ</Link>
+        <Link to="/" className="hover:text-primary transition">
+          Trang chủ
+        </Link>
         <span className="material-symbols-outlined text-base">chevron_right</span>
-        <Link to="/doctors" className="hover:text-primary transition">Bác sĩ</Link>
+        <Link to="/doctors" className="hover:text-primary transition">
+          Bác sĩ
+        </Link>
         <span className="material-symbols-outlined text-base">chevron_right</span>
         <span className="text-slate-700 font-medium">Đặt lịch khám</span>
       </nav>
@@ -201,12 +209,16 @@ export default function BookingPage() {
 
       {/* Step indicator */}
       <div className="flex items-center gap-3 mb-8">
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition ${step === 1 ? "bg-primary text-white" : "bg-slate-100 text-slate-500"}`}>
+        <div
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition ${step === 1 ? "bg-primary text-white" : "bg-slate-100 text-slate-500"}`}
+        >
           <span className="material-symbols-outlined text-lg">calendar_month</span>
           Chọn ngày giờ
         </div>
         <span className="material-symbols-outlined text-slate-300">arrow_forward</span>
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition ${step === 2 ? "bg-primary text-white" : "bg-slate-100 text-slate-500"}`}>
+        <div
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition ${step === 2 ? "bg-primary text-white" : "bg-slate-100 text-slate-500"}`}
+        >
           <span className="material-symbols-outlined text-lg">fact_check</span>
           Xác nhận
         </div>
@@ -263,7 +275,12 @@ export default function BookingPage() {
                 {slots.map((slot, idx) => {
                   const now = dayjs().tz("Asia/Ho_Chi_Minh");
                   const [h, m] = slot.gioBatDau.split(":").map(Number);
-                  const slotDate = dayjs(selectedDate).tz("Asia/Ho_Chi_Minh").hour(h).minute(m).second(0).millisecond(0);
+                  const slotDate = dayjs(selectedDate)
+                    .tz("Asia/Ho_Chi_Minh")
+                    .hour(h)
+                    .minute(m)
+                    .second(0)
+                    .millisecond(0);
 
                   const isPast = slotDate.isBefore(now);
                   const isBooked = slot.daDat || !slot.conTrong || isPast;
@@ -278,8 +295,8 @@ export default function BookingPage() {
                         isBooked
                           ? "bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed"
                           : isSelected
-                          ? "bg-primary text-white border-primary cursor-pointer"
-                          : "bg-white border-slate-200 text-slate-600 hover:border-primary hover:text-primary cursor-pointer"
+                            ? "bg-primary text-white border-primary cursor-pointer"
+                            : "bg-white border-slate-200 text-slate-600 hover:border-primary hover:text-primary cursor-pointer"
                       }`}
                     >
                       <span className={isPast ? "line-through opacity-50" : ""}>{slot.gioBatDau}</span>
@@ -317,7 +334,7 @@ export default function BookingPage() {
                   </option>
                 ))}
               </select>
-              {selectedPayment && paymentMethods.find(p => String(p.id) === selectedPayment)?.maLoai === "VNPAY" && (
+              {selectedPayment && paymentMethods.find((p) => String(p.id) === selectedPayment)?.maLoai === "VNPAY" && (
                 <p className="mt-2 text-[11px] text-amber-600 flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm">info</span>
                   Bạn sẽ được chuyển hướng sang cổng thanh toán VNPay sau khi nhấn xác nhận.

@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { usePatients, useUpdatePatient, useDeletePatient } from "../../hooks/queries/usePatientQueries";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import { formatDate } from "../../utils/dateUtils";
 
 // Cấu hình số lượng bệnh nhân hiển thị trên mỗi trang
 const ITEMS_PER_PAGE = 8;
@@ -14,7 +15,7 @@ const ITEMS_PER_PAGE = 8;
  */
 export default function AdminPatientsPage() {
   const navigate = useNavigate();
-  
+
   // State quản lý tìm kiếm và phân trang
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -77,21 +78,21 @@ export default function AdminPatientsPage() {
       setSelectedPatient(null);
     };
 
-    if (modalMode === 'delete') {
+    if (modalMode === "delete") {
       deleteMutation.mutate(selectedPatient.id, {
         onSuccess: () => toast.success(`Đã xóa hồ sơ bệnh nhân ${selectedPatient.hoTen}`),
         onError: (err) => toast.error(err.message || "Thao tác thất bại"),
         onSettled,
       });
     } else {
-      const newStatus = modalMode === 'lock' ? 0 : 1;
+      const newStatus = modalMode === "lock" ? 0 : 1;
       updateMutation.mutate(
         { id: selectedPatient.id, data: { trangThaiTaiKhoan: newStatus } },
         {
-          onSuccess: () => toast.success(`${modalMode === 'lock' ? "Khóa" : "Mở khóa"} tài khoản thành công!`),
+          onSuccess: () => toast.success(`${modalMode === "lock" ? "Khóa" : "Mở khóa"} tài khoản thành công!`),
           onError: (err) => toast.error(err.message || "Thao tác thất bại"),
           onSettled,
-        }
+        },
       );
     }
   };
@@ -102,11 +103,9 @@ export default function AdminPatientsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Quản lý bệnh nhân</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Điều chỉnh trạng thái hoạt động và hồ sơ bệnh nhân hệ thống.
-          </p>
+          <p className="text-slate-500 text-sm mt-1">Điều chỉnh trạng thái hoạt động và hồ sơ bệnh nhân hệ thống.</p>
         </div>
-        
+
         {/* Card hiển thị tổng số hồ sơ bệnh nhân */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex items-center gap-4 shrink-0 px-6">
           <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10">
@@ -115,9 +114,7 @@ export default function AdminPatientsPage() {
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Tổng bệnh nhân</p>
             <div className="flex items-baseline gap-1 mt-0.5">
-              <p className="text-2xl font-black text-slate-900">
-                {totalPatients.toLocaleString("vi-VN")}
-              </p>
+              <p className="text-2xl font-black text-slate-900">{totalPatients.toLocaleString("vi-VN")}</p>
               <p className="text-[10px] font-bold text-slate-400">hồ sơ</p>
             </div>
           </div>
@@ -147,10 +144,16 @@ export default function AdminPatientsPage() {
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Mã BN</th>
-                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Họ tên bệnh nhân</th>
+                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                  Họ tên bệnh nhân
+                </th>
                 <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Liên hệ</th>
-                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Trạng thái</th>
-                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Tùy chọn hành động</th>
+                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                  Trạng thái
+                </th>
+                <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">
+                  Tùy chọn hành động
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -223,7 +226,7 @@ export default function AdminPatientsPage() {
                           <span className="material-symbols-outlined text-base">visibility</span>
                           CHI TIẾT
                         </Link>
-                        
+
                         {/* Nút Chỉnh Sửa (Điều hướng) */}
                         <button
                           onClick={() => handleEdit(p.id)}
@@ -237,7 +240,7 @@ export default function AdminPatientsPage() {
                         {/* Nút Chuyển đổi trạng thái Khóa/Mở */}
                         {p.taiKhoan?.trangThaiTaiKhoan === 0 ? (
                           <button
-                            onClick={() => openActionModal(p, 'unlock')}
+                            onClick={() => openActionModal(p, "unlock")}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-all text-[10px] font-bold shadow-sm shadow-emerald-500/20"
                           >
                             <span className="material-symbols-outlined text-base">lock_open</span>
@@ -245,17 +248,17 @@ export default function AdminPatientsPage() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => openActionModal(p, 'lock')}
+                            onClick={() => openActionModal(p, "lock")}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-900 transition-all text-[10px] font-bold shadow-sm shadow-slate-800/20"
                           >
                             <span className="material-symbols-outlined text-base">lock</span>
                             KHÓA TK
                           </button>
                         )}
-                        
+
                         {/* Nút Xóa hồ sơ (Dùng Material Icon xóa) */}
                         <button
-                          onClick={() => openActionModal(p, 'delete')}
+                          onClick={() => openActionModal(p, "delete")}
                           className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all"
                           title="Xóa hồ sơ"
                         >
@@ -277,14 +280,14 @@ export default function AdminPatientsPage() {
           </p>
           <div className="flex gap-2">
             <button
-              onClick={() => setPage(p => p - 1)}
+              onClick={() => setPage((p) => p - 1)}
               disabled={page <= 1}
               className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all shadow-sm hover:shadow-md"
             >
               <span className="material-symbols-outlined text-xl">chevron_left</span>
             </button>
             <button
-              onClick={() => setPage(p => p + 1)}
+              onClick={() => setPage((p) => p + 1)}
               disabled={page >= totalPages}
               className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all shadow-sm hover:shadow-md"
             >
@@ -300,31 +303,33 @@ export default function AdminPatientsPage() {
         onClose={() => setIsModalOpen(false)}
         onConfirm={handleConfirmAction}
         title={
-          modalMode === 'delete' 
-            ? "Xác nhận xóa bệnh nhân" 
-            : modalMode === 'lock' 
-              ? "Xác nhận khóa tài khoản" 
+          modalMode === "delete"
+            ? "Xác nhận xóa bệnh nhân"
+            : modalMode === "lock"
+              ? "Xác nhận khóa tài khoản"
               : "Xác nhận mở khóa tài khoản"
         }
         message={
-          modalMode === 'delete' ? (
+          modalMode === "delete" ? (
             <>
-              Hệ thống sẽ xóa vĩnh viễn hồ sơ của bệnh nhân <strong>{selectedPatient?.hoTen}</strong>. 
-              Các tài khoản liên kết và lịch sử cũng sẽ bị ảnh hưởng. Thao tác này <strong>không thể hoàn tác</strong>.
+              Hệ thống sẽ xóa vĩnh viễn hồ sơ của bệnh nhân <strong>{selectedPatient?.hoTen}</strong>. Các tài khoản
+              liên kết và lịch sử cũng sẽ bị ảnh hưởng. Thao tác này <strong>không thể hoàn tác</strong>.
             </>
-          ) : modalMode === 'lock' ? (
+          ) : modalMode === "lock" ? (
             <>
-              Tài khoản của bệnh nhân <strong>{selectedPatient?.hoTen}</strong> sẽ bị tạm ngưng. 
-              Người dùng này sẽ không thể đăng nhập cho đến khi được mở khóa lại.
+              Tài khoản của bệnh nhân <strong>{selectedPatient?.hoTen}</strong> sẽ bị tạm ngưng. Người dùng này sẽ không
+              thể đăng nhập cho đến khi được mở khóa lại.
             </>
           ) : (
-            <>Bạn có chắc muốn khôi phục quyền truy cập cho bệnh nhân <strong>{selectedPatient?.hoTen}</strong> không?</>
+            <>
+              Bạn có chắc muốn khôi phục quyền truy cập cho bệnh nhân <strong>{selectedPatient?.hoTen}</strong> không?
+            </>
           )
         }
         confirmText={
-          modalMode === 'delete' ? "Xóa vĩnh viễn" : modalMode === 'lock' ? "Khóa tài khoản ngay" : "Mở khóa ngay"
+          modalMode === "delete" ? "Xóa vĩnh viễn" : modalMode === "lock" ? "Khóa tài khoản ngay" : "Mở khóa ngay"
         }
-        type={modalMode === 'delete' || modalMode === 'lock' ? 'danger' : 'success'}
+        type={modalMode === "delete" || modalMode === "lock" ? "danger" : "success"}
       />
     </div>
   );

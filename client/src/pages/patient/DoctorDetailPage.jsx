@@ -29,9 +29,7 @@ export default function DoctorDetailPage() {
     return (
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 text-center py-20">
-          <span className="material-symbols-outlined text-5xl text-primary animate-spin">
-            progress_activity
-          </span>
+          <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
           <p className="mt-4 text-slate-500">Đang tải thông tin bác sĩ...</p>
         </div>
       </section>
@@ -43,22 +41,14 @@ export default function DoctorDetailPage() {
     return (
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-20">
-          <span className="material-symbols-outlined text-6xl text-slate-300 mb-4 block">
-            person_off
-          </span>
-          <h2 className="text-2xl font-bold text-slate-700 mb-2">
-            Không tìm thấy bác sĩ
-          </h2>
-          <p className="text-slate-500 mb-6">
-            Bác sĩ bạn tìm kiếm không tồn tại hoặc đã bị xoá.
-          </p>
+          <span className="material-symbols-outlined text-6xl text-slate-300 mb-4 block">person_off</span>
+          <h2 className="text-2xl font-bold text-slate-700 mb-2">Không tìm thấy bác sĩ</h2>
+          <p className="text-slate-500 mb-6">Bác sĩ bạn tìm kiếm không tồn tại hoặc đã bị xoá.</p>
           <Link
             to="/doctors"
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition"
           >
-            <span className="material-symbols-outlined text-xl">
-              arrow_back
-            </span>
+            <span className="material-symbols-outlined text-xl">arrow_back</span>
             Quay lại danh sách bác sĩ
           </Link>
         </div>
@@ -77,15 +67,11 @@ export default function DoctorDetailPage() {
           <Link to="/" className="hover:text-primary transition">
             Trang chủ
           </Link>
-          <span className="material-symbols-outlined text-base">
-            chevron_right
-          </span>
+          <span className="material-symbols-outlined text-base">chevron_right</span>
           <Link to="/doctors" className="hover:text-primary transition">
             Bác sĩ
           </Link>
-          <span className="material-symbols-outlined text-base">
-            chevron_right
-          </span>
+          <span className="material-symbols-outlined text-base">chevron_right</span>
           <span className="text-slate-800 font-medium">{doctor.tenBacSi}</span>
         </nav>
 
@@ -95,39 +81,27 @@ export default function DoctorDetailPage() {
             {/* Avatar */}
             <div className="w-40 h-40 rounded-full border-4 border-primary/20 bg-primary/5 flex items-center justify-center overflow-hidden shrink-0">
               {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={doctor.tenBacSi}
-                  className="w-full h-full object-cover"
-                />
+                <img src={avatarUrl} alt={doctor.tenBacSi} className="w-full h-full object-cover" />
               ) : (
                 <span className="material-symbols-outlined text-7xl text-primary/40">person</span>
               )}
             </div>
 
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-2xl font-bold text-slate-800">
-                {doctor.tenBacSi}
-              </h1>
+              <h1 className="text-2xl font-bold text-slate-800">{doctor.tenBacSi}</h1>
 
-              <p className="text-primary font-medium mt-1">
-                {specialtyName}
-              </p>
+              <p className="text-primary font-medium mt-1">{specialtyName}</p>
 
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-6 gap-y-2 mt-4 text-sm text-slate-600">
                 {doctor.hocViChucDanh && (
                   <span className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-base text-primary">
-                      school
-                    </span>
+                    <span className="material-symbols-outlined text-base text-primary">school</span>
                     {doctor.hocViChucDanh}
                   </span>
                 )}
 
                 <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-base text-primary">
-                    medical_services
-                  </span>
+                  <span className="material-symbols-outlined text-base text-primary">medical_services</span>
                   {specialtyName}
                 </span>
               </div>
@@ -138,27 +112,23 @@ export default function DoctorDetailPage() {
                 </p>
               )}
 
-              {doctor.giaKham && (
-                <p className="text-primary font-bold text-xl mt-4">
-                  {formatPrice(doctor.giaKham)}
-                </p>
-              )}
+              {doctor.giaKham && <p className="text-primary font-bold text-xl mt-4">{formatPrice(doctor.giaKham)}</p>}
 
               {/* Nút đặt lịch: Ẩn nếu là Bác sĩ/Admin */}
-              {(!user || user.vaiTro === "benh_nhan") ? (
+              {!user || user.vaiTro === "benh_nhan" ? (
                 <Link
                   to={`/booking/${doctor.id}`}
                   className="inline-flex items-center gap-2 mt-6 px-8 py-3 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary/90 transition shadow-lg shadow-primary/20 hover:-translate-y-0.5 active:translate-y-0"
                 >
-                  <span className="material-symbols-outlined text-xl">
-                    calendar_month
-                  </span>
+                  <span className="material-symbols-outlined text-xl">calendar_month</span>
                   Đặt lịch khám ngay
                 </Link>
               ) : (
                 <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 inline-flex items-center gap-3 text-slate-400">
                   <span className="material-symbols-outlined">info</span>
-                  <p className="text-[10px] font-black uppercase tracking-tight">Tài khoản nhân viên không thể đặt lịch khám</p>
+                  <p className="text-[10px] font-black uppercase tracking-tight">
+                    Tài khoản nhân viên không thể đặt lịch khám
+                  </p>
                 </div>
               )}
             </div>
@@ -170,9 +140,7 @@ export default function DoctorDetailPage() {
           {/* Cột trái: giới thiệu bác sĩ */}
           <div className="lg:col-span-2">
             <div className="bg-white p-8 rounded-lg shadow">
-              <h2 className="text-xl font-bold text-slate-800 mb-1">
-                Giới thiệu
-              </h2>
+              <h2 className="text-xl font-bold text-slate-800 mb-1">Giới thiệu</h2>
               <div className="h-1 w-12 bg-primary rounded-full mb-5" />
               <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
                 {doctor.moTaChiTiet || "Thông tin chi tiết về bác sĩ sẽ được cập nhật sớm."}
@@ -183,70 +151,44 @@ export default function DoctorDetailPage() {
           {/* Cột phải: card tóm tắt thông tin */}
           <div>
             <div className="bg-white p-8 rounded-lg shadow">
-              <h2 className="text-xl font-bold text-slate-800 mb-1">
-                Thông tin
-              </h2>
+              <h2 className="text-xl font-bold text-slate-800 mb-1">Thông tin</h2>
               <div className="h-1 w-12 bg-primary rounded-full mb-5" />
 
               <ul className="space-y-4">
                 {doctor.hocViChucDanh && (
                   <li className="flex items-start gap-3">
-                    <span className="material-symbols-outlined text-primary mt-0.5">
-                      school
-                    </span>
+                    <span className="material-symbols-outlined text-primary mt-0.5">school</span>
                     <div>
-                      <p className="text-xs text-slate-400 uppercase tracking-wide">
-                        Học vấn
-                      </p>
-                      <p className="text-slate-700 font-medium">
-                        {doctor.hocViChucDanh}
-                      </p>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">Học vấn</p>
+                      <p className="text-slate-700 font-medium">{doctor.hocViChucDanh}</p>
                     </div>
                   </li>
                 )}
 
                 <li className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-primary mt-0.5">
-                    medical_services
-                  </span>
+                  <span className="material-symbols-outlined text-primary mt-0.5">medical_services</span>
                   <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wide">
-                      Chuyên khoa
-                    </p>
-                    <p className="text-slate-700 font-medium">
-                      {specialtyName}
-                    </p>
+                    <p className="text-xs text-slate-400 uppercase tracking-wide">Chuyên khoa</p>
+                    <p className="text-slate-700 font-medium">{specialtyName}</p>
                   </div>
                 </li>
 
                 {doctor.giaKham && (
                   <li className="flex items-start gap-3">
-                    <span className="material-symbols-outlined text-primary mt-0.5">
-                      payments
-                    </span>
+                    <span className="material-symbols-outlined text-primary mt-0.5">payments</span>
                     <div>
-                      <p className="text-xs text-slate-400 uppercase tracking-wide">
-                        Phí khám
-                      </p>
-                      <p className="text-primary font-bold">
-                        {formatPrice(doctor.giaKham)}
-                      </p>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">Phí khám</p>
+                      <p className="text-primary font-bold">{formatPrice(doctor.giaKham)}</p>
                     </div>
                   </li>
                 )}
 
                 {doctor.taiKhoan?.email && (
                   <li className="flex items-start gap-3">
-                    <span className="material-symbols-outlined text-primary mt-0.5">
-                      mail
-                    </span>
+                    <span className="material-symbols-outlined text-primary mt-0.5">mail</span>
                     <div>
-                      <p className="text-xs text-slate-400 uppercase tracking-wide">
-                        Email
-                      </p>
-                      <p className="text-slate-700 font-medium">
-                        {doctor.taiKhoan.email}
-                      </p>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">Email</p>
+                      <p className="text-slate-700 font-medium">{doctor.taiKhoan.email}</p>
                     </div>
                   </li>
                 )}

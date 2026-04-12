@@ -96,9 +96,7 @@ function LoginPage() {
                     className={`${INPUT_CLASS} ${errors.email ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                     {...register("email")}
                   />
-                  {errors.email && (
-                    <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
-                  )}
+                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                 </div>
 
                 {/* Trường Mật khẩu — có nút toggle hiển thị/ẩn */}
@@ -121,9 +119,7 @@ function LoginPage() {
                       </span>
                     </button>
                   </div>
-                  {errors.password && (
-                    <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
-                  )}
+                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
                 </div>
 
                 {/* Ghi nhớ đăng nhập & quên mật khẩu */}
@@ -133,9 +129,7 @@ function LoginPage() {
                       type="checkbox"
                       className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary focus:ring-offset-0 bg-slate-50 transition-all"
                     />
-                    <span className="text-sm text-slate-600 group-hover:text-slate-900">
-                      Ghi nhớ đăng nhập
-                    </span>
+                    <span className="text-sm text-slate-600 group-hover:text-slate-900">Ghi nhớ đăng nhập</span>
                   </label>
                   <Link
                     to="/forgot-password"
@@ -166,10 +160,7 @@ function LoginPage() {
               <div className="mt-10 text-center">
                 <p className="text-slate-600">
                   Chưa có tài khoản?
-                  <Link
-                    to="/register"
-                    className="text-primary font-bold hover:underline underline-offset-4 ml-1"
-                  >
+                  <Link to="/register" className="text-primary font-bold hover:underline underline-offset-4 ml-1">
                     Đăng ký ngay
                   </Link>
                 </p>
@@ -188,11 +179,7 @@ function LeftPanel() {
     <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-center p-12 text-white overflow-hidden">
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-primary/80 z-10 mix-blend-multiply" />
-        <img
-          alt="Bác sĩ đang tư vấn y tế hiện đại"
-          className="w-full h-full object-cover"
-          src={IMAGE_URL}
-        />
+        <img alt="Bác sĩ đang tư vấn y tế hiện đại" className="w-full h-full object-cover" src={IMAGE_URL} />
       </div>
       <div className="relative z-20">
         <div className="flex items-center gap-3 mb-8">

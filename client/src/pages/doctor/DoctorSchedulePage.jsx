@@ -3,14 +3,14 @@
  * TRANG: QUẢN LÝ LỊCH TRÌNH CÔNG TÁC (BÁC SĨ)
  * Đường dẫn: /doctor/schedule
  * =============================================================================
- * 
+ *
  * CHỨC NĂNG CHÍNH:
  * 1. Lịch mini (Mini Calendar): Hiển thị tổng quan các ngày trong tháng.
  *    - Các ngày có dấu chấm: Đã đăng ký ca trực.
  *    - Chọn ngày: Lọc danh sách ca trực bên phải theo ngày đó.
  * 2. Danh sách ca trực: Hiển thị chi tiết giờ giấc, số lượng bệnh nhân đã đặt.
  * 3. Quản lý tác vụ: Cho phép bác sĩ đăng ký thêm ca mới hoặc hủy ca chưa diễn ra.
- * 
+ *
  * PHONG CÁCH THIẾT KẾ:
  * - Ưu tiên sự gọn gàng, sử dụng các đường kẻ mảnh (Border-2) thay vì shadow.
  * - Các thẻ thông tin mang phong cách "Hồ sơ y tế" sạch sẽ, chuyên nghiệp.
@@ -62,7 +62,7 @@ function DoctorSchedulePage() {
    * 3. LOGIC XÁC ĐỊNH TRẠNG THÁI CA TRỰC (Hôm nay, Sắp tới, Hoàn thành)
    */
   const todayStr = toDateString(dayjs());
-  
+
   const getShiftStatus = (item) => {
     const dStr = toDateString(item.ngayLamViec);
     if (dStr < todayStr) return "completed";
@@ -81,13 +81,18 @@ function DoctorSchedulePage() {
    * 4. LOGIC XỬ LÝ BỘ LỊCH MINI
    */
   const { daysInMonth, firstDayIdx } = getMonthData(year, month);
-  
+
   // Chuyển tháng
   const handleMonthChange = (offset) => {
     let newMonth = month + offset;
     let newYear = year;
-    if (newMonth < 0) { newMonth = 11; newYear--; }
-    else if (newMonth > 11) { newMonth = 0; newYear++; }
+    if (newMonth < 0) {
+      newMonth = 11;
+      newYear--;
+    } else if (newMonth > 11) {
+      newMonth = 0;
+      newYear++;
+    }
     setMonth(newMonth);
     setYear(newYear);
     setSelectedDay(null); // Reset ngày chọn khi đổi tháng
@@ -95,16 +100,16 @@ function DoctorSchedulePage() {
 
   // Tìm các ngày có ca trực trong tháng đang xem để đánh dấu (dot)
   const daysWithShift = schedules
-    .filter(s => {
+    .filter((s) => {
       const d = dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh");
       return d.month() === month && d.year() === year;
     })
-    .map(s => dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh").date());
+    .map((s) => dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh").date());
 
   /**
    * 5. LOGIC LỌC DANH SÁCH CHI TIẾT
    */
-  const filteredList = schedules.filter(s => {
+  const filteredList = schedules.filter((s) => {
     const d = dayjs(s.ngayLamViec).tz("Asia/Ho_Chi_Minh");
     if (d.month() !== month || d.year() !== year) return false;
     if (selectedDay && d.date() !== selectedDay) return false;
@@ -113,7 +118,7 @@ function DoctorSchedulePage() {
 
   // Thống kê nhanh số lượng
   const totalCount = schedules.length;
-  const upcomingCount = schedules.filter(s => getShiftStatus(s) === "upcoming").length;
+  const upcomingCount = schedules.filter((s) => getShiftStatus(s) === "upcoming").length;
 
   /**
    * 6. HÀM XỬ LÝ HÀNH ĐỘNG
@@ -137,12 +142,13 @@ function DoctorSchedulePage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      
       {/* --- HEADER --- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Quản lý lịch công tác</h1>
-          <p className="text-slate-500 text-sm font-medium mt-1">Cập nhật và theo dõi các khung giờ khám bệnh của bác sĩ</p>
+          <p className="text-slate-500 text-sm font-medium mt-1">
+            Cập nhật và theo dõi các khung giờ khám bệnh của bác sĩ
+          </p>
         </div>
         <Link
           to="/doctor/schedule/add"
@@ -154,39 +160,52 @@ function DoctorSchedulePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
         {/* --- CỘT TRÁI: BỘ LỊCH MINI (CALENDAR) --- */}
         <div className="lg:col-span-1">
           <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 sticky top-8">
             <div className="flex items-center justify-between mb-6">
-              <button onClick={() => handleMonthChange(-1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400"><span className="material-symbols-outlined">chevron_left</span></button>
-              <h3 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Tháng {month + 1}, {year}</h3>
-              <button onClick={() => handleMonthChange(1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400"><span className="material-symbols-outlined">chevron_right</span></button>
+              <button onClick={() => handleMonthChange(-1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400">
+                <span className="material-symbols-outlined">chevron_left</span>
+              </button>
+              <h3 className="font-bold text-slate-800 uppercase text-xs tracking-widest">
+                Tháng {month + 1}, {year}
+              </h3>
+              <button onClick={() => handleMonthChange(1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400">
+                <span className="material-symbols-outlined">chevron_right</span>
+              </button>
             </div>
 
             {/* Header Thứ */}
             <div className="grid grid-cols-7 gap-1 mb-2">
-              {DAYS_OF_WEEK.map(d => (
-                <div key={d} className="text-center text-[10px] font-bold text-slate-300 py-1">{d}</div>
+              {DAYS_OF_WEEK.map((d) => (
+                <div key={d} className="text-center text-[10px] font-bold text-slate-300 py-1">
+                  {d}
+                </div>
               ))}
             </div>
 
             {/* Lưới Ngày */}
             <div className="grid grid-cols-7 gap-1">
-              {Array(firstDayIdx).fill(null).map((_, i) => <div key={`empty-${i}`} />)}
-              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
+              {Array(firstDayIdx)
+                .fill(null)
+                .map((_, i) => (
+                  <div key={`empty-${i}`} />
+                ))}
+              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => (
                 <button
                   key={day}
                   onClick={() => setSelectedDay(day === selectedDay ? null : day)}
                   className={`aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-bold transition-all relative ${
-                    day === selectedDay 
-                      ? "bg-primary text-white border-2 border-primary" 
+                    day === selectedDay
+                      ? "bg-primary text-white border-2 border-primary"
                       : "text-slate-600 hover:bg-slate-50 border-2 border-transparent"
                   }`}
                 >
                   {day}
                   {daysWithShift.includes(day) && (
-                    <div className={`w-1 h-1 rounded-full absolute bottom-1.5 ${day === selectedDay ? "bg-white" : "bg-primary"}`} />
+                    <div
+                      className={`w-1 h-1 rounded-full absolute bottom-1.5 ${day === selectedDay ? "bg-white" : "bg-primary"}`}
+                    />
                   )}
                 </button>
               ))}
@@ -213,7 +232,12 @@ function DoctorSchedulePage() {
                 {selectedDay ? `Bản kê ca trực ngày ${selectedDay}` : `Toàn bộ ca trực tháng ${month + 1}`}
               </h3>
               {selectedDay && (
-                <button onClick={() => setSelectedDay(null)} className="text-[10px] font-bold text-primary hover:underline uppercase">Hiện tất cả</button>
+                <button
+                  onClick={() => setSelectedDay(null)}
+                  className="text-[10px] font-bold text-primary hover:underline uppercase"
+                >
+                  Hiện tất cả
+                </button>
               )}
             </div>
 
@@ -229,7 +253,7 @@ function DoctorSchedulePage() {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredList.length > 0 ? (
-                    filteredList.map(item => {
+                    filteredList.map((item) => {
                       const status = getShiftStatus(item);
                       const config = STATUS_CONFIG[status];
                       return (
@@ -243,7 +267,10 @@ function DoctorSchedulePage() {
                           <td className="px-6 py-5">
                             <div className="flex flex-col gap-1.5 w-32">
                               <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                                <div className="h-full bg-primary" style={{ width: `${(item.soBenhNhanHienTai / item.soBenhNhanToiDa) * 100}%` }} />
+                                <div
+                                  className="h-full bg-primary"
+                                  style={{ width: `${(item.soBenhNhanHienTai / item.soBenhNhanToiDa) * 100}%` }}
+                                />
                               </div>
                               <span className="text-[10px] font-bold text-slate-400">
                                 {item.soBenhNhanHienTai} / {item.soBenhNhanToiDa} Bệnh nhân
@@ -251,13 +278,15 @@ function DoctorSchedulePage() {
                             </div>
                           </td>
                           <td className="px-6 py-5">
-                            <span className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase ${config.style}`}>
+                            <span
+                              className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase ${config.style}`}
+                            >
                               {config.label}
                             </span>
                           </td>
                           <td className="px-6 py-5 text-center">
                             {status !== "completed" ? (
-                              <button 
+                              <button
                                 onClick={() => handleDelete(item.id)}
                                 className="size-8 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50 transition-all flex items-center justify-center mx-auto"
                               >
@@ -272,7 +301,9 @@ function DoctorSchedulePage() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={4} className="py-32 text-center text-slate-400 font-bold italic text-sm">Trống: Không tìm thấy ca trực phù hợp</td>
+                      <td colSpan={4} className="py-32 text-center text-slate-400 font-bold italic text-sm">
+                        Trống: Không tìm thấy ca trực phù hợp
+                      </td>
                     </tr>
                   )}
                 </tbody>

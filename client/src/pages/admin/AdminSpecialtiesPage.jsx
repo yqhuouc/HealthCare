@@ -18,7 +18,7 @@ const ITEMS_PER_PAGE = 7;
 function AdminSpecialtiesPage() {
   // State quản lý UI
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   // State quản lý Modal xác nhận xóa
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState(null);
@@ -91,7 +91,6 @@ function AdminSpecialtiesPage() {
 
       {/* CONTAINER CHÍNH: Chứa bảng dữ liệu */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        
         {/* VIEW: DESKTOP (Dạng bảng chuẩn) */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
@@ -108,7 +107,9 @@ function AdminSpecialtiesPage() {
                 // Skeleton/Loading state
                 <tr>
                   <td colSpan="4" className="text-center py-20">
-                    <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
+                    <span className="material-symbols-outlined animate-spin text-primary text-4xl">
+                      progress_activity
+                    </span>
                   </td>
                 </tr>
               ) : paginatedData.length === 0 ? (
@@ -119,65 +120,71 @@ function AdminSpecialtiesPage() {
                     Chưa có chuyên khoa nào được tạo
                   </td>
                 </tr>
-              ) : paginatedData.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
-                  {/* Cột: Chuyên khoa (Ảnh + Tên + Icon) */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="size-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
-                        {item.anhChuyenKhoa ? (
-                          <img src={item.anhChuyenKhoa} alt={item.tenChuyenKhoa} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="material-symbols-outlined text-slate-400">image</span>
-                        )}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 flex items-center gap-1.5">
-                          {item.icon && (
-                            <span className="material-symbols-outlined text-primary text-xl">
-                              {item.icon}
-                            </span>
+              ) : (
+                paginatedData.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                    {/* Cột: Chuyên khoa (Ảnh + Tên + Icon) */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="size-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                          {item.anhChuyenKhoa ? (
+                            <img
+                              src={item.anhChuyenKhoa}
+                              alt={item.tenChuyenKhoa}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="material-symbols-outlined text-slate-400">image</span>
                           )}
-                          {item.tenChuyenKhoa}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">ID: #{item.id}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                            {item.icon && (
+                              <span className="material-symbols-outlined text-primary text-xl">{item.icon}</span>
+                            )}
+                            {item.tenChuyenKhoa}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                            ID: #{item.id}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  {/* Cột: Mô tả rút gọn */}
-                  <td className="px-6 py-4">
-                    <p className="text-slate-600 line-clamp-2 max-w-xs text-xs leading-relaxed">
-                      {item.moTaChuyenKhoa || "Không có mô tả"}
-                    </p>
-                  </td>
-                  {/* Cột: Thống kê số lượng bác sĩ */}
-                  <td className="px-6 py-4 text-center">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold">
-                      <span className="material-symbols-outlined text-sm">groups</span>
-                      {item._count?.bacSiList || 0}
-                    </span>
-                  </td>
-                  {/* Cột: Thao tác điều khiển */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link 
-                        to={`/admin/specialties/edit/${item.id}`} 
-                        className="size-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-blue-50 hover:text-primary transition-all"
-                        title="Chỉnh sửa"
-                      >
-                        <span className="material-symbols-outlined text-xl">edit</span>
-                      </Link>
-                      <button 
-                        onClick={() => requestDelete(item)} 
-                        className="size-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all"
-                        title="Xóa chuyên khoa"
-                      >
-                        <span className="material-symbols-outlined text-xl">delete</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    {/* Cột: Mô tả rút gọn */}
+                    <td className="px-6 py-4">
+                      <p className="text-slate-600 line-clamp-2 max-w-xs text-xs leading-relaxed">
+                        {item.moTaChuyenKhoa || "Không có mô tả"}
+                      </p>
+                    </td>
+                    {/* Cột: Thống kê số lượng bác sĩ */}
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold">
+                        <span className="material-symbols-outlined text-sm">groups</span>
+                        {item._count?.bacSiList || 0}
+                      </span>
+                    </td>
+                    {/* Cột: Thao tác điều khiển */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          to={`/admin/specialties/edit/${item.id}`}
+                          className="size-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-blue-50 hover:text-primary transition-all"
+                          title="Chỉnh sửa"
+                        >
+                          <span className="material-symbols-outlined text-xl">edit</span>
+                        </Link>
+                        <button
+                          onClick={() => requestDelete(item)}
+                          className="size-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all"
+                          title="Xóa chuyên khoa"
+                        >
+                          <span className="material-symbols-outlined text-xl">delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -201,9 +208,7 @@ function AdminSpecialtiesPage() {
                     {item.icon && <span className="material-symbols-outlined text-primary text-base">{item.icon}</span>}
                     {item.tenChuyenKhoa}
                   </p>
-                  <p className="text-xs text-slate-500 line-clamp-2 mt-1 leading-relaxed">
-                    {item.moTaChuyenKhoa}
-                  </p>
+                  <p className="text-xs text-slate-500 line-clamp-2 mt-1 leading-relaxed">{item.moTaChuyenKhoa}</p>
                 </div>
               </div>
               <div className="flex items-center justify-between pt-2">
@@ -212,10 +217,16 @@ function AdminSpecialtiesPage() {
                   {item._count?.bacSiList || 0} bác sĩ
                 </span>
                 <div className="flex items-center gap-2">
-                  <Link to={`/admin/specialties/edit/${item.id}`} className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold">
+                  <Link
+                    to={`/admin/specialties/edit/${item.id}`}
+                    className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold"
+                  >
                     Sửa
                   </Link>
-                  <button onClick={() => requestDelete(item)} className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-xs font-bold">
+                  <button
+                    onClick={() => requestDelete(item)}
+                    className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-xs font-bold"
+                  >
                     Xóa
                   </button>
                 </div>
@@ -254,12 +265,12 @@ function AdminSpecialtiesPage() {
       <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 flex items-start gap-3">
         <span className="material-symbols-outlined text-slate-400 text-xl">info</span>
         <p className="text-xs text-slate-500 leading-relaxed font-medium">
-          Hệ thống yêu cầu các chuyên khoa phải trống người (không có bác sĩ đang liên kết) mới có thể thực hiện thao tác xóa để đảm bảo toàn vẹn dữ liệu. Đối với các chuyên khoa quan trọng, hãy cân nhắc sửa tên thay vì xóa.
+          Hệ thống yêu cầu các chuyên khoa phải trống người (không có bác sĩ đang liên kết) mới có thể thực hiện thao
+          tác xóa để đảm bảo toàn vẹn dữ liệu. Đối với các chuyên khoa quan trọng, hãy cân nhắc sửa tên thay vì xóa.
         </p>
       </div>
     </div>
   );
 }
-
 
 export default AdminSpecialtiesPage;

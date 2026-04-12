@@ -26,15 +26,13 @@ export default function SpecialtyListPage() {
 
   // Lọc chuyên khoa theo tên (không phân biệt hoa thường)
   const filteredSpecialties = specialties.filter((s) =>
-    s.tenChuyenKhoa.toLowerCase().includes(searchQuery.toLowerCase())
+    s.tenChuyenKhoa.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   if (loading) {
     return (
       <section className="flex-1 flex items-center justify-center py-20">
-        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
-          progress_activity
-        </span>
+        <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
       </section>
     );
   }
@@ -44,20 +42,15 @@ export default function SpecialtyListPage() {
       <div className="max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-10">
         {/* Tiêu đề trang */}
         <div className="mb-10">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-3">
-            Chuyên khoa
-          </h1>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-3">Chuyên khoa</h1>
           <p className="text-slate-600 text-lg max-w-2xl">
-            Đội ngũ chuyên gia hàng đầu cam kết mang đến dịch vụ chăm sóc sức
-            khỏe chất lượng cao cho gia đình bạn.
+            Đội ngũ chuyên gia hàng đầu cam kết mang đến dịch vụ chăm sóc sức khỏe chất lượng cao cho gia đình bạn.
           </p>
         </div>
 
         {/* Thanh tìm kiếm */}
         <div className="mb-12">
-          <label className="text-slate-900 text-sm font-semibold block mb-2">
-            Tìm chuyên khoa
-          </label>
+          <label className="text-slate-900 text-sm font-semibold block mb-2">Tìm chuyên khoa</label>
           <div className="relative max-w-lg">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
               search
@@ -75,12 +68,8 @@ export default function SpecialtyListPage() {
         {/* Grid danh sách chuyên khoa */}
         {filteredSpecialties.length === 0 ? (
           <div className="text-center py-20">
-            <span className="material-symbols-outlined text-6xl text-slate-300 block mb-4">
-              search_off
-            </span>
-            <p className="text-slate-500 text-lg">
-              Không tìm thấy chuyên khoa phù hợp
-            </p>
+            <span className="material-symbols-outlined text-6xl text-slate-300 block mb-4">search_off</span>
+            <p className="text-slate-500 text-lg">Không tìm thấy chuyên khoa phù hợp</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
@@ -91,14 +80,10 @@ export default function SpecialtyListPage() {
               >
                 {/* Icon chuyên khoa — đổi màu khi hover */}
                 <div className="w-14 h-14 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-5 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                  <span className="material-symbols-outlined text-3xl">
-                    {specialty.icon || DEFAULT_ICON}
-                  </span>
+                  <span className="material-symbols-outlined text-3xl">{specialty.icon || DEFAULT_ICON}</span>
                 </div>
 
-                <h3 className="text-xl font-bold text-slate-900 mb-2">
-                  {specialty.tenChuyenKhoa}
-                </h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">{specialty.tenChuyenKhoa}</h3>
 
                 <p className="text-slate-600 text-sm leading-relaxed mb-4 line-clamp-2">
                   {specialty.moTaChuyenKhoa || "Chuyên khoa chất lượng cao."}
@@ -106,9 +91,7 @@ export default function SpecialtyListPage() {
 
                 {/* Số lượng bác sĩ */}
                 <div className="flex items-center gap-2 mb-6">
-                  <span className="material-symbols-outlined text-primary text-sm">
-                    groups
-                  </span>
+                  <span className="material-symbols-outlined text-primary text-sm">groups</span>
                   <span className="text-sm font-semibold text-slate-700">
                     {specialty._count?.bacSiList || 0} bác sĩ chuyên khoa
                   </span>

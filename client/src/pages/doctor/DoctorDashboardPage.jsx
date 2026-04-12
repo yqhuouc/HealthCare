@@ -16,10 +16,7 @@
  * ============================================================
  */
 import { Link } from "react-router-dom";
-import {
-  useAppointmentsByDoctor,
-  useUpdateAppointmentStatus,
-} from "../../hooks/queries/useAppointmentQueries";
+import { useAppointmentsByDoctor, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "react-toastify";
 import { getInitials } from "../../utils/formatters";
@@ -69,9 +66,7 @@ function DoctorDashboardPage() {
   const todayStr = toDateString(dayjs()); // Lấy ngày hiện tại (YYYY-MM-DD)
 
   // Lọc danh sách: Chỉ lấy những lịch hẹn của chính ngày hôm nay
-  const todayAppointments = appointments.filter(
-    (a) => toDateString(a.ngayDat) === todayStr,
-  );
+  const todayAppointments = appointments.filter((a) => toDateString(a.ngayDat) === todayStr);
 
   /**
    * 4. TÍNH TOÁN CÁC CHỈ SỐ THỐNG KÊ (Stats)
@@ -116,8 +111,7 @@ function DoctorDashboardPage() {
       { id, trangThai: newStatus },
       {
         onSuccess: () => toast.success(`Đã cập nhật: ${labels[newStatus]}`),
-        onError: (err) =>
-          toast.error(err.message || "Không thể cập nhật trạng thái"),
+        onError: (err) => toast.error(err.message || "Không thể cập nhật trạng thái"),
       },
     );
   };
@@ -127,8 +121,7 @@ function DoctorDashboardPage() {
    */
   const renderStatusBadge = (appointment) => {
     // Nếu truyền số trạng thái trực tiếp (tốt cho việc tái sử dụng)
-    const status =
-      typeof appointment === "object" ? appointment.trangThai : appointment;
+    const status = typeof appointment === "object" ? appointment.trangThai : appointment;
     const config = STATUS_CONFIG[status];
     if (!config) return null;
 
@@ -188,9 +181,7 @@ function DoctorDashboardPage() {
               : "border-slate-300 text-slate-500 hover:bg-slate-50"
           }`}
         >
-          <span className="material-symbols-outlined text-sm">
-            {trangThai === 2 ? "visibility" : "clinical_notes"}
-          </span>
+          <span className="material-symbols-outlined text-sm">{trangThai === 2 ? "visibility" : "clinical_notes"}</span>
           {trangThai === 2 ? "Xem hồ sơ" : "Khám bệnh"}
         </Link>
       </div>
@@ -202,9 +193,7 @@ function DoctorDashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center py-32">
         <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
-        <p className="text-slate-500 font-medium">
-          Đang tải dữ liệu tổng quan...
-        </p>
+        <p className="text-slate-500 font-medium">Đang tải dữ liệu tổng quan...</p>
       </div>
     );
   }
@@ -218,22 +207,14 @@ function DoctorDashboardPage() {
             key={card.label}
             className={`bg-white p-5 border-2 ${card.borderColor} rounded-xl flex items-center gap-4`}
           >
-            <div
-              className={`w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center ${card.textColor}`}
-            >
-              <span className="material-symbols-outlined text-3xl font-light">
-                {card.icon}
-              </span>
+            <div className={`w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center ${card.textColor}`}>
+              <span className="material-symbols-outlined text-3xl font-light">{card.icon}</span>
             </div>
             <div>
               <p className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
                 {card.label}
               </p>
-              <p
-                className={`text-2xl font-bold ${card.textColor} leading-none`}
-              >
-                {card.value}
-              </p>
+              <p className={`text-2xl font-bold ${card.textColor} leading-none`}>{card.value}</p>
             </div>
           </div>
         ))}
@@ -244,12 +225,8 @@ function DoctorDashboardPage() {
         {/* Header của bảng */}
         <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-              Lịch làm việc hôm nay
-            </h2>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Danh sách bệnh nhân đăng ký khám trong ngày
-            </p>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Lịch làm việc hôm nay</h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Danh sách bệnh nhân đăng ký khám trong ngày</p>
           </div>
           <Link
             to="/doctor/appointments"
@@ -263,15 +240,9 @@ function DoctorDashboardPage() {
         {todayAppointments.length === 0 ? (
           /* Trường hợp không có lịch hẹn */
           <div className="py-24 text-center">
-            <span className="material-symbols-outlined text-6xl text-slate-200 mb-4">
-              calendar_today
-            </span>
-            <p className="text-slate-500 font-bold">
-              Hôm nay bạn chưa có lịch hẹn nào
-            </p>
-            <p className="text-slate-400 text-xs mt-1">
-              Các yêu cầu khám mới sẽ xuất hiện tại đây
-            </p>
+            <span className="material-symbols-outlined text-6xl text-slate-200 mb-4">calendar_today</span>
+            <p className="text-slate-500 font-bold">Hôm nay bạn chưa có lịch hẹn nào</p>
+            <p className="text-slate-400 text-xs mt-1">Các yêu cầu khám mới sẽ xuất hiện tại đây</p>
           </div>
         ) : (
           /* Hiển thị bảng dữ liệu (Responsive) */
@@ -298,16 +269,11 @@ function DoctorDashboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {todayAppointments.map((appt) => (
-                  <tr
-                    key={appt.id}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
+                  <tr key={appt.id} className="hover:bg-slate-50 transition-colors">
                     {/* Cột: Giờ khám */}
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-2 text-primary font-bold">
-                        <span className="material-symbols-outlined text-sm">
-                          schedule
-                        </span>
+                        <span className="material-symbols-outlined text-sm">schedule</span>
                         {formatTime(appt.gioBatDau)}
                       </div>
                     </td>
@@ -341,9 +307,7 @@ function DoctorDashboardPage() {
 
                     {/* Cột: Thao tác */}
                     <td className="px-6 py-5 text-right">
-                      <div className="inline-flex items-center">
-                        {renderActions(appt)}
-                      </div>
+                      <div className="inline-flex items-center">{renderActions(appt)}</div>
                     </td>
                   </tr>
                 ))}

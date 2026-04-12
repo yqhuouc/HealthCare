@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
-import { useLichLamViec, useKhungGio, useDeleteLichLamViec, useUpdateLichLamViec } from "../../hooks/queries/useScheduleQueries";
+import {
+  useLichLamViec,
+  useKhungGio,
+  useDeleteLichLamViec,
+  useUpdateLichLamViec,
+} from "../../hooks/queries/useScheduleQueries";
 import { useSpecialties } from "../../hooks/queries/useSpecialtyQueries";
 import { useDoctors } from "../../hooks/queries/useDoctorQueries";
 import { scheduleService } from "../../services/scheduleService"; // Giữ lại cho bulk create
@@ -14,12 +19,12 @@ import { scheduleKeys } from "../../hooks/queries/useScheduleQueries";
  */
 function AdminDoctorSchedulesPage() {
   const queryClient = useQueryClient();
-  
+
   // State quản lý các bộ lọc ở đầu trang
   const [filters, setFilters] = useState({
     chuyenKhoaId: "all",
     bacSiId: "all",
-    ngayLamViec: toDateString(dayjs())
+    ngayLamViec: toDateString(dayjs()),
   });
 
   // TanStack Query: Lấy dữ liệu danh mục (auto-cache)
@@ -33,15 +38,15 @@ function AdminDoctorSchedulesPage() {
   // TanStack Query: Lấy lịch làm việc theo bộ lọc
   const schParams = {
     bacSiId: filters.bacSiId !== "all" ? filters.bacSiId : "",
-    ngayLamViec: filters.ngayLamViec
+    ngayLamViec: filters.ngayLamViec,
   };
   const { data: schRes, isLoading: loading } = useLichLamViec(schParams);
-  
+
   // Lọc client-side theo chuyên khoa nếu cần
   const schedules = (() => {
     let data = schRes?.data || [];
     if (filters.chuyenKhoaId !== "all" && filters.bacSiId === "all") {
-      data = data.filter(sch => sch.bacSi?.chuyenKhoaId === Number(filters.chuyenKhoaId));
+      data = data.filter((sch) => sch.bacSi?.chuyenKhoaId === Number(filters.chuyenKhoaId));
     }
     return data;
   })();
@@ -57,11 +62,15 @@ function AdminDoctorSchedulesPage() {
     bacSiId: "",
     ngayBatDau: "",
     ngayKetThuc: "",
-    khungGioIds: []
+    khungGioIds: [],
   });
 
   // State quản lý Modal chỉnh sửa tải trọng và Modal xóa
-  const [editModal, setEditModal] = useState({ open: false, schedule: null, newLimit: 0 });
+  const [editModal, setEditModal] = useState({
+    open: false,
+    schedule: null,
+    newLimit: 0,
+  });
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
 
   /**
@@ -92,7 +101,7 @@ function AdminDoctorSchedulesPage() {
           await scheduleService.createLichLamViec({
             bacSiId: newSchedule.bacSiId,
             ngayLamViec: date,
-            khungGioId: slotId
+            khungGioId: slotId,
           });
           successCount++;
         } catch (err) {
@@ -105,7 +114,12 @@ function AdminDoctorSchedulesPage() {
     if (successCount > 0) {
       toast.success(`Đã tạo thành công ${successCount} ca làm việc.`);
       setShowAddModal(false);
-      setNewSchedule({ bacSiId: "", ngayBatDau: "", ngayKetThuc: "", khungGioIds: [] });
+      setNewSchedule({
+        bacSiId: "",
+        ngayBatDau: "",
+        ngayKetThuc: "",
+        khungGioIds: [],
+      });
       // Invalidate queries thay vì fetchData()
       queryClient.invalidateQueries({ queryKey: scheduleKeys.lists() });
     }
@@ -135,14 +149,17 @@ function AdminDoctorSchedulesPage() {
     e.preventDefault();
     if (!editModal.schedule) return;
     updateMutation.mutate(
-      { id: editModal.schedule.id, data: { soBenhNhanToiDa: editModal.newLimit } },
+      {
+        id: editModal.schedule.id,
+        data: { soBenhNhanToiDa: editModal.newLimit },
+      },
       {
         onSuccess: () => {
           toast.success("Đã điều chỉnh tải trọng thành công!");
           setEditModal({ open: false, schedule: null, newLimit: 0 });
         },
         onError: (error) => toast.error(error.message || "Lỗi khi cập nhật"),
-      }
+      },
     );
   };
 
@@ -151,11 +168,9 @@ function AdminDoctorSchedulesPage() {
    * @param {number} id - ID của khung giờ
    */
   const toggleSlotSelection = (id) => {
-    setNewSchedule(prev => ({
+    setNewSchedule((prev) => ({
       ...prev,
-      khungGioIds: prev.khungGioIds.includes(id) 
-        ? prev.khungGioIds.filter(i => i !== id)
-        : [...prev.khungGioIds, id]
+      khungGioIds: prev.khungGioIds.includes(id) ? prev.khungGioIds.filter((i) => i !== id) : [...prev.khungGioIds, id],
     }));
   };
 
@@ -182,11 +197,21 @@ function AdminDoctorSchedulesPage() {
           <label className="text-xs font-bold text-slate-500 uppercase ml-1">Chuyên khoa</label>
           <select
             value={filters.chuyenKhoaId}
-            onChange={(e) => setFilters({ ...filters, chuyenKhoaId: e.target.value, bacSiId: "all" })}
+            onChange={(e) =>
+              setFilters({
+                ...filters,
+                chuyenKhoaId: e.target.value,
+                bacSiId: "all",
+              })
+            }
             className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
           >
             <option value="all">Tất cả chuyên khoa</option>
-            {specialties.map(sp => <option key={sp.id} value={sp.id}>{sp.tenChuyenKhoa}</option>)}
+            {specialties.map((sp) => (
+              <option key={sp.id} value={sp.id}>
+                {sp.tenChuyenKhoa}
+              </option>
+            ))}
           </select>
         </div>
         <div className="space-y-1.5 flex-1 min-w-[200px]">
@@ -198,8 +223,12 @@ function AdminDoctorSchedulesPage() {
           >
             <option value="all">Tất cả Bác sĩ</option>
             {doctors
-              .filter(d => filters.chuyenKhoaId === "all" || d.chuyenKhoaId === Number(filters.chuyenKhoaId))
-              .map(d => <option key={d.id} value={d.id}>{d.tenBacSi}</option>)}
+              .filter((d) => filters.chuyenKhoaId === "all" || d.chuyenKhoaId === Number(filters.chuyenKhoaId))
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.tenBacSi}
+                </option>
+              ))}
           </select>
         </div>
         <div className="space-y-1.5 flex-1 min-w-[200px]">
@@ -228,56 +257,76 @@ function AdminDoctorSchedulesPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan="5" className="py-20 text-center text-primary animate-spin"><span className="material-symbols-outlined text-4xl">progress_activity</span></td></tr>
-              ) : schedules.length === 0 ? (
-                <tr><td colSpan="5" className="py-20 text-center text-slate-400 italic">Ngày này chưa có lịch làm việc nào được phân công.</td></tr>
-              ) : schedules.map((sch) => (
-                <tr key={sch.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-6 py-4 font-bold text-slate-900">
-                    <div className="flex flex-col">
-                      <span>{sch.bacSi?.tenBacSi}</span>
-                      <span className="text-[10px] font-bold text-slate-400 capitalize">{sch.bacSi?.chuyenKhoa?.tenChuyenKhoa}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-primary/10 text-primary font-black tracking-widest rounded-lg text-xs">
-                      {formatTime(sch.khungGio?.gioBatDau)} - {formatTime(sch.khungGio?.gioKetThuc)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600 text-sm">
-                    <div className="flex items-center gap-1.5 font-bold">
-                      <span className="text-emerald-600">{sch.soBenhNhanHienTai}</span>
-                      <span className="text-slate-300">/</span>
-                      <span className="text-slate-700">{sch.soBenhNhanToiDa} BN</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${sch.sanSang === 1 ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"}`}>
-                       {sch.sanSang === 1 ? "Đang mở" : "Tạm khóa"}
-                     </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-1">
-                      {/* Nút mở modal chỉnh sửa tải trọng */}
-                      <button
-                        onClick={() => setEditModal({ open: true, schedule: sch, newLimit: sch.soBenhNhanToiDa })}
-                        className="aspect-square size-8 flex justify-center items-center text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
-                        title="Điều chỉnh tải trọng"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
-                      </button>
-                      {/* Nút mở modal xác nhận xóa */}
-                      <button
-                        onClick={() => setDeleteModal({ open: true, id: sch.id })}
-                        className="aspect-square size-8 flex justify-center items-center text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-                        title="Xóa lịch làm việc"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
-                      </button>
-                    </div>
+                <tr>
+                  <td colSpan="5" className="py-20 text-center text-primary animate-spin">
+                    <span className="material-symbols-outlined text-4xl">progress_activity</span>
                   </td>
                 </tr>
-              ))}
+              ) : schedules.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="py-20 text-center text-slate-400 italic">
+                    Ngày này chưa có lịch làm việc nào được phân công.
+                  </td>
+                </tr>
+              ) : (
+                schedules.map((sch) => (
+                  <tr key={sch.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-4 font-bold text-slate-900">
+                      <div className="flex flex-col">
+                        <span>{sch.bacSi?.tenBacSi}</span>
+                        <span className="text-[10px] font-bold text-slate-400 capitalize">
+                          {sch.bacSi?.chuyenKhoa?.tenChuyenKhoa}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 bg-primary/10 text-primary font-black tracking-widest rounded-lg text-xs">
+                        {formatTime(sch.khungGio?.gioBatDau)} - {formatTime(sch.khungGio?.gioKetThuc)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 text-sm">
+                      <div className="flex items-center gap-1.5 font-bold">
+                        <span className="text-emerald-600">{sch.soBenhNhanHienTai}</span>
+                        <span className="text-slate-300">/</span>
+                        <span className="text-slate-700">{sch.soBenhNhanToiDa} BN</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${sch.sanSang === 1 ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"}`}
+                      >
+                        {sch.sanSang === 1 ? "Đang mở" : "Tạm khóa"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-1">
+                        {/* Nút mở modal chỉnh sửa tải trọng */}
+                        <button
+                          onClick={() =>
+                            setEditModal({
+                              open: true,
+                              schedule: sch,
+                              newLimit: sch.soBenhNhanToiDa,
+                            })
+                          }
+                          className="aspect-square size-8 flex justify-center items-center text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
+                          title="Điều chỉnh tải trọng"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">edit</span>
+                        </button>
+                        {/* Nút mở modal xác nhận xóa */}
+                        <button
+                          onClick={() => setDeleteModal({ open: true, id: sch.id })}
+                          className="aspect-square size-8 flex justify-center items-center text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                          title="Xóa lịch làm việc"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -306,7 +355,11 @@ function AdminDoctorSchedulesPage() {
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
                   >
                     <option value="all">Tất cả chuyên khoa</option>
-                    {specialties.map(sp => <option key={sp.id} value={sp.id}>{sp.tenChuyenKhoa}</option>)}
+                    {specialties.map((sp) => (
+                      <option key={sp.id} value={sp.id}>
+                        {sp.tenChuyenKhoa}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -314,13 +367,22 @@ function AdminDoctorSchedulesPage() {
                   <select
                     required
                     value={newSchedule.bacSiId}
-                    onChange={(e) => setNewSchedule({ ...newSchedule, bacSiId: e.target.value })}
+                    onChange={(e) =>
+                      setNewSchedule({
+                        ...newSchedule,
+                        bacSiId: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
                   >
                     <option value="">-- Chọn bác sĩ --</option>
                     {doctors
-                      .filter(d => addModalChuyenKhoa === "all" || d.chuyenKhoaId === Number(addModalChuyenKhoa))
-                      .map(d => <option key={d.id} value={d.id}>{d.tenBacSi} ({d.chuyenKhoa?.tenChuyenKhoa})</option>)}
+                      .filter((d) => addModalChuyenKhoa === "all" || d.chuyenKhoaId === Number(addModalChuyenKhoa))
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.tenBacSi} ({d.chuyenKhoa?.tenChuyenKhoa})
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
@@ -333,7 +395,12 @@ function AdminDoctorSchedulesPage() {
                     required
                     min={toDateString(dayjs())}
                     value={newSchedule.ngayBatDau}
-                    onChange={(e) => setNewSchedule({ ...newSchedule, ngayBatDau: e.target.value })}
+                    onChange={(e) =>
+                      setNewSchedule({
+                        ...newSchedule,
+                        ngayBatDau: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"
                   />
                 </div>
@@ -343,7 +410,12 @@ function AdminDoctorSchedulesPage() {
                     type="date"
                     min={newSchedule.ngayBatDau}
                     value={newSchedule.ngayKetThuc}
-                    onChange={(e) => setNewSchedule({ ...newSchedule, ngayKetThuc: e.target.value })}
+                    onChange={(e) =>
+                      setNewSchedule({
+                        ...newSchedule,
+                        ngayKetThuc: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"
                   />
                 </div>
@@ -352,29 +424,33 @@ function AdminDoctorSchedulesPage() {
               <div className="space-y-3">
                 <label className="text-sm font-bold text-slate-700">Chọn các khung giờ (Có thể chọn nhiều)</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {slots.map(slot => (
+                  {slots.map((slot) => (
                     <button
                       key={slot.id}
                       type="button"
                       onClick={() => toggleSlotSelection(slot.id)}
                       className={`
                         p-3 rounded-xl border text-sm font-bold transition-all
-                        ${newSchedule.khungGioIds.includes(slot.id)
-                          ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
-                          : "bg-slate-50 border-slate-200 text-slate-600 hover:border-primary/50"}
+                        ${
+                          newSchedule.khungGioIds.includes(slot.id)
+                            ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
+                            : "bg-slate-50 border-slate-200 text-slate-600 hover:border-primary/50"
+                        }
                       `}
                     >
                       {formatTime(slot.gioBatDau)} - {formatTime(slot.gioKetThuc)}
                     </button>
                   ))}
                 </div>
-                {newSchedule.khungGioIds.length === 0 && <p className="text-xs text-rose-500 italic">Vui lòng chọn ít nhất một khung giờ.</p>}
+                {newSchedule.khungGioIds.length === 0 && (
+                  <p className="text-xs text-rose-500 italic">Vui lòng chọn ít nhất một khung giờ.</p>
+                )}
               </div>
 
               <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3 items-start">
                 <span className="material-symbols-outlined text-amber-600">info</span>
                 <p className="text-xs text-amber-700 leading-relaxed">
-                  Hệ thống sẽ tự động tính số lượng bệnh nhân tối đa dựa trên thời lượng khám của Chuyên khoa bác sĩ đó. 
+                  Hệ thống sẽ tự động tính số lượng bệnh nhân tối đa dựa trên thời lượng khám của Chuyên khoa bác sĩ đó.
                   Nếu đã có lịch trùng, hệ thống sẽ bỏ qua ca đó.
                 </p>
               </div>
@@ -391,8 +467,8 @@ function AdminDoctorSchedulesPage() {
                   type="submit"
                   className="flex-1 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
                 >
-                   <span className="material-symbols-outlined text-xl">send</span>
-                   Xác nhận tạo lịch
+                  <span className="material-symbols-outlined text-xl">send</span>
+                  Xác nhận tạo lịch
                 </button>
               </div>
             </form>
@@ -409,23 +485,52 @@ function AdminDoctorSchedulesPage() {
             </div>
             <form onSubmit={submitEditCapacity} className="p-5 space-y-5">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-sm">
-                <p><span className="text-slate-500">Bác sĩ:</span> <strong className="text-slate-800">{editModal.schedule?.bacSi?.tenBacSi}</strong></p>
-                <p><span className="text-slate-500">Ca:</span> <strong className="text-primary">{formatTime(editModal.schedule?.khungGio?.gioBatDau)} - {formatTime(editModal.schedule?.khungGio?.gioKetThuc)}</strong></p>
+                <p>
+                  <span className="text-slate-500">Bác sĩ:</span>{" "}
+                  <strong className="text-slate-800">{editModal.schedule?.bacSi?.tenBacSi}</strong>
+                </p>
+                <p>
+                  <span className="text-slate-500">Ca:</span>{" "}
+                  <strong className="text-primary">
+                    {formatTime(editModal.schedule?.khungGio?.gioBatDau)} -{" "}
+                    {formatTime(editModal.schedule?.khungGio?.gioKetThuc)}
+                  </strong>
+                </p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Số ca khám tối đa</label>
-                <input 
-                  type="number" 
-                  required min={1} max={50}
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  max={50}
                   value={editModal.newLimit}
-                  onChange={(e) => setEditModal({...editModal, newLimit: Number(e.target.value)})}
-                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-4 focus:ring-primary/20 outline-none font-bold text-slate-900" 
+                  onChange={(e) =>
+                    setEditModal({
+                      ...editModal,
+                      newLimit: Number(e.target.value),
+                    })
+                  }
+                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-4 focus:ring-primary/20 outline-none font-bold text-slate-900"
                 />
-                <p className="text-xs italic text-slate-400">Tăng số lượng bệnh nhân để nới lỏng thêm ca khám cho bác sĩ.</p>
+                <p className="text-xs italic text-slate-400">
+                  Tăng số lượng bệnh nhân để nới lỏng thêm ca khám cho bác sĩ.
+                </p>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setEditModal({ open: false, schedule: null, newLimit: 0 })} className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all">Hủy</button>
-                <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-md shadow-primary/20">Lưu thay đổi</button>
+                <button
+                  type="button"
+                  onClick={() => setEditModal({ open: false, schedule: null, newLimit: 0 })}
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
+                >
+                  Lưu thay đổi
+                </button>
               </div>
             </form>
           </div>
@@ -444,13 +549,13 @@ function AdminDoctorSchedulesPage() {
               Xóa lịch làm việc này đồng nghĩa bác sĩ sẽ không khám vào khung giờ này nữa. Hành động không thể hoàn tác.
             </p>
             <div className="flex gap-3">
-              <button 
-                onClick={() => setDeleteModal({ open: false, id: null })} 
+              <button
+                onClick={() => setDeleteModal({ open: false, id: null })}
                 className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-all"
               >
                 Hủy bỏ
               </button>
-              <button 
+              <button
                 onClick={confirmDelete}
                 className="flex-1 py-3 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20"
               >

@@ -100,9 +100,7 @@ function RegisterPage() {
                     className={`${INPUT_CLASS} ${errors.fullName ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                     {...register("fullName")}
                   />
-                  {errors.fullName && (
-                    <p className="text-red-500 text-xs mt-1">{errors.fullName.message}</p>
-                  )}
+                  {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName.message}</p>}
                 </div>
 
                 {/* Email */}
@@ -114,9 +112,7 @@ function RegisterPage() {
                     className={`${INPUT_CLASS} ${errors.email ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                     {...register("email")}
                   />
-                  {errors.email && (
-                    <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
-                  )}
+                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                 </div>
 
                 {/* Số điện thoại */}
@@ -128,9 +124,7 @@ function RegisterPage() {
                     className={`${INPUT_CLASS} ${errors.phone ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
                     {...register("phone")}
                   />
-                  {errors.phone && (
-                    <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
-                  )}
+                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
                 </div>
 
                 {/* Mật khẩu — có toggle hiển thị/ẩn */}
@@ -153,9 +147,7 @@ function RegisterPage() {
                       </span>
                     </button>
                   </div>
-                  {errors.password && (
-                    <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
-                  )}
+                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
                 </div>
 
                 {/* Xác nhận mật khẩu — validate phải trùng với trường mật khẩu */}
@@ -173,9 +165,7 @@ function RegisterPage() {
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors"
                       onClick={() => setShowConfirm(!showConfirm)}
                     >
-                      <span className="material-symbols-outlined">
-                        {showConfirm ? "visibility_off" : "visibility"}
-                      </span>
+                      <span className="material-symbols-outlined">{showConfirm ? "visibility_off" : "visibility"}</span>
                     </button>
                   </div>
                   {errors.confirmPassword && (
@@ -204,10 +194,7 @@ function RegisterPage() {
               <div className="mt-10 text-center">
                 <p className="text-slate-600">
                   Đã có tài khoản?
-                  <Link
-                    to="/login"
-                    className="text-primary font-bold hover:underline underline-offset-4 ml-1"
-                  >
+                  <Link to="/login" className="text-primary font-bold hover:underline underline-offset-4 ml-1">
                     Đăng nhập
                   </Link>
                 </p>
@@ -226,11 +213,7 @@ function LeftPanel() {
     <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-center p-12 text-white overflow-hidden">
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-primary/80 z-10 mix-blend-multiply" />
-        <img
-          alt="Bác sĩ đang tư vấn y tế hiện đại"
-          className="w-full h-full object-cover"
-          src={IMAGE_URL}
-        />
+        <img alt="Bác sĩ đang tư vấn y tế hiện đại" className="w-full h-full object-cover" src={IMAGE_URL} />
       </div>
       <div className="relative z-20">
         <div className="flex items-center gap-3 mb-8">

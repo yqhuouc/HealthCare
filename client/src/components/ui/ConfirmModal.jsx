@@ -3,10 +3,6 @@ import React from 'react';
 /**
  * ConfirmModal - Component xác nhận hành động quan trọng (Xóa, Hủy...)
  * Thiết kế sạch sẽ, đứng đắn, phù hợp phong cách đồ án tốt nghiệp.
- */
-/**
- * ConfirmModal - Component xác nhận hành động quan trọng (Xóa, Hủy...)
- * Thiết kế sạch sẽ, đứng đắn, phù hợp phong cách đồ án tốt nghiệp.
  * Đã tối ưu Responsive & Glassmorphism.
  */
 const ConfirmModal = ({ 
@@ -52,10 +48,10 @@ const ConfirmModal = ({
   const config = typeConfig[type] || typeConfig.danger;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 ml-0">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center p-4 sm:p-6 ml-0">
       {/* Backdrop: Glassmorphism effect */}
       <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-[4px] transition-opacity duration-300 animate-in fade-in" 
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in" 
         onClick={!isLoading ? onClose : undefined}
       />
       
@@ -117,6 +113,5 @@ const ConfirmModal = ({
     </div>
   );
 };
-
 
 export default ConfirmModal;

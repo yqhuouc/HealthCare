@@ -33,10 +33,18 @@ function AdminDashboardPage() {
   // Gọi API bằng TanStack Query — tự cache + tự quản lý loading/error
   const { data: tongQuanRes, isLoading: loadingStats } = useTongQuan();
   const { data: lichHenRes, isLoading: loadingChart } = useLichHenStats(dateRange);
-  const { data: appointmentsRes, isLoading: loadingRecent } = useAppointments({ page: 1, limit: 5 });
+  const { data: appointmentsRes, isLoading: loadingRecent } = useAppointments({
+    page: 1,
+    limit: 5,
+  });
 
   // Trích xuất dữ liệu từ response
-  const stats = tongQuanRes?.data || { tongBenhNhan: 0, tongBacSi: 0, tongLichHen: 0, tongChuyenKhoa: 0 };
+  const stats = tongQuanRes?.data || {
+    tongBenhNhan: 0,
+    tongBacSi: 0,
+    tongLichHen: 0,
+    tongChuyenKhoa: 0,
+  };
   const recentAppointments = appointmentsRes?.data || [];
 
   // Xử lý dữ liệu biểu đồ 14 ngày
@@ -44,7 +52,10 @@ function AdminDashboardPage() {
     if (!lichHenRes?.data?.lichHenTheoNgay) return [];
 
     const rawDays = lichHenRes.data.lichHenTheoNgay;
-    const cleanDays = rawDays.map((d) => ({ ...d, soLuong: Number(d.soLuong || 0) }));
+    const cleanDays = rawDays.map((d) => ({
+      ...d,
+      soLuong: Number(d.soLuong || 0),
+    }));
 
     const today = dayjs();
     const pastDate = today.subtract(13, "day");
@@ -116,9 +127,7 @@ function AdminDashboardPage() {
   if (loadingStats && loadingChart && loadingRecent) {
     return (
       <div className="flex justify-center py-10">
-        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
-          progress_activity
-        </span>
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
       </div>
     );
   }
@@ -133,23 +142,13 @@ function AdminDashboardPage() {
             className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-primary/30 transition-colors relative"
           >
             <div className="flex flex-col h-full">
-              <div
-                className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${card.iconBg}`}
-              >
-                <span
-                  className={`material-symbols-outlined text-2xl ${card.iconColor}`}
-                >
-                  {card.icon}
-                </span>
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${card.iconBg}`}>
+                <span className={`material-symbols-outlined text-2xl ${card.iconColor}`}>{card.icon}</span>
               </div>
 
               <div className="mt-4">
-                <p className="text-2xl font-bold text-slate-900 tracking-tight">
-                  {card.value}
-                </p>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">
-                  {card.label}
-                </p>
+                <p className="text-2xl font-bold text-slate-900 tracking-tight">{card.value}</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">{card.label}</p>
               </div>
             </div>
           </div>
@@ -160,17 +159,11 @@ function AdminDashboardPage() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/30">
           <div>
-            <h2 className="text-base font-bold text-slate-900">
-              Hoạt động đặt lịch 14 ngày qua
-            </h2>
-            <p className="text-[11px] text-slate-500">
-              Thống kê số lượng bệnh nhân đặt lịch theo ngày
-            </p>
+            <h2 className="text-base font-bold text-slate-900">Hoạt động đặt lịch 14 ngày qua</h2>
+            <p className="text-[11px] text-slate-500">Thống kê số lượng bệnh nhân đặt lịch theo ngày</p>
           </div>
           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest sm:hidden">
-            <span className="material-symbols-outlined text-sm">
-              swipe_left
-            </span>
+            <span className="material-symbols-outlined text-sm">swipe_left</span>
             Vuốt để xem
           </div>
         </div>
@@ -189,20 +182,12 @@ function AdminDashboardPage() {
 
                   <div
                     className={`w-full max-w-[28px] rounded-t-sm transition-all duration-300 relative ${
-                      bar.count > 0
-                        ? bar.isToday
-                          ? "bg-orange-500"
-                          : "bg-primary"
-                        : "bg-slate-200"
+                      bar.count > 0 ? (bar.isToday ? "bg-orange-500" : "bg-primary") : "bg-slate-200"
                     }`}
                     style={{ height: bar.height }}
                   />
 
-                  <span
-                    className={`text-[10px] font-semibold ${
-                      bar.isToday ? "text-orange-500" : "text-slate-400"
-                    }`}
-                  >
+                  <span className={`text-[10px] font-semibold ${bar.isToday ? "text-orange-500" : "text-slate-400"}`}>
                     {bar.label}
                   </span>
                 </div>
@@ -220,17 +205,10 @@ function AdminDashboardPage() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
           <div>
-            <h2 className="text-base font-bold text-slate-900">
-              Hoạt động gần đây
-            </h2>
-            <p className="text-[11px] text-slate-500">
-              Các sự kiện mới nhất trong hệ thống
-            </p>
+            <h2 className="text-base font-bold text-slate-900">Hoạt động gần đây</h2>
+            <p className="text-[11px] text-slate-500">Các sự kiện mới nhất trong hệ thống</p>
           </div>
-          <Link
-            to="/admin/appointments"
-            className="text-xs font-semibold text-primary hover:underline"
-          >
+          <Link to="/admin/appointments" className="text-xs font-semibold text-primary hover:underline">
             Xem tất cả
           </Link>
         </div>
@@ -238,9 +216,7 @@ function AdminDashboardPage() {
         <div className="p-6">
           {recentAppointments.length === 0 ? (
             <div className="flex flex-col items-center py-10 text-slate-400">
-              <span className="material-symbols-outlined text-3xl mb-1">
-                history
-              </span>
+              <span className="material-symbols-outlined text-3xl mb-1">history</span>
               <p className="text-xs">Chưa có hoạt động nào</p>
             </div>
           ) : (
@@ -277,43 +253,26 @@ function AdminDashboardPage() {
                 const config = statusIcons[apt.trangThai] || statusIcons[0];
 
                 return (
-                  <div
-                    key={apt.id}
-                    className="relative pl-12 pb-6 last:pb-0 group"
-                  >
+                  <div key={apt.id} className="relative pl-12 pb-6 last:pb-0 group">
                     <div
                       className={`absolute left-0 top-0 w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 border-white shadow-sm ${config.bg}`}
                     >
-                      <span
-                        className={`material-symbols-outlined text-lg ${config.color}`}
-                      >
-                        {config.icon}
-                      </span>
+                      <span className={`material-symbols-outlined text-lg ${config.color}`}>{config.icon}</span>
                     </div>
 
                     <div className="p-1">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <div>
                           <p className="text-sm text-slate-700">
-                            Bệnh nhân{" "}
-                            <span className="font-bold text-slate-900 text-[13px]">
-                              {pName}
-                            </span>{" "}
-                            đã đặt lịch khám
+                            Bệnh nhân <span className="font-bold text-slate-900 text-[13px]">{pName}</span> đã đặt lịch
+                            khám
                           </p>
                           <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[14px]">
-                              medical_services
-                            </span>
-                            Bác sĩ:{" "}
-                            <span className="font-medium text-slate-600">
-                              {dName}
-                            </span>
+                            <span className="material-symbols-outlined text-[14px]">medical_services</span>
+                            Bác sĩ: <span className="font-medium text-slate-600">{dName}</span>
                           </p>
                         </div>
-                        <time className="text-[11px] font-medium text-slate-400 sm:self-center">
-                          {aptDate}
-                        </time>
+                        <time className="text-[11px] font-medium text-slate-400 sm:self-center">{aptDate}</time>
                       </div>
 
                       <Link
@@ -321,9 +280,7 @@ function AdminDashboardPage() {
                         className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-blue-700 transition-colors"
                       >
                         Chi tiết lịch khám
-                        <span className="material-symbols-outlined text-[14px]">
-                          chevron_right
-                        </span>
+                        <span className="material-symbols-outlined text-[14px]">chevron_right</span>
                       </Link>
                     </div>
                   </div>

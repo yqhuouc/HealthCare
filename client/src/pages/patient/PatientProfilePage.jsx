@@ -18,7 +18,7 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { authService } from "../../services/authService";
 import useAuthStore from "../../stores/useAuthStore";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { patientProfileSchema, passwordChangeSchema } from "../../validations/authSchema";
 
@@ -45,6 +45,10 @@ export default function PatientProfilePage() {
       diaChi: "",
     }
   });
+
+  const { control: profileControl } = profileForm;
+  const watchedHoTen = useWatch({ control: profileControl, name: "hoTen" });
+  const watchedEmail = useWatch({ control: profileControl, name: "email" });
   
   const [snapshot, setSnapshot] = useState(profileForm.getValues());
 
@@ -221,9 +225,9 @@ export default function PatientProfilePage() {
           </label>
           <div>
             <h2 className="text-xl font-bold text-slate-800">
-              {profileForm.watch("hoTen")}
+              {watchedHoTen}
             </h2>
-            <p className="text-slate-500 text-sm mt-1">{profileForm.watch("email")}</p>
+            <p className="text-slate-500 text-sm mt-1">{watchedEmail}</p>
           </div>
         </div>
 

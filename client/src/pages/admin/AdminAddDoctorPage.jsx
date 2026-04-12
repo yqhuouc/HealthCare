@@ -1,4 +1,3 @@
-
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useCreateDoctor } from "../../hooks/queries/useDoctorQueries";
@@ -14,7 +13,7 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
  */
 function AdminAddDoctorPage() {
   const navigate = useNavigate();
-  
+
   // TanStack Query: Lấy danh sách chuyên khoa (auto-cache)
   const { data: specRes } = useSpecialties();
   const specialties = specRes?.data || [];
@@ -22,11 +21,11 @@ function AdminAddDoctorPage() {
   // TanStack Query: Mutation tạo bác sĩ mới (auto-invalidate list)
   const createMutation = useCreateDoctor();
   const loading = createMutation.isPending;
-  
+
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(doctorSchema),
     defaultValues: {
@@ -38,7 +37,7 @@ function AdminAddDoctorPage() {
       giaKham: "",
       moTaNgan: "",
       moTaChiTiet: "",
-    }
+    },
   });
 
   const onSubmit = (data) => {
@@ -52,7 +51,7 @@ function AdminAddDoctorPage() {
         onError: (error) => {
           toast.error(error.message || "Có lỗi xảy ra khi thêm bác sĩ!");
         },
-      }
+      },
     );
   };
 
@@ -75,7 +74,6 @@ function AdminAddDoctorPage() {
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-8 sm:p-12 space-y-10">
-          
           {/* Section: Thông tin cơ bản (Họ tên, Chuyên khoa) */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -84,7 +82,9 @@ function AdminAddDoctorPage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Họ tên bác sĩ <span className="text-rose-500">*</span></label>
+                <label className="text-sm font-bold text-slate-700">
+                  Họ tên bác sĩ <span className="text-rose-500">*</span>
+                </label>
                 <input
                   {...register("tenBacSi")}
                   placeholder="VD: PGS. TS. Nguyễn Văn A"
@@ -93,7 +93,9 @@ function AdminAddDoctorPage() {
                 {errors.tenBacSi && <p className="text-red-500 text-xs mt-1">{errors.tenBacSi.message}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Chuyên khoa <span className="text-rose-500">*</span></label>
+                <label className="text-sm font-bold text-slate-700">
+                  Chuyên khoa <span className="text-rose-500">*</span>
+                </label>
                 <select
                   {...register("chuyenKhoaId")}
                   className={`w-full px-5 py-3.5 rounded-2xl border-slate-200 bg-slate-50/50 text-sm focus:ring-4 focus:ring-primary/10 transition-all font-medium appearance-none cursor-pointer ${errors.chuyenKhoaId ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
@@ -120,7 +122,9 @@ function AdminAddDoctorPage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Email công tác <span className="text-rose-500">*</span></label>
+                <label className="text-sm font-bold text-slate-700">
+                  Email công tác <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="email"
                   {...register("email")}
@@ -130,7 +134,9 @@ function AdminAddDoctorPage() {
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Mật khẩu khởi tạo <span className="text-rose-500">*</span></label>
+                <label className="text-sm font-bold text-slate-700">
+                  Mật khẩu khởi tạo <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="password"
                   {...register("matKhau")}
@@ -172,7 +178,7 @@ function AdminAddDoctorPage() {
                 {errors.giaKham && <p className="text-red-500 text-xs mt-1">{errors.giaKham.message}</p>}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Mô tả ngắn gọn chuyên môn</label>
               <input

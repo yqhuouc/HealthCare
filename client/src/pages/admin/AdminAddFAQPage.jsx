@@ -17,7 +17,7 @@
  * Dữ liệu: CATEGORIES (danh sách chuyên mục + badge color)
  * ============================================================
  */
-import { useState } from "react";
+
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useCreateFAQ } from "../../hooks/queries/useFAQQueries";
@@ -30,11 +30,11 @@ import { faqSchema } from "../../validations/adminSchema";
  */
 function AdminAddFAQPage() {
   const navigate = useNavigate();
-  
+
   // TanStack Query: Mutation tạo FAQ mới (auto-invalidate list)
   const createMutation = useCreateFAQ();
   const loading = createMutation.isPending;
-  
+
   const {
     register,
     handleSubmit,
@@ -45,33 +45,27 @@ function AdminAddFAQPage() {
       cauHoi: "",
       traLoi: "",
       dangHoatDong: 1,
-    }
+    },
   });
 
   /**
    * Gửi dữ liệu FAQ mới lên server để lưu trữ
    */
   const onSubmit = (data) => {
-    createMutation.mutate(
-      data,
-      {
-        onSuccess: () => {
-          toast.success("Đã thêm FAQ mới thành công!");
-          navigate("/admin/faqs");
-        },
-        onError: (err) => toast.error(err.message || "Lỗi khi thêm câu hỏi"),
-      }
-    );
+    createMutation.mutate(data, {
+      onSuccess: () => {
+        toast.success("Đã thêm FAQ mới thành công!");
+        navigate("/admin/faqs");
+      },
+      onError: (err) => toast.error(err.message || "Lỗi khi thêm câu hỏi"),
+    });
   };
 
   return (
     <div className="max-w-3xl mx-auto">
       {/* Breadcrumb điều hướng */}
       <div className="flex items-center gap-2 mb-6 text-sm">
-        <Link
-          to="/admin/faqs"
-          className="text-slate-500 hover:text-primary transition-colors"
-        >
+        <Link to="/admin/faqs" className="text-slate-500 hover:text-primary transition-colors">
           Quản lý FAQs
         </Link>
         <span className="text-slate-300">/</span>
@@ -80,12 +74,8 @@ function AdminAddFAQPage() {
 
       {/* Header trang */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900">
-          Thêm câu hỏi mới
-        </h2>
-        <p className="text-slate-500 text-sm mt-1">
-          Tạo câu hỏi thường gặp mới cho hệ thống HealthCare.
-        </p>
+        <h2 className="text-2xl font-bold text-slate-900">Thêm câu hỏi mới</h2>
+        <p className="text-slate-500 text-sm mt-1">Tạo câu hỏi thường gặp mới cho hệ thống HealthCare.</p>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -120,9 +110,7 @@ function AdminAddFAQPage() {
           {/* Chọn trạng thái hiển thị */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Trạng thái hiển thị
-              </label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Trạng thái hiển thị</label>
               <select
                 {...register("dangHoatDong")}
                 className="w-full rounded-lg border-slate-200 text-sm focus:ring-primary focus:border-primary"

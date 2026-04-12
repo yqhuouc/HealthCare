@@ -33,9 +33,7 @@ export default function SpecialtyDetailPage() {
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto py-20 text-center">
-        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
-          progress_activity
-        </span>
+        <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
         <p className="mt-4 text-slate-500">Đang tải thông tin chuyên khoa...</p>
       </div>
     );
@@ -44,15 +42,9 @@ export default function SpecialtyDetailPage() {
   if (!specialty) {
     return (
       <div className="max-w-7xl mx-auto py-12 px-4 text-center">
-        <span className="material-symbols-outlined text-6xl text-slate-300 block mb-4">
-          search_off
-        </span>
-        <h2 className="text-2xl font-bold text-slate-700 mb-2">
-          Không tìm thấy chuyên khoa
-        </h2>
-        <p className="text-slate-500 mb-6">
-          Chuyên khoa bạn tìm kiếm không tồn tại hoặc đã bị xóa.
-        </p>
+        <span className="material-symbols-outlined text-6xl text-slate-300 block mb-4">search_off</span>
+        <h2 className="text-2xl font-bold text-slate-700 mb-2">Không tìm thấy chuyên khoa</h2>
+        <p className="text-slate-500 mb-6">Chuyên khoa bạn tìm kiếm không tồn tại hoặc đã bị xóa.</p>
         <Link
           to="/specialties"
           className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition"
@@ -91,26 +83,18 @@ export default function SpecialtyDetailPage() {
           }}
         />
         <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-12 text-white max-w-2xl">
-          <span className="bg-primary px-3 py-1 rounded-full text-xs font-bold w-fit mb-4">
-            CHUYÊN KHOA
-          </span>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {specialty.tenChuyenKhoa}
-          </h2>
+          <span className="bg-primary px-3 py-1 rounded-full text-xs font-bold w-fit mb-4">CHUYÊN KHOA</span>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">{specialty.tenChuyenKhoa}</h2>
           <p className="text-slate-100 text-lg leading-relaxed mb-6 line-clamp-3">
             {specialty.moTaChuyenKhoa || "Chuyên khoa chất lượng cao với đội ngũ bác sĩ giàu kinh nghiệm."}
           </p>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg">
-              <span className="material-symbols-outlined text-primary">
-                schedule
-              </span>
+              <span className="material-symbols-outlined text-primary">schedule</span>
               <span className="text-sm">Khám {specialty.thoiLuongKham || 30} phút/ca</span>
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg">
-              <span className="material-symbols-outlined text-primary">
-                groups
-              </span>
+              <span className="material-symbols-outlined text-primary">groups</span>
               <span className="text-sm">{doctors.length} bác sĩ</span>
             </div>
           </div>
@@ -123,9 +107,7 @@ export default function SpecialtyDetailPage() {
           {/* Giới thiệu chuyên khoa */}
           <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-100">
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">
-                info
-              </span>
+              <span className="material-symbols-outlined text-primary">info</span>
               Giới thiệu chuyên khoa
             </h3>
             <p className="text-slate-600 leading-relaxed">
@@ -141,9 +123,7 @@ export default function SpecialtyDetailPage() {
             <ul className="space-y-4">
               {COMMITMENTS.map((text, idx) => (
                 <li key={idx} className="flex items-start gap-3">
-                  <span className="material-symbols-outlined mt-0.5">
-                    check_circle
-                  </span>
+                  <span className="material-symbols-outlined mt-0.5">check_circle</span>
                   <span>{text}</span>
                 </li>
               ))}
@@ -157,9 +137,7 @@ export default function SpecialtyDetailPage() {
           </div>
           {/* Icon trang trí nền */}
           <div className="absolute -bottom-10 -right-10 opacity-20">
-            <span className="material-symbols-outlined text-[160px]">
-              medical_information
-            </span>
+            <span className="material-symbols-outlined text-[160px]">medical_information</span>
           </div>
         </div>
       </section>
@@ -168,19 +146,13 @@ export default function SpecialtyDetailPage() {
       <section>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              Đội ngũ Bác sĩ Chuyên khoa
-            </h2>
-            <p className="text-slate-500 text-sm mt-1">
-              Các bác sĩ giàu kinh nghiệm, tận tâm với nghề
-            </p>
+            <h2 className="text-2xl font-bold text-slate-900">Đội ngũ Bác sĩ Chuyên khoa</h2>
+            <p className="text-slate-500 text-sm mt-1">Các bác sĩ giàu kinh nghiệm, tận tâm với nghề</p>
           </div>
         </div>
 
         {doctors.length === 0 ? (
-          <p className="text-slate-500 text-center py-10">
-            Chưa có bác sĩ nào trong chuyên khoa này.
-          </p>
+          <p className="text-slate-500 text-center py-10">Chưa có bác sĩ nào trong chuyên khoa này.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {doctors.map((doctor) => (
@@ -194,17 +166,9 @@ export default function SpecialtyDetailPage() {
                       <span className="material-symbols-outlined text-4xl text-primary/40">person</span>
                     </div>
                     <div>
-                      <h4 className="font-bold text-lg text-slate-900">
-                        {doctor.tenBacSi}
-                      </h4>
-                      <p className="text-sm text-primary font-medium mb-1">
-                        {specialty.tenChuyenKhoa}
-                      </p>
-                      {doctor.hocViChucDanh && (
-                        <p className="text-sm text-slate-500">
-                          {doctor.hocViChucDanh}
-                        </p>
-                      )}
+                      <h4 className="font-bold text-lg text-slate-900">{doctor.tenBacSi}</h4>
+                      <p className="text-sm text-primary font-medium mb-1">{specialty.tenChuyenKhoa}</p>
+                      {doctor.hocViChucDanh && <p className="text-sm text-slate-500">{doctor.hocViChucDanh}</p>}
                     </div>
                   </div>
 
@@ -212,9 +176,7 @@ export default function SpecialtyDetailPage() {
                   {doctor.giaKham && (
                     <div className="flex items-center justify-between py-3 border-t border-slate-100">
                       <span className="text-sm text-slate-500">Giá khám:</span>
-                      <span className="font-bold text-primary">
-                        {formatPrice(doctor.giaKham)}
-                      </span>
+                      <span className="font-bold text-primary">{formatPrice(doctor.giaKham)}</span>
                     </div>
                   )}
 
@@ -241,10 +203,7 @@ export default function SpecialtyDetailPage() {
 
         {/* Link xem tất cả bác sĩ */}
         <div className="mt-10 text-center">
-          <Link
-            to="/doctors"
-            className="text-primary font-medium hover:underline inline-flex items-center gap-2"
-          >
+          <Link to="/doctors" className="text-primary font-medium hover:underline inline-flex items-center gap-2">
             Xem tất cả bác sĩ chuyên khoa
             <span className="material-symbols-outlined">arrow_forward</span>
           </Link>

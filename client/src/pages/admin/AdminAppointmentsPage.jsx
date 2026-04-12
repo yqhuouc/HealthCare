@@ -27,7 +27,7 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 // Chuyển đổi mã trạng thái số từ Database sang key chuỗi dùng cho config UI
 const STATUS_MAP = {
-  0: "pending",   // Chờ xác nhận
+  0: "pending", // Chờ xác nhận
   1: "confirmed", // Đã xác nhận
   2: "completed", // Đã khám xong
   3: "cancelled", // Đã hủy
@@ -85,13 +85,18 @@ function AdminAppointmentsPage() {
    * Xử lý cập nhật nhanh trạng thái của một lịch hẹn
    */
   const handleUpdateStatus = (id, newStatus) => {
-    const labels = { 0: "Đã hoàn tác (về chờ)", 1: "Đã xác nhận lịch", 2: "Đã hoàn thành khám", 3: "Đã hủy lịch" };
+    const labels = {
+      0: "Đã hoàn tác (về chờ)",
+      1: "Đã xác nhận lịch",
+      2: "Đã hoàn thành khám",
+      3: "Đã hủy lịch",
+    };
     statusMutation.mutate(
       { id, trangThai: newStatus },
       {
         onSuccess: () => toast.success(labels[newStatus] || "Cập nhật thành công"),
         onError: (err) => toast.error(err.message || "Lỗi cập nhật trạng thái"),
-      }
+      },
     );
   };
 
@@ -131,15 +136,17 @@ function AdminAppointmentsPage() {
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
           {/* Nhóm Filter bên trái: Các nút chuyển đổi trạng thái */}
           <div className="space-y-4 flex-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Bộ lọc trạng thái</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+              Bộ lọc trạng thái
+            </p>
             <div className="flex flex-wrap gap-2">
               {STATUS_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   onClick={() => setStatusFilter(f.value)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                    statusFilter === f.value 
-                      ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
+                    statusFilter === f.value
+                      ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
                       : "bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-700 shadow-sm"
                   }`}
                 >
@@ -152,9 +159,13 @@ function AdminAppointmentsPage() {
           {/* Nhóm Filter Ngày bên phải: Chọn khoảng thời gian đặt lịch */}
           <div className="flex flex-wrap items-end gap-3 lg:border-l lg:border-slate-100 lg:pl-6">
             <div className="flex-1 min-w-[140px]">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Từ ngày</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                Từ ngày
+              </label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">calendar_today</span>
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                  calendar_today
+                </span>
                 <input
                   type="date"
                   value={dateFrom}
@@ -164,9 +175,13 @@ function AdminAppointmentsPage() {
               </div>
             </div>
             <div className="flex-1 min-w-[140px]">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Đến ngày</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                Đến ngày
+              </label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">event</span>
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                  event
+                </span>
                 <input
                   type="date"
                   value={dateTo}
@@ -175,8 +190,8 @@ function AdminAppointmentsPage() {
                 />
               </div>
             </div>
-            <button 
-              onClick={handleFilter} 
+            <button
+              onClick={handleFilter}
               className="h-[42px] px-6 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95"
             >
               Lọc
@@ -213,68 +228,106 @@ function AdminAppointmentsPage() {
                     Không tìm thấy lịch hẹn phù hợp.
                   </td>
                 </tr>
-              ) : appointments.map((apt) => {
-                const statusString = STATUS_MAP[apt.trangThai] || "pending";
-                const config = APPOINTMENT_STATUS_CONFIG[statusString];
-                const patientName = apt.benhNhan?.hoTen || "Chưa xác định";
-                const doctorName = typeof apt.bacSi === "object" ? apt.bacSi?.tenBacSi : "Chưa xác định";
-                const formattedDate = new Date(apt.ngayDat).toLocaleDateString("vi-VN");
-                const timeString = apt.gioBatDau ? new Date(apt.gioBatDau).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "";
-                
-                return (
-                  <tr key={apt.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-4 font-medium text-slate-800">LK{apt.id}</td>
-                    <td className="px-5 py-4">
-                      <span className="font-bold text-slate-900">{patientName}</span>
-                    </td>
-                    <td className="px-5 py-4 text-slate-600">{doctorName}</td>
-                    <td className="px-5 py-4 text-slate-600">{timeString} - {formattedDate}</td>
-                    <td className="px-5 py-4">
-                      {config && (
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${config.className}`}>
-                          {config.label}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-4 flex items-center gap-2">
-                      <Link to={`/admin/appointments/${apt.id}`} className="text-primary font-medium hover:underline text-sm">
-                        Xem chi tiết
-                      </Link>
-                      {/* Các nút xử lý nhanh dựa trên trạng thái hiện tại */}
-                      {apt.trangThai === 0 && (
-                        <>
-                          <button onClick={() => handleUpdateStatus(apt.id, 1)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-100" title="Xác nhận">
-                            <span className="material-symbols-outlined text-sm">check</span>
-                          </button>
-                          <button onClick={() => handleUpdateStatus(apt.id, 3)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-rose-100" title="Hủy lịch">
-                            <span className="material-symbols-outlined text-sm">close</span>
-                          </button>
-                        </>
-                      )}
-                      {apt.trangThai === 1 && (
-                        <>
-                          <button onClick={() => handleUpdateStatus(apt.id, 2)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-100" title="Hoàn tất khám">
-                            <span className="material-symbols-outlined text-sm">task_alt</span>
-                          </button>
-                          <button onClick={() => handleUpdateStatus(apt.id, 0)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200" title="Hoàn tác về chờ">
+              ) : (
+                appointments.map((apt) => {
+                  const statusString = STATUS_MAP[apt.trangThai] || "pending";
+                  const config = APPOINTMENT_STATUS_CONFIG[statusString];
+                  const patientName = apt.benhNhan?.hoTen || "Chưa xác định";
+                  const doctorName = typeof apt.bacSi === "object" ? apt.bacSi?.tenBacSi : "Chưa xác định";
+                  const formattedDate = new Date(apt.ngayDat).toLocaleDateString("vi-VN");
+                  const timeString = apt.gioBatDau
+                    ? new Date(apt.gioBatDau).toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "";
+
+                  return (
+                    <tr key={apt.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-5 py-4 font-medium text-slate-800">LK{apt.id}</td>
+                      <td className="px-5 py-4">
+                        <span className="font-bold text-slate-900">{patientName}</span>
+                      </td>
+                      <td className="px-5 py-4 text-slate-600">{doctorName}</td>
+                      <td className="px-5 py-4 text-slate-600">
+                        {timeString} - {formattedDate}
+                      </td>
+                      <td className="px-5 py-4">
+                        {config && (
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${config.className}`}
+                          >
+                            {config.label}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 flex items-center gap-2">
+                        <Link
+                          to={`/admin/appointments/${apt.id}`}
+                          className="text-primary font-medium hover:underline text-sm"
+                        >
+                          Xem chi tiết
+                        </Link>
+                        {/* Các nút xử lý nhanh dựa trên trạng thái hiện tại */}
+                        {apt.trangThai === 0 && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateStatus(apt.id, 1)}
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-100"
+                              title="Xác nhận"
+                            >
+                              <span className="material-symbols-outlined text-sm">check</span>
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(apt.id, 3)}
+                              className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-rose-100"
+                              title="Hủy lịch"
+                            >
+                              <span className="material-symbols-outlined text-sm">close</span>
+                            </button>
+                          </>
+                        )}
+                        {apt.trangThai === 1 && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateStatus(apt.id, 2)}
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-100"
+                              title="Hoàn tất khám"
+                            >
+                              <span className="material-symbols-outlined text-sm">task_alt</span>
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(apt.id, 0)}
+                              className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                              title="Hoàn tác về chờ"
+                            >
+                              <span className="material-symbols-outlined text-sm">undo</span>
+                            </button>
+                          </>
+                        )}
+                        {apt.trangThai === 2 && (
+                          <button
+                            onClick={() => handleUpdateStatus(apt.id, 1)}
+                            className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                            title="Hoàn tác khám (về xác nhận)"
+                          >
                             <span className="material-symbols-outlined text-sm">undo</span>
                           </button>
-                        </>
-                      )}
-                      {apt.trangThai === 2 && (
-                        <button onClick={() => handleUpdateStatus(apt.id, 1)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200" title="Hoàn tác khám (về xác nhận)">
-                          <span className="material-symbols-outlined text-sm">undo</span>
-                        </button>
-                      )}
-                      {apt.trangThai === 3 && (
-                        <button onClick={() => handleUpdateStatus(apt.id, 1)} className="p-1.5 text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/10" title="Khôi phục lịch">
-                          <span className="material-symbols-outlined text-sm">history</span>
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                        )}
+                        {apt.trangThai === 3 && (
+                          <button
+                            onClick={() => handleUpdateStatus(apt.id, 1)}
+                            className="p-1.5 text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/10"
+                            title="Khôi phục lịch"
+                          >
+                            <span className="material-symbols-outlined text-sm">history</span>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -287,8 +340,13 @@ function AdminAppointmentsPage() {
             const patientName = apt.benhNhan?.hoTen || "Chưa xác định";
             const doctorName = typeof apt.bacSi === "object" ? apt.bacSi?.tenBacSi : "Chưa xác định";
             const formattedDate = new Date(apt.ngayDat).toLocaleDateString("vi-VN");
-            const timeString = apt.gioBatDau ? new Date(apt.gioBatDau).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "";
-            
+            const timeString = apt.gioBatDau
+              ? new Date(apt.gioBatDau).toLocaleTimeString("vi-VN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "";
+
             return (
               <div key={apt.id} className="p-5 space-y-4">
                 <div className="flex items-start justify-between">
@@ -297,16 +355,20 @@ function AdminAppointmentsPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-black text-primary uppercase tracking-widest">LK{apt.id}</span>
                       <span className="text-[10px] text-slate-300">•</span>
-                      <span className="text-[10px] font-bold text-slate-400">{timeString} - {formattedDate}</span>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {timeString} - {formattedDate}
+                      </span>
                     </div>
                   </div>
                   {config && (
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${config.className}`}>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${config.className}`}
+                    >
                       {config.label}
                     </span>
                   )}
                 </div>
-                
+
                 <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="material-symbols-outlined text-sm text-slate-400">person_filled</span>
@@ -314,31 +376,66 @@ function AdminAppointmentsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-sm text-slate-400">medical_services</span>
-                    <p className="text-[11px] font-medium text-slate-500 italic truncate opacity-80">"{apt.trieuChung || "—"}"</p>
+                    <p className="text-[11px] font-medium text-slate-500 italic truncate opacity-80">
+                      "{apt.trieuChung || "—"}"
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex gap-2">
-                  <Link to={`/admin/appointments/${apt.id}`} className="flex-1 text-center py-2.5 bg-white text-slate-500 text-[10px] font-black uppercase rounded-xl border border-slate-200 hover:bg-slate-50 transition-all shadow-sm tracking-widest">
+                  <Link
+                    to={`/admin/appointments/${apt.id}`}
+                    className="flex-1 text-center py-2.5 bg-white text-slate-500 text-[10px] font-black uppercase rounded-xl border border-slate-200 hover:bg-slate-50 transition-all shadow-sm tracking-widest"
+                  >
                     Hồ sơ
                   </Link>
                   {apt.trangThai === 0 && (
                     <>
-                      <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-[1.5] py-2.5 bg-primary text-white text-[10px] font-black uppercase rounded-xl shadow-lg shadow-primary/20 tracking-widest">Duyệt</button>
-                      <button onClick={() => handleUpdateStatus(apt.id, 3)} className="aspect-square flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl border border-rose-100"><span className="material-symbols-outlined text-lg">close</span></button>
+                      <button
+                        onClick={() => handleUpdateStatus(apt.id, 1)}
+                        className="flex-[1.5] py-2.5 bg-primary text-white text-[10px] font-black uppercase rounded-xl shadow-lg shadow-primary/20 tracking-widest"
+                      >
+                        Duyệt
+                      </button>
+                      <button
+                        onClick={() => handleUpdateStatus(apt.id, 3)}
+                        className="aspect-square flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl border border-rose-100"
+                      >
+                        <span className="material-symbols-outlined text-lg">close</span>
+                      </button>
                     </>
                   )}
                   {apt.trangThai === 1 && (
                     <>
-                      <button onClick={() => handleUpdateStatus(apt.id, 2)} className="flex-[1.5] py-2.5 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-xl shadow-lg shadow-emerald-200 tracking-widest">Xong</button>
-                      <button onClick={() => handleUpdateStatus(apt.id, 0)} className="aspect-square flex items-center justify-center bg-slate-100 text-slate-500 rounded-xl"><span className="material-symbols-outlined text-lg font-bold">undo</span></button>
+                      <button
+                        onClick={() => handleUpdateStatus(apt.id, 2)}
+                        className="flex-[1.5] py-2.5 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-xl shadow-lg shadow-emerald-200 tracking-widest"
+                      >
+                        Xong
+                      </button>
+                      <button
+                        onClick={() => handleUpdateStatus(apt.id, 0)}
+                        className="aspect-square flex items-center justify-center bg-slate-100 text-slate-500 rounded-xl"
+                      >
+                        <span className="material-symbols-outlined text-lg font-bold">undo</span>
+                      </button>
                     </>
                   )}
                   {apt.trangThai === 2 && (
-                    <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-1 py-2.5 bg-slate-100 text-slate-400 text-[10px] font-black uppercase rounded-xl tracking-widest hover:text-slate-600">Hoàn tác xong</button>
+                    <button
+                      onClick={() => handleUpdateStatus(apt.id, 1)}
+                      className="flex-1 py-2.5 bg-slate-100 text-slate-400 text-[10px] font-black uppercase rounded-xl tracking-widest hover:text-slate-600"
+                    >
+                      Hoàn tác xong
+                    </button>
                   )}
                   {apt.trangThai === 3 && (
-                    <button onClick={() => handleUpdateStatus(apt.id, 1)} className="flex-1 py-2.5 bg-primary/5 text-primary text-[10px] font-black uppercase rounded-xl border border-primary/10 tracking-widest">Khôi phục</button>
+                    <button
+                      onClick={() => handleUpdateStatus(apt.id, 1)}
+                      className="flex-1 py-2.5 bg-primary/5 text-primary text-[10px] font-black uppercase rounded-xl border border-primary/10 tracking-widest"
+                    >
+                      Khôi phục
+                    </button>
                   )}
                 </div>
               </div>

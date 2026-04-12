@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useCreateSpecialty } from "../../hooks/queries/useSpecialtyQueries";
 import { specialtyService } from "../../services/specialtyService"; // Giữ lại cho uploadAnh (chưa có trong hooks)
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { specialtySchema } from "../../validations/adminSchema";
 // Danh sách các biểu tượng (icon) được hỗ trợ cho chuyên khoa
@@ -32,27 +32,30 @@ function AdminAddSpecialtyPage() {
   const navigate = useNavigate();
   // Ref để tham chiếu đến thẻ input file ẩn
   const fileInputRef = useRef(null);
-  
+
   // TanStack Query: Mutation tạo chuyên khoa mới (auto-invalidate list)
   const createMutation = useCreateSpecialty();
   const loading = createMutation.isPending;
-  
+
   const {
     register,
     handleSubmit,
-    watch,
-    formState: { errors }
+    control,
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(specialtySchema),
     defaultValues: {
       tenChuyenKhoa: "",
       icon: "medical_services",
       moTa: "",
-      thoiLuongKham: 20
-    }
+      thoiLuongKham: 20,
+    },
   });
-  
-  const iconValue = watch("icon");
+
+  const iconValue = useWatch({
+    control,
+    name: "icon",
+  });
 
   // State quản lý tệp tin ảnh và URL xem trước
   const [selectedFile, setSelectedFile] = useState(null);
@@ -139,9 +142,7 @@ function AdminAddSpecialtyPage() {
 
               {/* Thời gian khám */}
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Thời lượng khám trung bình (Phút)
-                </label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Thời lượng khám trung bình (Phút)</label>
                 <input
                   type="number"
                   {...register("thoiLuongKham")}
@@ -176,7 +177,7 @@ function AdminAddSpecialtyPage() {
               <span className="material-symbols-outlined text-xl text-primary">category</span>
               Biểu tượng (Icon)
             </label>
-            
+
             <div className="space-y-4">
               <select
                 {...register("icon")}
@@ -210,7 +211,7 @@ function AdminAddSpecialtyPage() {
               Ảnh chuyên khoa
             </label>
 
-            <div 
+            <div
               onClick={() => fileInputRef.current?.click()}
               className="relative aspect-video rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group overflow-hidden flex flex-col items-center justify-center gap-2"
             >
@@ -223,20 +224,20 @@ function AdminAddSpecialtyPage() {
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-3xl text-slate-300 group-hover:text-primary transition-colors">add_photo_alternate</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Click để chọn ảnh</span>
+                  <span className="material-symbols-outlined text-3xl text-slate-300 group-hover:text-primary transition-colors">
+                    add_photo_alternate
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Click để chọn ảnh
+                  </span>
                 </>
               )}
             </div>
             {/* Input file ẩn bên dưới để kích hoạt khi click vào khung preview */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/*"
-              className="hidden"
-            />
-            <p className="text-[10px] text-slate-400 mt-3 italic font-medium">Hỗ trợ JPG, PNG, WEBP. Dung lượng tối đa 2MB.</p>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+            <p className="text-[10px] text-slate-400 mt-3 italic font-medium">
+              Hỗ trợ JPG, PNG, WEBP. Dung lượng tối đa 2MB.
+            </p>
           </div>
         </div>
       </div>
@@ -269,4 +270,3 @@ function AdminAddSpecialtyPage() {
 }
 
 export default AdminAddSpecialtyPage;
-

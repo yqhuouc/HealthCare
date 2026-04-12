@@ -1,6 +1,10 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { useAppointment, useUpdateAppointmentStatus, useUpdatePaymentStatus } from "../../hooks/queries/useAppointmentQueries";
+import {
+  useAppointment,
+  useUpdateAppointmentStatus,
+  useUpdatePaymentStatus,
+} from "../../hooks/queries/useAppointmentQueries";
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { getInitials } from "../../utils/formatters";
@@ -28,7 +32,7 @@ const PAYMENT_STATUS_OPTIONS = [
 function AdminAppointmentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   // TanStack Query: Lấy chi tiết lịch hẹn (auto-cache)
   const { data: aptRes, isLoading: loading } = useAppointment(id);
   const appointment = aptRes?.data || null;
@@ -47,7 +51,7 @@ function AdminAppointmentDetailPage() {
       {
         onSuccess: () => toast.success("Cập nhật trạng thái thành công!"),
         onError: () => toast.error("Lỗi khi cập nhật trạng thái"),
-      }
+      },
     );
   };
 
@@ -60,7 +64,7 @@ function AdminAppointmentDetailPage() {
       {
         onSuccess: () => toast.success("Cập nhật thanh toán thành công!"),
         onError: () => toast.error("Lỗi khi cập nhật thanh toán"),
-      }
+      },
     );
   };
 
@@ -98,12 +102,14 @@ function AdminAppointmentDetailPage() {
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">Chi tiết lịch khám #LK{id}</h2>
           {statusCfg && (
-            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${statusCfg.className}`}>
+            <span
+              className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${statusCfg.className}`}
+            >
               {statusCfg.label}
             </span>
           )}
         </div>
-        
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
             <span className="flex items-center gap-1.5">
@@ -194,7 +200,7 @@ function AdminAppointmentDetailPage() {
                 Hoàn tác xong
               </button>
             )}
-            
+
             <button
               onClick={() => navigate(-1)}
               className="flex items-center justify-center gap-2 px-4 py-2 text-[10px] font-black bg-white border border-slate-200 text-slate-400 rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest"
@@ -216,7 +222,9 @@ function AdminAppointmentDetailPage() {
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-8">
               {/* Thông tin Bệnh nhân */}
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Thông tin Bệnh nhân</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                  Thông tin Bệnh nhân
+                </p>
                 <div className="flex items-center gap-4 group">
                   <div className="size-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary font-black text-lg border border-primary/10 group-hover:bg-primary transition-colors group-hover:text-white">
                     {getInitials(patient.hoTen || "??")}
@@ -230,7 +238,7 @@ function AdminAppointmentDetailPage() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Bác sĩ phụ trách */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Bác sĩ phụ trách</p>
@@ -250,7 +258,9 @@ function AdminAppointmentDetailPage() {
 
               {/* Mô tả Triệu chứng */}
               <div className="sm:col-span-2 pt-4 border-t border-slate-50">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">Lý do khám / Triệu chứng</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">
+                  Lý do khám / Triệu chứng
+                </p>
                 <div className="bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200 italic text-sm text-slate-600 leading-relaxed font-medium">
                   "{appointment.trieuChung || "Bệnh nhân không để lại ghi chú triệu chứng."}"
                 </div>
@@ -289,9 +299,7 @@ function AdminAppointmentDetailPage() {
                           <p className="text-xs text-slate-500 italic">{item.lieuDung}</p>
                         </td>
                         <td className="py-3 text-center text-slate-600">{item.soLuong}</td>
-                        <td className="py-3 text-right text-slate-600">
-                          {item.donGia?.toLocaleString("vi-VN")}đ
-                        </td>
+                        <td className="py-3 text-right text-slate-600">{item.donGia?.toLocaleString("vi-VN")}đ</td>
                       </tr>
                     ))}
                   </tbody>
@@ -314,10 +322,13 @@ function AdminAppointmentDetailPage() {
             <div className="space-y-4">
               <div>
                 <p className="text-xs text-slate-500 font-semibold mb-2">Trạng thái hiện tại</p>
-                <div className={`p-3 rounded-xl border flex items-center justify-center font-bold ${
-                  PAYMENT_STATUS_OPTIONS.find(o => o.value === appointment.trangThaiThanhToan)?.color || "bg-slate-50"
-                }`}>
-                  {PAYMENT_STATUS_OPTIONS.find(o => o.value === appointment.trangThaiThanhToan)?.label || "Không rõ"}
+                <div
+                  className={`p-3 rounded-xl border flex items-center justify-center font-bold ${
+                    PAYMENT_STATUS_OPTIONS.find((o) => o.value === appointment.trangThaiThanhToan)?.color ||
+                    "bg-slate-50"
+                  }`}
+                >
+                  {PAYMENT_STATUS_OPTIONS.find((o) => o.value === appointment.trangThaiThanhToan)?.label || "Không rõ"}
                 </div>
               </div>
 
@@ -363,7 +374,8 @@ function AdminAppointmentDetailPage() {
               <div className="pt-3 border-t border-white/10 flex justify-between items-center">
                 <span className="font-bold">Tổng cộng</span>
                 <span className="text-xl font-bold text-primary-light">
-                  {((appointment.giaKham || 0) + (prescription?.tongTien || 0)).toLocaleString("vi-VN")}đ
+                  {((Number(appointment.giaKham) || 0) + (Number(prescription?.tongTien) || 0)).toLocaleString("vi-VN")}
+                  đ
                 </span>
               </div>
             </div>

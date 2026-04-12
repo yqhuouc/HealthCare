@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
-import { usePaymentMethods, useCreatePaymentMethod, useDeletePaymentMethod } from "../../hooks/queries/usePaymentQueries";
+import {
+  usePaymentMethods,
+  useCreatePaymentMethod,
+  useDeletePaymentMethod,
+} from "../../hooks/queries/usePaymentQueries";
 
 /**
  * Trang AdminPaymentMethodsPage - Quản lý các hình thức thanh toán (Admin)
- * Chức năng: 
+ * Chức năng:
  * - Hiển thị danh sách các phương thức thanh toán đang hoạt động.
  * - Cho phép thêm mới hình thức thanh toán.
  * - Cho phép xóa các hình thức thanh toán không còn sử dụng.
@@ -13,11 +17,11 @@ function AdminPaymentMethodsPage() {
   // TanStack Query: Lấy danh sách hình thức thanh toán (auto-cache)
   const { data: methodsRes, isLoading: loading } = usePaymentMethods();
   const methods = methodsRes?.data || [];
-  
+
   // TanStack Query: Mutations (auto-invalidate list)
   const createMutation = useCreatePaymentMethod();
   const deleteMutation = useDeletePaymentMethod();
-  
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [newMethod, setNewMethod] = useState({ tenHinhThuc: "", moTa: "" });
 
@@ -74,33 +78,38 @@ function AdminPaymentMethodsPage() {
         ) : methods.length === 0 ? (
           // Hiển thị khi danh sách trống
           <div className="col-span-full py-20 text-center text-slate-400 italic">Chưa có hình thức thanh toán nào</div>
-        ) : methods.map((method) => (
-          <div key={method.id} className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:shadow-slate-200/50 transition-all group">
-            <div className="flex justify-between items-start mb-4">
-              {/* Icon đại diện cho hình thức */}
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                <span className="material-symbols-outlined text-2xl">account_balance_wallet</span>
+        ) : (
+          methods.map((method) => (
+            <div
+              key={method.id}
+              className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:shadow-slate-200/50 transition-all group"
+            >
+              <div className="flex justify-between items-start mb-4">
+                {/* Icon đại diện cho hình thức */}
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                  <span className="material-symbols-outlined text-2xl">account_balance_wallet</span>
+                </div>
+                {/* Nút Xóa bản ghi */}
+                <button
+                  onClick={() => handleDelete(method.id)}
+                  className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                >
+                  <span className="material-symbols-outlined text-xl">delete</span>
+                </button>
               </div>
-              {/* Nút Xóa bản ghi */}
-              <button
-                onClick={() => handleDelete(method.id)}
-                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-              >
-                <span className="material-symbols-outlined text-xl">delete</span>
-              </button>
+              {/* Tên và Mô tả hình thức */}
+              <h3 className="text-lg font-bold text-slate-900 mb-2">{method.tenHinhThuc}</h3>
+              <p className="text-sm text-slate-500 leading-relaxed mb-4 line-clamp-2" title={method.moTa}>
+                {method.moTa || "Không có mô tả chi tiết."}
+              </p>
+              {/* Trạng thái mặc định là Hoạt động */}
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200" />
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Đang hoạt động</span>
+              </div>
             </div>
-            {/* Tên và Mô tả hình thức */}
-            <h3 className="text-lg font-bold text-slate-900 mb-2">{method.tenHinhThuc}</h3>
-            <p className="text-sm text-slate-500 leading-relaxed mb-4 line-clamp-2" title={method.moTa}>
-              {method.moTa || "Không có mô tả chi tiết."}
-            </p>
-            {/* Trạng thái mặc định là Hoạt động */}
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200" />
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Đang hoạt động</span>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* MODAL: Form nhập thông tin thêm mới hình thức thanh toán */}

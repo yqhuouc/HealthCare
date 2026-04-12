@@ -27,7 +27,6 @@ import { formatTime, formatDate } from "../../utils/dateUtils";
 import { paymentService } from "../../services/paymentService";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 
-
 const STATUS_CONFIG = {
   0: { label: "Chờ xác nhận", color: "bg-yellow-100 text-yellow-700" },
   1: { label: "Đã xác nhận", color: "bg-blue-100 text-blue-700" },
@@ -65,8 +64,7 @@ export default function AppointmentHistoryPage() {
   });
 
   // TanStack Query: Lấy lịch hẹn theo bệnh nhân
-  const { data: aptRes, isLoading: loading } =
-    useAppointmentsByPatient(benhNhanId);
+  const { data: aptRes, isLoading: loading } = useAppointmentsByPatient(benhNhanId);
   const appointments = aptRes?.data || [];
 
   // TanStack Query: Mutation chính
@@ -74,9 +72,7 @@ export default function AppointmentHistoryPage() {
   const changeMethodMutation = useChangePaymentMethod();
 
   const filteredAppointments =
-    filterStatus === "all"
-      ? appointments
-      : appointments.filter((a) => a.trangThai === filterStatus);
+    filterStatus === "all" ? appointments : appointments.filter((a) => a.trangThai === filterStatus);
 
   const openModal = (config) => setModalConfig({ ...config, isOpen: true });
   const closeModal = () => setModalConfig((prev) => ({ ...prev, isOpen: false }));
@@ -98,7 +94,6 @@ export default function AppointmentHistoryPage() {
       },
     });
   };
-
 
   /** Thử lại thanh toán VNPay */
   const handleRetryPayment = async (appointmentId) => {
@@ -140,13 +135,10 @@ export default function AppointmentHistoryPage() {
     });
   };
 
-
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto py-20 text-center">
-        <span className="material-symbols-outlined text-5xl text-primary animate-spin">
-          progress_activity
-        </span>
+        <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
         <p className="mt-4 text-slate-500">Đang tải lịch sử đặt khám...</p>
       </div>
     );
@@ -167,9 +159,7 @@ export default function AppointmentHistoryPage() {
             key={tab.key}
             onClick={() => setFilterStatus(tab.key)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition cursor-pointer ${
-              filterStatus === tab.key
-                ? "bg-primary text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              filterStatus === tab.key ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
             {tab.label}
@@ -180,83 +170,60 @@ export default function AppointmentHistoryPage() {
       {/* Danh sách lịch hẹn */}
       {filteredAppointments.length === 0 ? (
         <div className="text-center py-16">
-          <span className="material-symbols-outlined text-6xl text-slate-300">
-            event_busy
-          </span>
+          <span className="material-symbols-outlined text-6xl text-slate-300">event_busy</span>
           <p className="text-slate-500 mt-4">
             Không có lịch hẹn nào
             {filterStatus !== "all" && " với trạng thái này"}.
           </p>
-          <Link
-            to="/doctors"
-            className="inline-block mt-4 text-primary hover:underline text-sm font-medium"
-          >
+          <Link to="/doctors" className="inline-block mt-4 text-primary hover:underline text-sm font-medium">
             Đặt lịch khám ngay
           </Link>
         </div>
       ) : (
         <div className="space-y-4">
           {filteredAppointments.map((appointment) => {
-            const statusCfg =
-              STATUS_CONFIG[appointment.trangThai] || STATUS_CONFIG[0];
+            const statusCfg = STATUS_CONFIG[appointment.trangThai] || STATUS_CONFIG[0];
             const isPending = appointment.trangThai === 0;
             const isCompleted = appointment.trangThai === 2;
             const doctorName = appointment.bacSi?.tenBacSi || "Bác sĩ";
-            const specialtyName =
-              appointment.bacSi?.chuyenKhoa?.tenChuyenKhoa || "";
+            const specialtyName = appointment.bacSi?.chuyenKhoa?.tenChuyenKhoa || "";
 
             return (
               <div
                 key={appointment.id}
                 className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 hover:shadow-md transition relative overflow-hidden"
               >
-
                 {/* Avatar bác sĩ */}
                 <div className="w-16 h-16 rounded-full border-2 border-primary/20 bg-primary/5 flex items-center justify-center overflow-hidden shrink-0">
-                  <span className="material-symbols-outlined text-3xl text-primary/40">
-                    person
-                  </span>
+                  <span className="material-symbols-outlined text-3xl text-primary/40">person</span>
                 </div>
 
                 {/* Thông tin chi tiết */}
                 <div className="flex-1 min-w-0 text-center sm:text-left">
-
                   <h3 className="font-semibold text-slate-800">{doctorName}</h3>
-                  {specialtyName && (
-                    <p className="text-sm text-slate-500 mt-0.5">
-                      {specialtyName}
-                    </p>
-                  )}
+                  {specialtyName && <p className="text-sm text-slate-500 mt-0.5">{specialtyName}</p>}
 
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 mt-4 text-sm text-slate-600">
-
                     <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-base text-slate-400">
-                        calendar_month
-                      </span>
+                      <span className="material-symbols-outlined text-base text-slate-400">calendar_month</span>
                       {formatDate(appointment.ngayDat)}
                     </span>
                     <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-base text-slate-400">
-                        schedule
-                      </span>
+                      <span className="material-symbols-outlined text-base text-slate-400">schedule</span>
                       {formatTime(appointment.gioBatDau)}
                     </span>
                   </div>
 
                   {appointment.lyDoKham && (
                     <p className="text-sm text-slate-500 mt-2 line-clamp-1">
-                      <span className="font-medium text-slate-600">Lý do:</span>{" "}
-                      {appointment.lyDoKham}
+                      <span className="font-medium text-slate-600">Lý do:</span> {appointment.lyDoKham}
                     </p>
                   )}
                 </div>
 
                 {/* Trạng thái + hành động */}
                 <div className="flex flex-col items-center sm:items-end gap-3 shrink-0 w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-
                   <div className="flex flex-col items-center sm:items-end gap-1.5">
-
                     <span
                       className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${statusCfg.color}`}
                     >
@@ -266,10 +233,7 @@ export default function AppointmentHistoryPage() {
                       <span
                         className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${PAYMENT_STATUS_CONFIG[appointment.trangThaiThanhToan]?.color || "bg-slate-100"}`}
                       >
-                        {
-                          PAYMENT_STATUS_CONFIG[appointment.trangThaiThanhToan]
-                            ?.label
-                        }
+                        {PAYMENT_STATUS_CONFIG[appointment.trangThaiThanhToan]?.label}
                       </span>
                     )}
                   </div>
@@ -281,9 +245,7 @@ export default function AppointmentHistoryPage() {
                           onClick={() => handleRetryPayment(appointment.id)}
                           className="w-full sm:w-auto px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 transition cursor-pointer flex items-center justify-center gap-2 shadow-sm whitespace-nowrap"
                         >
-                          <span className="material-symbols-outlined text-sm">
-                            payments
-                          </span>
+                          <span className="material-symbols-outlined text-sm">payments</span>
                           Thanh toán phí khám
                         </button>
                       )}
@@ -331,5 +293,4 @@ export default function AppointmentHistoryPage() {
       />
     </div>
   );
-
 }
