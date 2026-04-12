@@ -497,9 +497,13 @@ const remove = async (id, requestUser) => {
     throw new AppError("Bạn không có quyền xóa lịch khám của bệnh nhân thuộc bác sĩ khác", 403);
   }
 
-  if (existing.trangThai === 1 || existing.trangThai === 2) {
+  // Admin được quyền xóa mọi trạng thái để dọn dẹp dữ liệu, các role khác bị chặn nếu đã xác nhận/đã khám
+  if (
+    requestUser.vaiTro !== "admin" &&
+    (existing.trangThai === 1 || existing.trangThai === 2)
+  ) {
     throw new AppError(
-      "Không thể xóa cứng đối với lịch hẹn đã xác nhận hoặc đã khám.",
+      "Không thể xóa cứng đối với lịch hẹn đã xác nhận hoặc đã khám. Vui lòng chuyển sang trạng thái Hủy nếu cần.",
       400,
     );
   }

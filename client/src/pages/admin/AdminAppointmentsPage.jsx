@@ -22,8 +22,9 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { APPOINTMENT_STATUS_CONFIG } from "../../data/appointmentConstants";
-import { useAppointments, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
+import { useAppointments, useUpdateAppointmentStatus, useDeleteAppointment } from "../../hooks/queries/useAppointmentQueries";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 
 // Chuyển đổi mã trạng thái số từ Database sang key chuỗi dùng cho config UI
 const STATUS_MAP = {
@@ -55,6 +56,10 @@ function AdminAppointmentsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
+  // State quản lý xóa lịch hẹn
+  const [selectedApt, setSelectedApt] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   // Debounce tìm kiếm
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   useEffect(() => {
@@ -80,6 +85,32 @@ function AdminAppointmentsPage() {
 
   // TanStack Query: Mutation cập nhật trạng thái (auto-invalidate)
   const statusMutation = useUpdateAppointmentStatus();
+  const deleteMutation = useDeleteAppointment();
+
+  /**
+   * Mở modal xác nhận trước khi xóa
+   */
+  const openDeleteModal = (apt) => {
+    setSelectedApt(apt);
+    setIsDeleteModalOpen(true);
+  };
+
+  /**
+   * Thực hiện hành động xóa lịch hẹn
+   */
+  const handleDelete = () => {
+    if (!selectedApt) return;
+    deleteMutation.mutate(selectedApt.id, {
+      onSuccess: () => {
+        toast.success(`Đã xóa thành công lịch LK${selectedApt.id}`);
+        setIsDeleteModalOpen(false);
+        setSelectedApt(null);
+      },
+      onError: (err) => {
+        toast.error(err.message || "Lỗi khi xóa lịch hẹn");
+      },
+    });
+  };
 
   /**
    * Xử lý cập nhật nhanh trạng thái của một lịch hẹn
@@ -314,17 +345,26 @@ function AdminAppointmentsPage() {
                             <span className="material-symbols-outlined text-sm">undo</span>
                           </button>
                         )}
-                        {apt.trangThai === 3 && (
+                          {apt.trangThai === 3 && (
+                            <button
+                              onClick={() => handleUpdateStatus(apt.id, 1)}
+                              className="p-1.5 text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/10"
+                              title="Khôi phục lịch"
+                            >
+                              <span className="material-symbols-outlined text-sm">history</span>
+                            </button>
+                          )}
+
+                          {/* Nút Xóa vĩnh viễn (Admin luôn có quyền) */}
                           <button
-                            onClick={() => handleUpdateStatus(apt.id, 1)}
-                            className="p-1.5 text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/10"
-                            title="Khôi phục lịch"
+                            onClick={() => openDeleteModal(apt)}
+                            className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-100"
+                            title="Xóa vĩnh viễn"
                           >
-                            <span className="material-symbols-outlined text-sm">history</span>
+                            <span className="material-symbols-outlined text-sm">delete</span>
                           </button>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
                   );
                 })
               )}
@@ -437,6 +477,14 @@ function AdminAppointmentsPage() {
                       Khôi phục
                     </button>
                   )}
+
+                  {/* Nút xóa Mobile */}
+                  <button
+                    onClick={() => openDeleteModal(apt)}
+                    className="aspect-square flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl border border-rose-100"
+                  >
+                    <span className="material-symbols-outlined text-lg">delete</span>
+                  </button>
                 </div>
               </div>
             );
@@ -468,6 +516,24 @@ function AdminAppointmentsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal xác nhận xóa */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        isLoading={deleteMutation.isLoading}
+        title="Xác nhận xóa lịch hẹn"
+        message={
+          <>
+            Bạn có chắc chắn muốn xóa lịch hẹn <strong>LK{selectedApt?.id}</strong> của bệnh nhân{" "}
+            <strong>{selectedApt?.benhNhan?.hoTen}</strong>? Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể hoàn
+            tác.
+          </>
+        }
+        confirmLabel="Xóa vĩnh viễn"
+        type="danger"
+      />
     </div>
   );
 }
