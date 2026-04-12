@@ -34,11 +34,40 @@ Tài liệu này cung cấp các luận cứ khoa học và kỹ thuật cho vi�
 
 ---
 
-## 4. Kiến Trúc Phân Tầng (Multi-layered Architecture)
+## 4. Tailwind CSS 4 (Xử lý giao diện Dynamic)
+**Vấn đề:** CSS truyền thống dễ gây ra sự phình to của file (bloat) và khó quản lý các trạng thái hover/active/dark mode một cách nhất quán.
+
+**Giải pháp & Ưu điểm:**
+*   **Engine "Oxide" mới:** Tốc độ build nhanh gấp nhiều lần, giúp trải nghiệm phát triển mượt mà.
+*   **Utility-first:** Cho phép xây dựng giao diện phức tạp ngay trong file HTML/React mà không cần rời mắt khỏi mã nguồn.
+*   **Design System nhất quán:** Sử dụng các bộ biến CSS hiện đại, giúp dễ dàng tùy chỉnh theme và đảm bảo tính thẩm mỹ "premium" cho đồ án.
+
+---
+
+## 5. VNPay & Payment Integration (Thanh toán trực tuyến)
+**Vấn đề:** Hình thức thanh toán tiền mặt truyền thống có rủi ro và không phù hợp với xu hướng chuyển đổi số y tế.
+
+**Giải pháp & Ưu điểm:**
+*   **Cổng thanh toán quốc gia:** VNPay là giải pháp tin cậy tại Việt Nam, hỗ trợ đa dạng ngân hàng và ví điện tử.
+*   **Bảo mật HMAC-SHA512:** Đảm bảo toàn vẹn dữ liệu giao dịch giữa hệ thống phòng khám và ngân hàng.
+*   **Tự động hóa đối soát:** Giảm tải công việc cho Admin thông qua cơ chế IPN (Server-to-Server) tự động công nhận kết quả thanh toán.
+
+---
+
+## 6. Cloudinary (Lưu trữ hình ảnh Cloud)
+**Vấn đề:** Lưu trữ ảnh trực tiếp trên server gây tốn băng thông, khó quản lý scale và không tối ưu hóa được kích thước ảnh cho các thiết bị khác nhau.
+
+**Giải pháp & Ưu điểm:**
+*   **Image CDN:** Tự động tối ưu dung lượng và định dạng ảnh (WebP) giúp trang web tải nhanh hơn.
+*   **Upload API:** Tích hợp mượt mà với Multer ở Backend, giải phóng tài nguyên cho Server chính.
+
+---
+
+## 7. Kiến Trúc Phân Tầng (Multi-layered Architecture)
 Dự án áp dụng mô hình phân tầng rõ rệt:
 1.  **UI Layer:** Chỉ lo việc hiển thị.
 2.  **Validation Layer:** Chỉ lo việc kiểm tra tính đúng đắn của dữ liệu.
 3.  **Hook Layer:** Chỉ lo việc giao tiếp và quản lý vòng đời dữ liệu từ Server.
 4.  **Service Layer:** Chỉ lo việc định dạng và gửi request.
 
-**Kết luận:** Việc kết hợp bộ ba **TanStack Query + React Hook Form + Zod** đang là tiêu chuẩn công nghiệp (Industry Standard) hiện nay, giúp xây dựng các ứng dụng web quy mô lớn, bền vững và dễ mở rộng.
+**Kết luận:** Việc kết hợp bộ công cụ hiện đại (**React 19 + Tailwind 4 + VNPay + Supabase**) không chỉ giúp đồ án đạt điểm cao về mặt kỹ thuật mà còn mang tính thực tiễn cực lớn, sẵn sàng cho việc triển khai thực tế trong ngành y tế số.

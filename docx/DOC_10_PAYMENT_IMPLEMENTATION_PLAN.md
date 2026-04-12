@@ -26,7 +26,7 @@
 
 Thêm cột `loaiThanhToan` vào model `HinhThucThanhToan`:
 
-```diff
+```prisma
  model HinhThucThanhToan {
    id          BigInt    @id @default(autoincrement())
    tenHinhThuc String    @db.VarChar(120)
@@ -38,7 +38,7 @@ Thêm cột `loaiThanhToan` vào model `HinhThucThanhToan`:
 
 Thêm bảng `GiaoDich` (Giao dịch) để lưu lịch sử thanh toán VNPay:
 
-```diff
+```prisma
 +model GiaoDich {
 +  id               BigInt    @id @default(autoincrement())
 +  datLichId        BigInt
@@ -56,7 +56,7 @@ Thêm bảng `GiaoDich` (Giao dịch) để lưu lịch sử thanh toán VNPay:
 
 Và cập nhật model `DatLich` để thêm relation:
 
-```diff
+```prisma
  model DatLich {
    ...
    donThuoc            DonThuoc?
@@ -85,7 +85,7 @@ INSERT INTO "HinhThucThanhToan" ("tenHinhThuc", "maLoai") VALUES
 
 Đổi `hinhThucThanhToanId` từ `.optional()` sang **bắt buộc**:
 
-```diff
+```javascript
 -  hinhThucThanhToanId: z.union([z.string(), z.number()]).optional(),
 +  hinhThucThanhToanId: z.union([z.string(), z.number()]).refine((val) => Number(val) > 0, {
 +    message: "Vui lòng chọn hình thức thanh toán",
@@ -98,7 +98,7 @@ INSERT INTO "HinhThucThanhToan" ("tenHinhThuc", "maLoai") VALUES
 
 Cập nhật `create()` để hỗ trợ `loaiThanhToan`:
 
-```diff
+```javascript
  const create = async (data) => {
 -  return prisma.hinhThucThanhToan.create({ data: { tenHinhThuc: data.tenHinhThuc } });
 +  return prisma.hinhThucThanhToan.create({
@@ -120,7 +120,7 @@ Cập nhật `create()` để hỗ trợ `loaiThanhToan`:
 
 Sửa hàm `create()` — sau khi tạo lịch, trả thêm thông tin `loaiThanhToan` để frontend quyết định redirect:
 
-```diff
+```javascript
  // 7. Transaction: Ghi nhận lịch hẹn
  return prisma.$transaction(async (tx) => {
 +   // Lấy mã loại để phân luồng
@@ -154,7 +154,7 @@ Sửa hàm `create()` — sau khi tạo lịch, trả thêm thông tin `loaiThan
 
 Response trả thêm `loaiThanhToan` để frontend biết cần redirect VNPay hay không:
 
-```diff
+```javascript
  const create = asyncHandler(async (req, res) => {
    const datLich = await datLichService.create(req.body, req.user);
 -  res.status(201).json({ success: true, message: "Đặt lịch thành công", data: datLich });
@@ -211,7 +211,7 @@ GET    /api/vnpay/ipn               → vnpayController.vnpayIpn   (public)
 
 #### [MODIFY] [routes/index.js](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/server/src/routes/index.js)
 
-```diff
+```javascript
 +const vnpayRoutes = require("./vnpay.routes");
  ...
 +router.use("/vnpay", vnpayRoutes);
@@ -239,7 +239,7 @@ VNP_RETURN_URL=http://localhost:5173/payment/result
 
 Thêm API call VNPay:
 
-```diff
+```javascript
  export const paymentService = {
    getAll: () => api.get("/hinh-thuc-thanh-toan"),
    create: (data) => api.post("/hinh-thuc-thanh-toan", data),
@@ -256,7 +256,7 @@ Thêm API call VNPay:
 #### [MODIFY] [BookingPage.jsx](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/client/src/pages/patient/BookingPage.jsx)
 
 **Thay đổi 1:** Bắt buộc chọn hình thức thanh toán:
-```diff
+```javascript
 -  const canContinue = selectedDate && selectedSlot;
 +  const canContinue = selectedDate && selectedSlot && selectedPayment;
 ```
@@ -266,7 +266,7 @@ Thêm API call VNPay:
 - Hiển thị cảnh báo nếu chọn chuyển khoản: *"Bạn sẽ được chuyển sang trang VNPay để thanh toán phí khám"*
 
 **Thay đổi 3:** Sau `handleConfirm` thành công:
-```diff
+```javascript
  onSuccess: (res) => {
 -  toast.success("Đặt lịch thành công!");
 -  navigate("/appointments");
@@ -338,7 +338,7 @@ Trang kết quả thanh toán VNPay (redirect từ VNPay về `/payment/result?v
 #### [MODIFY] [App.jsx](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/client/src/App.jsx)
 
 Thêm route mới:
-```diff
+```javascript
 +import PaymentResultPage from "./pages/patient/PaymentResultPage";
  ...
 +<Route path="/payment/result" element={<PaymentResultPage />} />

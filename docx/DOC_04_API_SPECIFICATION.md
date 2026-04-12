@@ -1,59 +1,124 @@
-# Sơ Đồ & Luồng Dữ Liệu API Chi Tiết (API Data Flow)
+# TỔNG QUAN BACKEND & ĐẶC TẢ API (DOC_04)
 
-Tài liệu này mô tả cách thức dữ liệu luân chuyển trong hệ thống, từ các thao tác của người dùng đến các tầng xử lý khác nhau của ứng dụng.
-
----
-
-## 1. Kiến Trúc 6 Tầng (6-Layer Architecture)
-
-Ứng dụng được thiết kế theo mô hình phân lớp để đảm bảo tính module hóa:
-
-1.  **UI Component Layer (React):** Nhận input từ người dùng và hiển thị output.
-2.  **Validation Layer (Zod):** Kiểm tra tính hợp lệ của dữ liệu đầu vào ngay tại Client.
-3.  **Hook Layer (TanStack Query):** Quản lý vòng đời của Request (loading, success, error, caching).
-4.  **Zustand Layer (Global State):** Quản lý thông tin phiên làm việc (Session/Auth).
-5.  **Service Layer (Axios Wrapper):** Định nghĩa các API endpoints và kiểu dữ liệu gửi đi.
-6.  **Infrastructure Layer (Axios Interceptors):** Xử lý Token, Cookies và các lỗi HTTP toàn cục.
+> Tài liệu mô tả kiến trúc tầng Backend, hệ thống cơ sở dữ liệu và chi tiết danh sách API của dự án **ClinicBooking**.
+> **Công nghệ**: Node.js + Express + Prisma ORM + PostgreSQL (Supabase) + VNPay.
 
 ---
 
-## 2. Luồng Xử Lý Truy Văn (Query/Read Flow)
+## 1. Kiến trúc tổng quan
 
-Được áp dụng khi người dùng xem danh sách bác sĩ, lịch hẹn, hồ sơ cá nhân...
+Dự án tuân thủ mô hình phân lớp rõ ràng nhằm tách biệt trách nhiệm (Separation of Concerns):
 
-1.  **Component** gọi một Custom Hook (ví dụ: `useDoctors()`).
-2.  **TanStack Query** kiểm tra trong **Cache**. 
-    *   Nếu dữ liệu còn mới (`fresh`): Trả về kết quả ngay lập tức cho UI.
-    *   Nếu dữ liệu đã cũ hoặc chưa có: Thực hiện bước tiếp theo.
-3.  **Service** thực hiện gọi hàm API thông qua Axios.
-4.  **Axios Interceptor** đính kèm Auth Cookie.
-5.  **Backend** xử lý và trả về JSON.
-6.  **TanStack Query** lưu kết quả vào Cache và cập nhật trạng thái `data`, `isLoading = false`.
-7.  **Component** tự động render lại với dữ liệu mới.
+```
+Client (React)  ──HTTP──►  Express Server (Node.js)  ──Prisma──►  PostgreSQL
+                                        │
+                                        ├── Routes        → Định tuyến URL
+                                        ├── Validations   → Kiểm tra dữ liệu (Zod)
+                                        ├── Middlewares    → Auth, Phân quyền, Logger
+                                        ├── Controllers    → Điều phối logic
+                                        ├── Services       → Nghiệp vụ & DB
+                                        └── Prisma ORM     → SQL Generator
+```
 
----
-
-## 3. Luồng Xử Lý Biểu Mẫu (Mutation/Write Flow)
-
-Được áp dụng khi người dùng Đặt lịch, Sửa thông tin bác sĩ, Đổi mật khẩu...
-
-1.  **Người dùng** nhập liệu và nhấn "Lưu/Gửi".
-2.  **React Hook Form** thu thập dữ liệu và chuyển qua **Zod Schema**.
-3.  **Validation Layer** kiểm tra:
-    *   Nếu dữ liệu sai: Hiển thị lỗi ngay lập tức dưới các ô nhập liệu (Inline Errors).
-    *   Nếu dữ liệu đúng: Gọi hàm `mutate()`.
-4.  **Hook Layer** kích hoạt trạng thái `isPending = true` (hiển thị loading spinner trên nút bấm).
-5.  **Service** gửi dữ liệu đã được validate lên Backend.
-6.  **Backend** phản hồi kết quả thành công.
-7.  **Hook Layer** thực hiện `invalidateQueries`: Đánh dấu các bảng dữ liệu cũ là không còn hiệu lực.
-    *   *Ví dụ: Thêm bác sĩ mới xong sẽ tự động làm mới danh sách bác sĩ ở trang Dashboard.*
-8.  **Hệ thống** hiển thị thông báo thành công (Toast notification) và điều hướng trang nếu cần.
+### Luồng xử lý 1 request
+1. **Route**: Nhận request và định tuyến.
+2. **Middleware (Validate)**: Dùng **Zod** kiểm tra kiểu dữ liệu và ràng buộc đầu vào.
+3. **Middleware (Auth)**: Kiểm tra **JWT** trong HttpOnly Cookie để xác định danh tính và vai trò.
+4. **Controller**: Trích xuất dữ liệu từ `req.body`, `req.params`, `req.query`.
+5. **Service**: Thực hiện logic nghiệp vụ phức tạp và gọi **Prisma** để tương tác database.
+6. **Response**: Trả về JSON theo định dạng chuẩn { success, message, data }.
 
 ---
 
-## 4. Ưu Điểm Của Luồng Dữ Liệu Này
+## 2. Cấu trúc Database (12 Model)
 
-*   **Tính Tin Cậy:** Dữ liệu luôn được validate 2 lớp (Client & Server).
-*   **Hiệu Năng:** Giảm thiểu số lần Fetch dữ liệu nhờ bộ nhớ đệm thông minh.
-*   **Trải Nghiệm Người Dùng:** Giao diện phản ứng tức thì, các trạng thái Loading/Error được quản lý chuyên nghiệp.
-*   **Dễ Bảo Trì:** Khi cần thay đổi logic kiểm tra (ví dụ: thay đổi độ dài mật khẩu), chỉ cần sửa tại 1 file duy nhất trong `validations/`.
+Hệ thống sử dụng PostgreSQL (Supabase) với 12 bảng dữ liệu quan hệ mãnh liệt:
+
+| # | Model | Bảng DB | Vai trò |
+|---|-------|---------|---------|
+| 1 | **TaiKhoan** | TaiKhoan | Central Auth (Admin, Bác sĩ, Bệnh nhân) |
+| 2 | **ChuyenKhoa** | ChuyenKhoa | Danh mục chuyên khoa & icon hiển thị |
+| 3 | **BacSi** | BacSi | Thông tin chi tiết, học vị, giá khám |
+| 4 | **BenhNhan** | BenhNhan | Hồ sơ bệnh nhân, SĐT, Email liên hệ |
+| 5 | **KhungGio** | KhungGio | Master data khung giờ (07:00 -> 17:00) |
+| 6 | **LichLamViecBacSi** | LichLamViecBacSi | Ca làm việc cụ thể của bác sĩ theo ngày + khung giờ |
+| 7 | **HinhThucThanhToan** | HinhThucThanhToan | Ví điện tử (VNPay), Tiền mặt, Chuyển khoản |
+| 8 | **DatLich** | DatLich | Lịch hẹn (Trạng thái khám, Trạng thái thanh toán) |
+| 9 | **GiaoDich** | GiaoDich | Lịch sử thanh toán thực tế qua cổng VNPay |
+| 10 | **DonThuoc** | DonThuoc | Chẩn đoán & Tổng tiền đơn thuốc |
+| 11 | **ChiTietDonThuoc** | ChiTietDonThuoc | Danh sách thuốc, liều dùng, đơn giá |
+| 12 | **CauHoiThuongGap** | CauHoiThuongGap | Quản lý nội dung FAQ hệ thống |
+
+---
+
+## 3. Hệ thống Xác thực & Bảo mật (Dual JWT)
+
+Hệ thống sử dụng cơ chế **Token Rotation** để đảm bảo an toàn tối đa:
+
+- **Access Token (15m)**: Lưu trong **HttpOnly Cookie** (`accessToken`). Tự động hết hạn và xóa khi đóng/refresh nếu không dùng rotation.
+- **Refresh Token (7d)**: Lưu trong **HttpOnly Cookie** (`refreshToken`) và **Database**. Dùng để cấp Access Token mới mà người dùng không cần đăng nhập lại.
+- **Security Middlewares**: 
+  - `authenticate`: Xác thực JWT.
+  - `authorize(roles)`: Kiểm tra vai trò (admin, bac_si, benh_nhan).
+  - `ownershipCheck`: Bệnh nhân chỉ được xem/sửa dữ liệu của chính mình.
+
+---
+
+## 4. Chi tiết API Endpoints
+
+### 4.1 Hệ thống (Auth & Profile)
+- `POST /api/auth/register`: Đăng ký bệnh nhân.
+- `POST /api/auth/login`: Đăng nhập (Set Dual Cookie).
+- `POST /api/auth/refresh`: Làm mới token (Token Rotation).
+- `POST /api/auth/logout`: Đăng xuất (Clear Cookie + Nullify DB).
+- `GET /api/auth/me`: Lấy thông tin phiên làm việc hiện tại.
+- `PUT /api/auth/doi-mat-khau`: Đổi mật khẩu.
+- `PUT /api/auth/cap-nhat-ho-so`: Cập nhật Profile.
+- `PUT /api/auth/cap-nhat-avatar`: Upload ảnh lên Cloudinary.
+
+### 4.2 Nghiệp vụ Khám bệnh
+- `GET /api/chuyen-khoa`: Danh sách chuyên khoa.
+- `GET /api/bac-si`: Tìm kiếm & Lọc bác sĩ (Phân trang).
+- `GET /api/lich-lam-viec`: Xem lịch trống của bác sĩ.
+- `POST /api/dat-lich`: Đặt lịch khám mới (Transaction).
+- `GET /api/dat-lich/benh-nhan/:id`: Lịch sử khám của tôi.
+- `PUT /api/dat-lich/:id/trang-thai`: Bác sĩ xác nhận/hủy lịch.
+
+### 4.3 Kê đơn & Đơn thuốc
+- `POST /api/don-thuoc`: Bác sĩ kê đơn (Tự động tính tổng tiền).
+- `GET /api/don-thuoc/:id`: Xem đơn thuốc (Bản rút gọn nếu chưa thanh toán).
+- `GET /api/don-thuoc/all`: Admin quản lý kho đơn thuốc.
+
+### 4.4 Thanh toán Online (VNPay)
+- `POST /api/vnpay/create_payment_url`: Tạo link thanh toán phí khám/thuốc.
+- `GET /api/vnpay/vnpay_return`: Redirect sau khi thanh toán.
+- `GET /api/vnpay/vnpay_ipn`: Xử lý giao dịch ngầm (Server-to-Server).
+
+### 4.5 Quản trị & Thống kê (Admin)
+- `GET /api/thong-ke/tong-quan`: Dashboard số liệu.
+- `GET /api/thong-ke/lich-hen`: Thống kê tần suất theo ngày.
+- `GET /api/thong-ke/doanh-thu`: Doanh thu 12 tháng (Khám vs Thuốc).
+- `CRUD` cho Chuyên khoa, Bác sĩ, Bệnh nhân, FAQ, Khung giờ.
+
+---
+
+## 5. Định dạng Response chuẩn
+
+Hệ thống luôn trả về JSON thống nhất giúp Frontend xử lý dễ dàng:
+
+```json
+{
+  "success": true,
+  "message": "Thao tác thành công",
+  "data": { ... },
+  "pagination": {
+    "total": 100,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 10
+  }
+}
+```
+
+---
+*Tài liệu này là một phần của hồ sơ đồ án tốt nghiệp - Năm học 2025-2026.*

@@ -3,6 +3,7 @@
 ## Website Đặt Lịch Khám Bệnh Trực Tuyến — ClinicBooking
 
 > Tài liệu phân tích thiết kế hệ thống phục vụ báo cáo đồ án tốt nghiệp.
+> **Lưu ý**: Xem lộ trình chi tiết và hồ sơ học thuật tại thư mục [PHỤ LỤC ĐỒ ÁN](./PHU_LUC_DO_AN/PHU_LUC_01_LO_TRINH_10_TUAN.md).
 
 ---
 
@@ -40,15 +41,14 @@ Hệ thống **ClinicBooking** là website đặt lịch khám bệnh trực tuy
 
 ### 1.3 Phạm vi
 
-| Trong phạm vi | Ngoài phạm vi |
-|---|---|
-| Đăng ký / Đăng nhập / Phân quyền | Tích hợp cổng thanh toán thực tế |
-| Tìm kiếm bác sĩ theo chuyên khoa | Chat trực tuyến bác sĩ - bệnh nhân |
-| Đặt lịch / Hủy lịch / Xem lịch sử | Thông báo qua email/SMS |
-| Quản lý lịch làm việc bác sĩ | Hệ thống đánh giá bác sĩ |
-| Kê đơn thuốc | Quản lý kho thuốc chi tiết |
-| Quản trị hệ thống (Admin) | Hệ thống bảo hiểm y tế |
-| Thống kê báo cáo | Tích hợp thiết bị y tế IoT |
+| Đăng ký / Đăng nhập / Phân quyền | Chat trực tuyến bác sĩ - bệnh nhân |
+| Tìm kiếm bác sĩ theo chuyên khoa | Thông báo tự động qua SMS |
+| Đặt lịch / Hủy lịch / Xem lịch sử | Hệ thống bảo hiểm y tế |
+| Quản lý lịch làm việc bác sĩ | Tích hợp thiết bị y tế IoT |
+| Kê đơn thuốc & Quản lý đơn | |
+| Tích hợp Thanh toán Online (VNPay) | |
+| Quản trị hệ thống (Admin) | |
+| Thống kê báo cáo doanh thu | |
 
 ---
 
@@ -190,9 +190,8 @@ graph LR
 
 ```mermaid
 graph TB
-    BN(["👤 Bệnh nhân"])
-    BS(["🩺 Bác sĩ"])
-    AD(["🛡️ Admin"])
+    AD --- UC2 & UC3
+    AD --- UC14 & UC16 & UC17 & UC18 & UC19 & UC20 & UC21
 
     subgraph system["Hệ thống ClinicBooking"]
         subgraph auth["Nhóm Auth"]
@@ -209,7 +208,8 @@ graph TB
             UC8["UC08: Đặt lịch khám"]
             UC9["UC09: Xem lịch sử"]
             UC10["UC10: Hủy lịch hẹn"]
-            UC11["UC11: Xem đơn thuốc"]
+            UC11["UC11: Xem kết quả khám"]
+            UC22["UC22: Thanh toán Online"]
         end
 
         subgraph doctor["Nhóm Bác sĩ"]
@@ -225,17 +225,15 @@ graph TB
             UC18["UC18: Quản lý bệnh nhân"]
             UC19["UC19: Quản lý FAQ"]
             UC20["UC20: Xem thống kê"]
+            UC21["UC21: Quản lý đơn thuốc"]
         end
     end
 
     BN --- UC1 & UC2 & UC3 & UC4 & UC5
-    BN --- UC6 & UC7 & UC8 & UC9 & UC10 & UC11
+    BN --- UC6 & UC7 & UC8 & UC9 & UC10 & UC11 & UC22
 
     BS --- UC2 & UC3 & UC4 & UC5
     BS --- UC12 & UC13 & UC14 & UC15
-
-    AD --- UC2 & UC3
-    AD --- UC14 & UC16 & UC17 & UC18 & UC19 & UC20
 ```
 
 ### 5.2 Quan hệ include / extend
@@ -579,8 +577,11 @@ erDiagram
     KhungGio ||--o{ LichLamViecBacSi : "1-N"
     BacSi ||--o{ DatLich : "1-N"
     BenhNhan ||--o{ DatLich : "1-N"
+    LichLamViecBacSi ||--o{ DatLich : "1-N"
     HinhThucThanhToan ||--o{ DatLich : "1-N"
     DatLich ||--o| DonThuoc : "1-0..1"
+    DatLich ||--o{ GiaoDich : "1-N"
+    DonThuoc ||--o{ ChiTietDonThuoc : "1-N"
 
     TaiKhoan {
         BigInt id PK
@@ -602,6 +603,8 @@ erDiagram
         String tenChuyenKhoa
         String anhChuyenKhoa
         Text moTaChuyenKhoa
+        Int thoiLuongKham
+        String icon
     }
 
     BacSi {
@@ -632,8 +635,9 @@ erDiagram
     LichLamViecBacSi {
         BigInt id PK
         Date ngayLamViec
-        Int soBenhNhanHienTai "default 0"
-        Int sanSang "1=san sang, 0=khong"
+        Int soBenhNhanHienTai
+        Int soBenhNhanToiDa
+        Int sanSang
         BigInt bacSiId FK
         BigInt khungGioId FK
     }
@@ -641,6 +645,7 @@ erDiagram
     HinhThucThanhToan {
         BigInt id PK
         String tenHinhThuc
+        String maLoai "OFFLINE | VNPAY"
     }
 
     DatLich {
@@ -651,22 +656,48 @@ erDiagram
         String lyDoKham
         Decimal giaKham
         Int trangThai "0=cho, 1=xac nhan, 2=da kham, 3=huy"
+        Int trangThaiThanhToan "0=chua, 1=phi kham, 2=toan Bo"
         BigInt bacSiId FK
         BigInt benhNhanId FK
         BigInt hinhThucThanhToanId FK
+        BigInt lichLamViecId FK
+    }
+
+    GiaoDich {
+        BigInt id PK
+        BigInt datLichId FK
+        String loaiGiaoDich "PHI_KHAM | DON_THUOC"
+        Decimal soTien
+        String maGiaoDichVNP
+        String maThamChieu
+        Int trangThai "0=cho, 1=thanh cong, 2=that bai"
+        DateTime ngayTao
     }
 
     DonThuoc {
         BigInt id PK
         BigInt datLichId FK-UK
+        String chanDoan
+        String ghiChu
+        Decimal tongTien
         DateTime ngayTao
+    }
+
+    ChiTietDonThuoc {
+        BigInt id PK
+        BigInt donThuocId FK
+        String tenThuoc
+        Int soLuong
+        Decimal donGia
+        String lieuDung
+        String ghiChu
     }
 
     CauHoiThuongGap {
         BigInt id PK
         String cauHoi
         Text traLoi
-        Int dangHoatDong "1=hien thi, 0=an"
+        Int dangHoatDong
     }
 ```
 
@@ -766,6 +797,14 @@ Tất cả API đều có prefix `/api` và trả về JSON thống nhất:
 | GET | `/lich-hen` | Thống kê lịch hẹn theo ngày, top bác sĩ | Admin |
 | GET | `/doanh-thu` | Thống kê doanh thu theo 12 tháng | Admin |
 
+#### Thanh toán VNPay (`/api/vnpay`)
+
+| Method | Endpoint | Mô tả | Auth |
+|--------|----------|-------|------|
+| POST | `/create_payment_url` | Tạo link thanh toán VNPay | Bệnh nhân |
+| GET | `/vnpay_return` | Xử lý kết quả trả về từ VNPay (Redirect) | Không |
+| GET | `/vnpay_ipn` | Xử lý kết quả IPN (Server-to-Server) | Không |
+
 ---
 
 ## 12. Thiết kế bảo mật
@@ -834,13 +873,14 @@ Qua quá trình phân tích và thiết kế, hệ thống website đặt lịch
 
 **Các điểm nổi bật trong thiết kế:**
 
-- **10 bảng dữ liệu** với quan hệ chặt chẽ và ràng buộc nghiệp vụ đầy đủ (unique constraint chống trùng lịch, ownership check).
+- **12 bảng dữ liệu** với quan hệ chặt chẽ và ràng buộc nghiệp vụ đầy đủ (unique constraint chống trùng lịch, ownership check).
+- **Tích hợp VNPay**: Hỗ trợ thanh toán phí khám và tiền thuốc trực tuyến an toàn.
 - **Cơ chế bảo mật JWT kép** với Refresh Token Rotation — đảm bảo an toàn phiên đăng nhập.
 - **Phân quyền 3 cấp**: Authentication → Authorization → Ownership check.
-- **9 module API RESTful** với kiến trúc Controller → Service → Prisma → Database.
+- **10+ module API RESTful** với kiến trúc Controller → Service → Prisma → Database.
 - **Luồng nghiệp vụ** được mô tả rõ qua biểu đồ Use Case, Activity, Sequence và State.
 
-Hệ thống đáp ứng các yêu cầu chức năng (đặt lịch, quản lý lịch, kê đơn, thống kê) và phi chức năng (bảo mật, hiệu năng, khả dụng) phù hợp với quy mô một phòng khám vừa và nhỏ.
+Hệ thống đáp ứng các yêu cầu chức năng (đặt lịch, thanh toán, quản lý lịch, kê đơn, thống kê) và phi chức năng (bảo mật, hiệu năng, khả dụng) phù hợp với quy mô một phòng khám vừa và nhỏ.
 
 ---
 

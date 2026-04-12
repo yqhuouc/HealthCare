@@ -21,8 +21,9 @@
 11. [Test FAQ](#11-test-faq)
 12. [Test Hình thức thanh toán](#12-test-hình-thức-thanh-toán)
 13. [Lịch sử & Thống kê / Dashboard](#13-thống-kê--dashboard-dành-cho-admin)
-14. [Kiểm thử lỗi & Edge cases](#14-kiểm-thử-lỗi--edge-cases)
-15. [Checklist kiểm thử](#15-checklist-kiểm-thử)
+14. [Test Thanh toán Online (VNPay)](#14-test-thanh-toán-online-vnpay)
+15. [Kiểm thử lỗi & Edge cases](#15-kiểm-thử-lỗi--edge-cases)
+16. [Checklist kiểm thử](#16-checklist-kiểm-thử)
 
 ---
 
@@ -168,14 +169,14 @@ Nếu thành công sẽ hiện:
 
 1. Quay lại Supabase Dashboard
 2. Click **"Table Editor"** ở sidebar trái
-3. Bạn sẽ thấy **11 bảng** đã được tạo:
+3. Bạn sẽ thấy **12 bảng** đã được tạo:
 
 ```
 TaiKhoan, ChuyenKhoa, BacSi, BenhNhan, KhungGio,
-LichLamViecBacSi, HinhThucThanhToan, DatLich, DonThuoc, ChiTietDonThuoc, CauHoiThuongGap
+LichLamViecBacSi, HinhThucThanhToan, DatLich, GiaoDich, DonThuoc, ChiTietDonThuoc, CauHoiThuongGap
 ```
 
-Nếu thấy đủ 11 bảng → kết nối thành công!
+Nếu thấy đủ 12 bảng → kết nối thành công!
 
 ### 2.7 Seed dữ liệu mẫu
 
@@ -1754,7 +1755,37 @@ Cung cấp số liệu tài chính của 12 tháng phân tách 2 loại tiền �
 
 ---
 
-## 14. Kiểm thử lỗi & Edge cases
+## 14. Test Thanh toán Online (VNPay)
+
+### 14.1 Tạo URL thanh toán
+
+```
+POST {{base_url}}/vnpay/create_payment_url
+```
+
+**Headers**: Authorization: Bearer {{patient_token}}
+
+**Body**:
+```json
+{
+  "datLichId": 1,
+  "loaiGiaoDich": "PHI_KHAM",
+  "amount": 500000,
+  "bankCode": ""
+}
+```
+
+**Kết quả mong đợi**: Trả về `paymentUrl` để redirect người dùng sang VNPay.
+
+### 14.2 Test IPN (Mô phỏng VNPay gọi lại server)
+
+```
+GET {{base_url}}/vnpay/vnpay_ipn?vnp_Amount=50000000&vnp_BankCode=NCB&vnp_BankTranNo=VNP123&vnp_CardType=ATM&vnp_OrderInfo=Thanh+toan+phi+kham&vnp_PayDate=20260320153000&vnp_ResponseCode=00&vnp_TmnCode=...&vnp_TransactionNo=123456&vnp_TxnRef=GD_123&vnp_SecureHash=...
+```
+
+---
+
+## 15. Kiểm thử lỗi & Edge cases
 
 ### 14.1 Validate dữ liệu đầu vào (Zod)
 
@@ -1809,7 +1840,9 @@ Cung cấp số liệu tài chính của 12 tháng phân tách 2 loại tiền �
 | Xóa lịch đã xác nhận | DELETE dat-lich/1 (trangThai=1) | 400 |
 | ID không tồn tại | GET bac-si/99999 | 404 |
 
-## 15. Checklist kiểm thử
+---
+
+## 16. Checklist kiểm thử
 
 Dùng checklist này để đánh dấu các API đã test qua:
 

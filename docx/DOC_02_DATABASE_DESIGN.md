@@ -2,6 +2,7 @@
 
 > Tài liệu này viết để bạn “quên tới đâu tra tới đó”.
 > Tập trung vào: PostgreSQL (nền tảng DB), Prisma (ORM + workflow), và các “bẫy” thường gặp khi làm backend Node/Express.
+> Tài liệu này được chuẩn hóa cho hệ thống **12 bảng dữ liệu** của ClinicBooking.
 
 ---
 
@@ -22,9 +23,32 @@ PostgreSQL là hệ quản trị CSDL quan hệ (RDBMS). Bạn dùng PostgreSQL 
 
 ---
 
-## 2) Các khái niệm cốt lõi trong PostgreSQL
+## 2) Quy trình thiết kế CSDL (4 bước)
+Để đảm bảo hệ thống **12 bảng dữ liệu** hoạt động ổn định và tối ưu, chúng tôi đã tuân thủ quy trình thiết kế chuẩn:
 
-### 2.1 Database / Schema / Table
+### Bước 1: Phân tích yêu cầu dữ liệu
+- Xác định các thực thể chính: `TaiKhoan`, `BacSi`, `BenhNhan`, `DatLich`.
+- Xác định các dữ liệu phụ trợ: `ChuyenKhoa`, `KhungGio`, `HinhThucThanhToan`.
+- Xác định nhu cầu lưu vết: `DonThuoc`, `GiaoDich`.
+
+### Bước 2: Vẽ sơ đồ quan hệ thực thể (ERD)
+- Thiết lập các quan hệ 1-1 (TaiKhoan - BacSi).
+- Thiết lập quan hệ 1-N (ChuyenKhoa - BacSi, BacSi - DatLich).
+- Xem chi tiết sơ đồ ERD tại [DOC_01_SYSTEM_ANALYSIS.md](../DOC_01_SYSTEM_ANALYSIS.md).
+
+### Bước 3: Chuyển sang bảng vật lý (Logical Design)
+- Ánh xạ các thực thể thành các bảng trong PostgreSQL.
+- Thiết lập các khóa chính (PK) tự tăng (`BigInt`) và khóa ngoại (FK) để duy trì tính toàn vẹn.
+
+### Bước 4: Xác định kiểu dữ liệu và Ràng buộc (Physical Design)
+- Chọn kiểu dữ liệu tối ưu: `Decimal(10,2)` cho giá khảm/tiền thuốc, `VarChar` cho email/họ tên.
+- Thiết lập các ràng buộc quan trọng: `UNIQUE` cho email và slot đặt lịch, `NOT NULL` cho các trường bắt buộc.
+
+---
+
+## 3) Các khái niệm cốt lõi trong PostgreSQL
+
+### 3.1 Database / Schema / Table
 
 - **Database**: “khung chứa” chung.
 - **Schema**: namespace bên trong DB (thường dùng `public`).

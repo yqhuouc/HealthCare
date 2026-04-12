@@ -609,3 +609,32 @@ npx prisma studio
 ```
 
 Mở `http://localhost:5555` → duyệt/sửa dữ liệu trực tiếp trên các bảng.
+
+---
+
+## 17. Luồng Thanh toán Online (VNPay)
+
+### Luồng chi tiết (Tạo thanh toán)
+
+1. Bệnh nhân vào trang lịch sử lịch hẹn → bấm **"Thanh toán VNPay"** cho một gói (Phí khám hoặc Toàn bộ đơn thuốc).
+2. Frontend gọi `POST /api/vnpay/create_payment_url`.
+3. Backend flow:
+   - `vnpayController.createPaymentUrl` nhận: `datLichId`, `loaiGiaoDich`, `amount`.
+   - Tạo bản ghi `GiaoDich` trong DB với trạng thái = 0 (Chờ).
+   - Sử dụng `crypto` và cấu hình VNPay để tạo chuỗi băm (SHA512).
+   - Trả về `paymentUrl`.
+4. Frontend chuyển hướng người dùng sang trang thanh toán của VNPay.
+
+### Luồng chi tiết (Xử lý kết quả - IPN)
+
+1. Sau khi người dùng thanh toán/hủy trên VNPay, VNPay gọi ngầm về Server qua `GET /api/vnpay/vnpay_ipn`.
+2. Backend flow:
+   - Kiểm tra mã băm `vnp_SecureHash` để đảm bảo dữ liệu đúng từ VNPay.
+   - Tìm bản ghi `GiaoDich` tương ứng qua mã tham chiếu.
+   - Nếu thành công (`vnp_ResponseCode === '00'`):
+     - Cập nhật `GiaoDich.trangThai = 1` (Thành công).
+     - Cập nhật `DatLich.trangThaiThanhToan` dựa trên loại giao dịch:
+       - Nếu `PHI_KHAM` → `trangThaiThanhToan = 1`.
+       - Nếu `DON_THUOC` → `trangThaiThanhToan = 2`.
+   - Trả về mã phản hồi cho VNPay (`RspCode: '00'`).
+3. Người dùng được redirect về trang `vnpay_return` trên Frontend để xem thông báo kết quả.

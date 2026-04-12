@@ -19,7 +19,8 @@ sequenceDiagram
     BE-->>BN: Trả về ID lịch hẹn mới tạo
 
     Note over BN, BE: Bước 2: Tạo Link Thanh toán
-    BN->>BE: Gọi API lấy link VNPay (truyền ID lịch hẹn)
+    BN->>BE: Gọi API lấy link VNPay (truyền ID lịch hẹn + loaiGiaoDich)
+    BE->>DB: Tạo bản ghi GiaoDich (Trạng thái: 0 - Chờ)
     BE->>BE: Tính toán chữ ký bảo mật (Checksum) & Số tiền
     BE-->>BN: Trả về Payment URL (sandbox.vnpayment.vn/...)
 
@@ -31,7 +32,7 @@ sequenceDiagram
     Note over VN, BE: Bước 4: Cập nhật trạng thái (IPN)
     VN->>BE: VNPay gọi ngầm API IPN (Server-to-Server)
     BE->>BE: Kiểm tra chữ ký & Kiểm tra số tiền
-    BE->>DB: Cập nhật DatLich (Đã thanh toán) & Lưu Log Giao dịch
+    BE->>DB: Cập nhật GiaoDich (Thành công) & Cập nhật DatLich (trangThaiThanhToan)
     BE-->>VN: Phản hồi "Confirm Success" (RspCode 00)
 
     Note over VN, BN: Bước 5: Trả kết quả (Return URL)
@@ -60,6 +61,10 @@ sequenceDiagram
 *   **Nhiệm vụ**: Đón người dùng quay lại. Nó lấy `vnp_ResponseCode` từ URL:
     - Nếu là `00`: Hiện banner xanh (Thành công).
     - Nếu khác `00`: Hiện banner đỏ (Thất bại).
+
+### D. Model GiaoDich (Lưu trữ lịch sử)
+*   **Vị trí**: `server/prisma/schema.prisma` -> `model GiaoDich`
+*   **Nhiệm vụ**: Lưu lại mọi nỗ lực thanh toán của người dùng, bao gồm mã tham chiếu VNP, số tiền, loại giao dịch (Phí khám/Thuốc) và trạng thái cuối cùng giúp đối soát dữ liệu dễ dàng.
 
 ---
 

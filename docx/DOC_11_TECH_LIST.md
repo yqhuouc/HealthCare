@@ -39,5 +39,5 @@ Dưới đây là danh sách các công nghệ chính được áp dụng trong 
 
 > [!TIP]
 > **Tài liệu chuyên sâu phục vụ bảo vệ đồ án:**
-> *   [Phân tích kiến trúc & Lựa chọn công nghệ chi tiết](./TECH_STACK_EXPLANATION.md)
-> *   [Chi tiết luồng dữ liệu API & Mô hình phân tầng](./API_DATA_FLOW.md)
+> *   [Phân tích kiến trúc & Lựa chọn công nghệ chi tiết](./DOC_03_TECH_STACK.md)
+> *   [Chi tiết luồng dữ liệu API & Mô hình phân tầng](./DOC_04_API_SPECIFICATION.md)
