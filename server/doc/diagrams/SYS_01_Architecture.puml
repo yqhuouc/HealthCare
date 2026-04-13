@@ -1,0 +1,46 @@
+@startuml Component_Architecture
+skinparam component {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+}
+
+package "Trình duyệt Web" <<Node>> #LightBlue {
+  package "Frontend (React 19 + Vite 7)" {
+    [Các Portal\n(Admin / Bác sĩ / Bệnh nhân)] as Pages
+    [Components\n(UI, Context)] as Comps
+    [Dịch vụ API\n(Axios)] as ApiSvc
+    [Zustand Store\n(State)] as Store
+    [React Router\n(Routing)] as Router
+  }
+}
+
+package "Máy chủ Node.js" <<Node>> #LightGreen {
+  package "Backend (Express 4)" {
+    [Routes\n(11 module)] as Routes
+    [Middlewares\n(Auth, Validate, Error)] as MW
+    [Controllers\n(11 controller)] as Ctrl
+    [Services\n(11 module nghiệp vụ)] as Svc
+    [Prisma Client\n(ORM)] as Prisma
+  }
+}
+
+database "PostgreSQL DB" <<Node>> #LightCoral {
+  [Cơ sở dữ liệu\n(12 bảng)] as DB
+}
+
+package "Dịch vụ bên thứ 3" <<Node>> #MistyRose {
+  [VNPay Gateway] as VNP
+}
+
+Pages --> ApiSvc
+ApiSvc --> Routes : HTTP/REST\n+ JWT
+
+Routes --> MW
+MW --> Ctrl
+Ctrl --> Svc
+Svc --> Prisma
+Prisma --> DB : PostgreSQL
+
+Svc --> VNP : Tạo URL thanh toán
+VNP --> Routes : VNPay IPN / Callback
+@enduml

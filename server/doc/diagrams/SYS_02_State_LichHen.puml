@@ -1,0 +1,38 @@
+@startuml State_LichHen
+skinparam state {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+}
+
+[*] --> ChoXacNhan : Bệnh nhân đặt lịch\n(Mặc định: trangThai=0)
+
+state "Chờ xác nhận (0)" as ChoXacNhan #PaleGreen {
+  ChoXacNhan : ---
+  ChoXacNhan : Lịch hẹn mới tạo
+  ChoXacNhan : Chờ bác sĩ duyệt (Offline)\nHoặc chờ thanh toán (VNPay)
+}
+
+state "Đã xác nhận (1)" as DaXacNhan #LightBlue {
+  DaXacNhan : ---
+  DaXacNhan : Bác sĩ đã tiếp nhận\nHoặc hệ thống tự động xác nhận\nsau khi thanh toán thành công
+}
+
+state "Đã khám (2)" as DaKham #Plum {
+  DaKham : ---
+  DaKham : Hoàn thành khám bệnh\nBác sĩ thực hiện kê đơn thuốc
+}
+
+state "Đã hủy (3)" as DaHuy #Salmon {
+  DaHuy : ---
+  DaHuy : Lịch hẹn bị hủy bởi\nBN, BS hoặc Admin
+}
+
+ChoXacNhan --> DaXacNhan : BS/Admin duyệt\nHoặc VNPay Pay Success
+ChoXacNhan --> DaHuy : BN/BS/Admin hủy
+
+DaXacNhan --> DaKham : BS click "Hoàn thành"
+DaXacNhan --> DaHuy : BS/Admin hủy
+
+DaKham --> [*]
+DaHuy --> [*]
+@enduml

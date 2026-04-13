@@ -1,0 +1,30 @@
+@startuml Seq_XemThongTinCaNhan
+skinparam sequenceArrowThickness 2
+actor "Người dùng" as User
+participant "Giao diện" as FE #LightBlue
+participant "Router" as RT #LightYellow
+participant "Auth\nMiddleware" as AUTH #Orange
+participant "Auth\nService" as SV #LightGreen
+database "CSDL" as DB #LightCoral
+
+User -> FE : Xem hồ sơ cá nhân
+activate FE
+FE -> RT : GET /api/auth/me\n(Bearer token)
+activate RT
+RT -> AUTH : authenticate(JWT)
+activate AUTH
+AUTH --> RT : req.user
+deactivate AUTH
+RT -> SV : getMe(userId)
+activate SV
+SV -> DB : findUnique({id})\n+ include bacSi, benhNhan\n(tùy vai trò)
+activate DB
+DB --> SV : Thông tin tài khoản\n+ hồ sơ chi tiết
+deactivate DB
+SV --> RT : Dữ liệu người dùng\n(ẩn matKhau, refreshToken)
+deactivate SV
+RT --> FE : 200 OK {user}
+deactivate RT
+FE --> User : Hiển thị trang\nhồ sơ cá nhân
+deactivate FE
+@enduml

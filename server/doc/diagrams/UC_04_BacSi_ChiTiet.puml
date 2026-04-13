@@ -1,0 +1,34 @@
+@startuml UseCase_ChiTiet_BacSi
+left to right direction
+skinparam actorStyle awesome
+skinparam ranksep 100
+skinparam nodesep 50
+
+skinparam usecase {
+  BackgroundColor LightSkyBlue
+  BorderColor DarkSlateGray
+  FontSize 12
+}
+
+' ============================
+' ACTOR
+' ============================
+actor "Bác sĩ" as BS #LightGreen
+
+' ============================
+' CHỨC NĂNG NGHIỆP VỤ
+' ============================
+(Thiết lập khung giờ khám) as UC1
+(Xem danh sách lịch hẹn) as UC2
+(Khám bệnh & Kê đơn thuốc) as UC3
+(Cập nhật hồ sơ năng lực) as UC4
+
+' ============================
+' KẾT NỐI
+' ============================
+BS --- UC1
+BS --- UC2
+BS --- UC3
+BS --- UC4
+
+@enduml

@@ -1,0 +1,51 @@
+@startuml Sequence_RefreshToken
+skinparam sequenceArrowThickness 2
+
+participant "Giao diện\n(React)" as FE #LightBlue
+participant "Bộ định tuyến\n(Router)" as RT #LightYellow
+participant "Dịch vụ\nxác thực" as SV #LightGreen
+database "CSDL\n(PostgreSQL)" as DB #LightCoral
+
+note over FE : Access Token\nđã hết hạn
+
+FE -> RT : POST /api/auth/refresh-token
+activate RT
+note right of FE : Cookie tự động\ngửi kèm refreshToken\n(HttpOnly)
+
+RT -> SV : refreshAccessToken\n(refreshToken từ cookie)
+activate SV
+
+SV -> SV : jwt.verify\n(refreshToken, secret)
+
+SV -> DB : findUnique(decoded.id)
+activate DB
+DB --> SV : TàiKhoản\n(kèm refreshToken đã lưu)
+deactivate DB
+
+SV -> SV : So sánh token:\ncookie vs database
+
+alt Token KHỚP (cookie == DB)
+  SV -> SV : generateTokens()\nTạo cặp token MỚI
+  note right : **Token Rotation**\nToken cũ TỰ ĐỘNG\nVÔ HIỆU
+
+  SV -> DB : UPDATE TaiKhoan\nSET refreshToken = tokenMới
+  activate DB
+  DB --> SV : OK
+  deactivate DB
+
+  SV --> RT : {accessToken mới,\nrefreshToken mới}
+  deactivate SV
+
+  RT -> RT : res.cookie\n(refreshToken mới,\nHttpOnly)
+
+  RT --> FE : 200 OK\n{accessToken mới}
+  deactivate RT
+
+else Token KHÔNG KHỚP
+  SV --> RT : throw Error 401\nToken không hợp lệ
+  deactivate SV
+  RT --> FE : 401 Unauthorized
+  deactivate RT
+  note over FE : Chuyển hướng về\ntrang Đăng nhập\n(Có thể token\nbị đánh cắp!)
+end
+@enduml

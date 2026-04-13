@@ -1,0 +1,39 @@
+@startuml UseCase_ChiTiet_QuanLyFAQ
+left to right direction
+skinparam actorStyle awesome
+skinparam ranksep 100
+skinparam nodesep 50
+
+skinparam usecase {
+  BackgroundColor LightSkyBlue
+  BorderColor DarkSlateGray
+  FontSize 12
+}
+
+' ============================
+' ACTOR
+' ============================
+actor "Quản trị viên" as AD #LightCoral
+
+' ============================
+' USE CASE CHÍNH (TÂM ĐIỂM)
+' ============================
+(Quản lý câu hỏi thường gặp\n--\n**extension points**\nThêm câu hỏi\nSửa câu hỏi\nXóa câu hỏi) as Main #DeepSkyBlue
+
+' ============================
+' CÁC USE CASE MỞ RỘNG (DÀN SANG PHẢI)
+' ============================
+(Thêm câu hỏi mới) as UC1
+(Sửa câu hỏi) as UC2
+(Xóa câu hỏi) as UC3
+
+' ============================
+' KẾT NỐI
+' ============================
+AD --- Main
+
+Main <.. UC1 : <<Extend>>
+Main <.. UC2 : <<Extend>>
+Main <.. UC3 : <<Extend>>
+
+@enduml

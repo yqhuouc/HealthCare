@@ -1,0 +1,39 @@
+@startuml UseCase_ChiTiet_QuanLyBenhNhan
+left to right direction
+skinparam actorStyle awesome
+skinparam ranksep 100
+skinparam nodesep 50
+
+skinparam usecase {
+  BackgroundColor LightSkyBlue
+  BorderColor DarkSlateGray
+  FontSize 12
+}
+
+' ============================
+' ACTOR
+' ============================
+actor "Quản trị viên" as AD #LightCoral
+
+' ============================
+' USE CASE CHÍNH (TÂM ĐIỂM)
+' ============================
+(Quản lý bệnh nhân\n--\n**extension points**\nXem thông tin bác sĩ\nSửa thông tin bệnh nhân\nXóa bệnh nhân) as Main #DeepSkyBlue
+
+' ============================
+' CÁC USE CASE MỞ RỘNG (DÀN SANG PHẢI)
+' ============================
+(Xem danh sách bệnh nhân) as UC1
+(Sửa thông tin bệnh nhân) as UC2
+(Xóa bệnh nhân) as UC3
+
+' ============================
+' KẾT NỐI (DÀN NGANG THẲNG TẮP)
+' ============================
+AD --- Main
+
+Main <.. UC1 : <<Extend>>
+Main <.. UC2 : <<Extend>>
+Main <.. UC3 : <<Extend>>
+
+@enduml

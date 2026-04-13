@@ -1,0 +1,115 @@
+@startuml UseCase_TongQuan
+left to right direction
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam wrapWidth 200
+
+' Màu sắc chuyên nghiệp
+skinparam usecase {
+  BackgroundColor LightSkyBlue
+  BorderColor DarkSlateGray
+  FontSize 13
+}
+
+' ============================
+' ACTORS (BÊN TRÁI)
+' ============================
+actor "Quản trị viên" as AD #LightCoral
+actor "Bác sĩ" as BS #LightGreen
+actor "Bệnh nhân" as BN #SkyBlue
+
+' ============================
+' TRUNG TÂM HỘI TỤ (BÊN PHẢI)
+' ============================
+usecase "   ĐĂNG NHẬP HỆ THỐNG   " as Login #DeepSkyBlue
+
+' ============================
+' PHÂN HỆ QUẢN TRỊ
+' ============================
+rectangle "Phân hệ Quản trị" {
+  usecase "Quản lý Bác sĩ" as AD1
+  usecase "Quản lý Bệnh nhân" as AD2
+  usecase "Quản lý Chuyên khoa" as AD3
+  usecase "Quản lý Ca làm việc" as AD4
+  usecase "Quản lý Lịch khám" as AD5
+  usecase "Quản lý FAQ" as AD6
+  usecase "Quản lý Giao dịch & Thanh toán" as AD7
+  usecase "Xem thống kê" as AD8
+}
+
+' ============================
+' PHÂN HỆ BÁC SĨ
+' ============================
+rectangle "Phân hệ Bác sĩ" {
+  usecase "Thiết lập lịch làm việc" as BS1
+  usecase "Xem lịch hẹn" as BS2
+  usecase "Khám & Kê đơn thuốc" as BS3
+}
+
+' ============================
+' PHÂN HỆ BỆNH NHÂN
+' ============================
+rectangle "Phân hệ Bệnh nhân" {
+  usecase "Đăng ký tài khoản" as BN1
+  usecase "Đổi/Quên mật khẩu" as BN2
+  usecase "Cập nhật hồ sơ" as BN3
+  usecase "Tìm BS & Chuyên khoa" as BN4
+  usecase "Đặt lịch khám" as BN5
+  usecase "Thanh toán Online" as BN6
+  usecase "Xem Lịch sử/Kết quả" as BN7
+  usecase "Xem FAQ" as BN8
+}
+
+' ============================
+' KẾT NỐI ACTOR -> USE CASE
+' ============================
+AD -- AD1
+AD -- AD2
+AD -- AD3
+AD -- AD4
+AD -- AD5
+AD -- AD6
+AD -- AD7
+AD -- AD8
+
+BS -- BS1
+BS -- BS2
+BS -- BS3
+
+BN -- BN1
+BN -- BN2
+BN -- BN3
+BN -- BN4
+BN -- BN5
+BN -- BN6
+BN -- BN7
+BN -- BN8
+
+' ============================
+' KẾT NỐI <<INCLUDE>> ĐẾN LOGIN
+' ============================
+AD1 ..> Login : <<include>>
+AD2 ..> Login : <<include>>
+AD3 ..> Login : <<include>>
+AD4 ..> Login : <<include>>
+AD5 ..> Login : <<include>>
+AD6 ..> Login : <<include>>
+AD7 ..> Login : <<include>>
+AD8 ..> Login : <<include>>
+
+BS1 ..> Login : <<include>>
+BS2 ..> Login : <<include>>
+BS3 ..> Login : <<include>>
+
+BN2 ..> Login : <<include>>
+BN3 ..> Login : <<include>>
+BN4 ..> Login : <<include>>
+BN5 ..> Login : <<include>>
+BN6 ..> Login : <<include>>
+BN7 ..> Login : <<include>>
+
+' Sắp xếp dọc Actor
+AD -[hidden]down- BS
+BS -[hidden]down- BN
+
+@enduml

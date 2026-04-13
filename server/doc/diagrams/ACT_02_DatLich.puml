@@ -1,0 +1,36 @@
+@startuml Activity_DatLich
+|Bệnh nhân / Frontend|
+start
+:Xem danh sách chuyên khoa;
+:Chọn chuyên khoa;
+:Xem danh sách bác sĩ\ntheo chuyên khoa;
+:Chọn bác sĩ;
+:Xem thông tin chi tiết\nbác sĩ và lịch trống;
+:Chọn **ngày** và **khung giờ**;
+:Nhập **lý do khám**;
+:Chọn **hình thức thanh toán**;
+:Gửi yêu cầu đặt lịch\n(kèm JWT token);
+
+|Máy chủ / Backend|
+:Xác thực JWT & Validate dữ liệu;
+:Kiểm tra Bác sĩ, Bệnh nhân & Lịch làm việc;
+:Kiểm tra trùng lịch (Unique constraint);
+
+if (Hình thức thanh toán?) then (Offline)
+  :Tạo DatLich (trangThai=0, ttThanhToan=0);
+  :Trả về 201 Created;
+  |Bệnh nhân / Frontend|
+  :Hiển thị "Đặt lịch thành công";
+  stop
+else (VNPay)
+  :Tạo DatLich (trangThai=0, ttThanhToan=0);
+  :Tạo GiaoDich (trangThai=0: Chờ);
+  :Tạo URL thanh toán VNPay;
+  :Trả về URL VNPay cho Frontend;
+  |Bệnh nhân / Frontend|
+  :Chuyển hướng người dùng\nsang VNPay Gateway;
+  :Người dùng thực hiện thanh toán;
+  :VNPay chuyển hướng về Callback URL;
+  detach
+endif
+@enduml

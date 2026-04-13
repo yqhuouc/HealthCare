@@ -50,6 +50,16 @@ Hệ thống **ClinicBooking** là website đặt lịch khám bệnh trực tuy
 | Quản trị hệ thống (Admin) | |
 | Thống kê báo cáo doanh thu | |
 
+### 1.4 Khảo sát hiện trạng và Vấn đề
+
+Qua khảo sát thực tế quy trình quản lý tại các phòng khám quy mô nhỏ và vừa, chúng tôi đã xác định những vấn đề cốt lõi của hệ thống quản lý truyền thống:
+
+-   **Quy trình đặt lịch bất cập**: Bệnh nhân phải trực tiếp đến phòng khám hoặc liên hệ qua điện thoại, gây mất thời gian và khó khăn trong việc tra cứu khung giờ trống.
+-   **Khó kiểm soát lưu lượng**: Phòng khám dễ rơi vào tình trạng quá tải hoặc trùng lịch do không có công cụ điều phối nhân sự và thời gian thực.
+-   **Lưu trữ phân tán**: Thông tin bệnh nhân, bác sĩ và bệnh sử được ghi chép thủ công trên sổ sách, dẫn đến khó khăn khi cần tra cứu nhanh hoặc thống kê báo cáo.
+-   **Thiếu tính tự động hóa**: Việc xác nhận hoặc hủy lịch hoàn toàn phụ thuộc vào nhân sự trực quầy, dễ xảy ra sai sót trong quá trình ghi nhận.
+-   **Hệ thống báo cáo yếu**: Không có công cụ thống kê doanh thu, năng suất làm việc của bác sĩ một cách chính xác theo thời gian thực.
+
 ---
 
 ## 2. Phân tích yêu cầu
@@ -176,11 +186,11 @@ graph LR
     AD -->|"Quản trị dữ liệu,\nthống kê"| HT
 ```
 
-| Actor | Vai trò | Quyền hạn chính |
+| Actor | Vai trò | Mô tả quy trình & Quyền hạn |
 |-------|---------|-----------------|
-| **Bệnh nhân** | Người sử dụng dịch vụ khám bệnh | Đăng ký/đăng nhập, tìm bác sĩ, đặt lịch, xem lịch sử, hủy lịch, xem đơn thuốc |
-| **Bác sĩ** | Cung cấp dịch vụ khám bệnh | Đăng nhập, quản lý lịch làm việc, xem/xử lý lịch hẹn, kê đơn thuốc |
-| **Admin** | Quản trị toàn bộ hệ thống | CRUD chuyên khoa/bác sĩ/bệnh nhân/FAQ, quản lý lịch hẹn, xem thống kê |
+| **Bệnh nhân** | Sử dụng dịch vụ đặt lịch và theo dõi khám chữa bệnh | Tìm kiếm bác sĩ/chuyên khoa, đặt lịch hẹn theo khung giờ trống, nhận email xác nhận tự động, xem lịch sử bệnh lý và kết quả/đơn thuốc trực tuyến. |
+| **Bác sĩ** | Trực tiếp cung cấp dịch vụ khám bệnh và điều trị | Chủ động thiết lập lịch làm việc theo khung giờ sẵn sàng, phê duyệt/hủy lịch hẹn, nhập thông tin chẩn đoán, kê đơn thuốc điện tử và gửi kết quả tức thì qua hệ thống. |
+| **Quản trị viên (Admin)** | Giám sát và điều phối toàn bộ hoạt động hệ thống | Quản lý danh mục chuyên khoa, hồ sơ bác sĩ và bệnh nhân; giám sát các cuộc hẹn, xử lý các câu hỏi thường gặp (FAQ) và theo dõi báo cáo thống kê doanh thu/tăng trưởng. |
 
 ---
 

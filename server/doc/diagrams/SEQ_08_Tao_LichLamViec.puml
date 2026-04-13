@@ -1,0 +1,26 @@
+@startuml Sequence_Tao_LichLamViec
+actor "Bác sĩ" as BS
+participant "Frontend" as FE
+participant "Router" as RT
+participant "Service" as SV
+database "PostgreSQL" as DB
+
+BS -> FE : Chọn ngày & các khung giờ
+activate FE
+FE -> RT : POST /api/lich-lam-viec
+activate RT
+RT -> SV : create(data, user)
+activate SV
+SV -> DB : findUnique(bacSiId)
+DB --> SV : Bác sĩ OK
+SV -> DB : Create Many LichLamViecBacSi
+activate DB
+DB --> SV : Created
+deactivate DB
+SV --> RT : Success
+deactivate SV
+RT --> FE : 201 Created
+deactivate RT
+FE --> BS : Hiển thị thành công
+deactivate FE
+@enduml

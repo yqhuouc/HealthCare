@@ -1,0 +1,32 @@
+@startuml Activity_KheDon
+|Bác sĩ|
+start
+:Đăng nhập vào hệ thống;
+:Xem danh sách lịch hẹn "Đã xác nhận";
+:Chọn một bệnh nhân đến khám;
+:Tiến hành khám lâm sàng;
+:Cập nhật trạng thái lịch hẹn -> "Đã khám";
+
+|Máy chủ / Backend|
+:Lưu trạng thái mới;
+:Mở form kê đơn cho bác sĩ;
+
+|Bác sĩ|
+:Nhập **Chẩn đoán** và **Ghi chú**;
+repeat
+  :Chọn thuốc từ danh sách;
+  :Nhập số lượng, đơn giá, liều dùng;
+  :Thêm vào danh mục đơn thuốc;
+backward:Tiếp tục kê thêm thuốc;
+repeat while (Cần thêm thuốc?) is (Có) not (Không)
+:Gửi đơn thuốc hoàn tất;
+
+|Máy chủ / Backend|
+:Tính toán **Tổng tiền**;
+:Lưu DonThuoc và các ChiTietDonThuoc;
+:Trả về kết quả thành công;
+
+|Bác sĩ|
+:Thông báo cho bệnh nhân;
+stop
+@enduml

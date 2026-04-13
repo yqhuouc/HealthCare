@@ -46,7 +46,28 @@ PostgreSQL là hệ quản trị CSDL quan hệ (RDBMS). Bạn dùng PostgreSQL 
 
 ---
 
-## 3) Các khái niệm cốt lõi trong PostgreSQL
+## 3) Sự tiến hóa và Chuẩn hóa từ thiết kế cũ
+
+Hệ thống hiện tại được tối ưu hóa từ bản thiết kế SQL cũ bằng cách áp dụng các kỹ thuật chuẩn hóa dữ liệu cao cấp:
+
+### 3.1 Chuyển đổi mô hình Tài khoản (1-to-1 Normalization)
+- **Thiết kế cũ**: Thường gộp chung thông tin định danh (email, mật khẩu) vào từng bảng riêng lẻ (`BacSi`, `BenhNhan`), gây khó khăn cho việc quản lý xác thực tập trung.
+- **Thiết kế mới**: Tách riêng bảng `TaiKhoan` làm trung tâm. Mối quan hệ **1-to-1** được thiết lập giữa `TaiKhoan` và `BacSi`/`BenhNhan`. Điều này giúp quản lý Auth chuyên nghiệp hơn và dễ dàng mở rộng thêm các vai trò khác (như Nhân viên y tế) trong tương lai.
+
+### 3.2 Hiện đại hóa quy trình Lịch làm việc
+- **Thiết kế cũ**: Quản lý theo "Ca làm việc" (Shift) dạng văn bản, dễ dẫn đến xung đột hoặc trùng lặp khi đặt lịch.
+- **Thiết kế mới**: Sử dụng bảng `KhungGio` (Slot) cố định (ví dụ: 08:00 - 08:30) kết hợp với `LichLamViecBacSi`. Bác sĩ chỉ cần chọn các slot sẵn sàng, hệ thống sẽ tự động gán và kiểm tra tính khả dụng, loại bỏ hoàn toàn khả năng trùng lịch.
+
+### 3.3 Bổ sung Tầng Tài chính & Thanh toán
+- Hệ thống bổ sung hai bảng quan trọng là `HinhThucThanhToan` và `GiaoDich`.
+- Điều này cho phép tích hợp cổng thanh toán trực tuyến (**VNPay**) — một tính năng vượt trội so với các hệ thống quản lý thủ công trước đây, giúp tự động hóa quy trình thu phí khám và kê đơn.
+
+### 3.4 Tách biệt Đơn thuốc và Chi tiết
+- `DonThuoc` và `ChiTietDonThuoc` được tách làm 2 bảng (1-N) để hỗ trợ việc kê nhiều loại thuốc trong một lần khám, lưu trữ đơn giá tại thời điểm kê đơn để đảm bảo tính chính xác của hóa đơn lịch sử.
+
+---
+
+## 4) Các khái niệm cốt lõi trong PostgreSQL
 
 ### 3.1 Database / Schema / Table
 
@@ -107,7 +128,7 @@ Trong backend, transaction thường dùng khi:
 
 ---
 
-## 3) Migrations/Schema thay đổi: DB “sống” như thế nào?
+## 5) Migrations/Schema thay đổi: DB “sống” như thế nào?
 
 Thường bạn có 2 kiểu workflow:
 
@@ -121,7 +142,7 @@ Với đồ án/ứng dụng học thuật:
 
 ---
 
-## 4) Prisma là gì?
+## 6) Prisma là gì?
 
 Prisma là **ORM (Object-Relational Mapping)** cho Node.js/TypeScript.
 
@@ -146,7 +167,7 @@ bạn vẫn có thể dùng:
 
 ---
 
-## 5) Prisma workflow (trong project Node/Express)
+## 7) Prisma workflow (trong project Node/Express)
 
 Thông thường:
 
@@ -161,7 +182,7 @@ Thông thường:
 
 ---
 
-## 6) Prisma schema.prisma: bạn cần đọc phần nào?
+## 8) Prisma schema.prisma: bạn cần đọc phần nào?
 
 Các phần quan trọng:
 
@@ -199,7 +220,7 @@ Những điểm bạn cần nhớ:
 
 ---
 
-## 7) Prisma Client: các method CRUD cốt lõi
+## 9) Prisma Client: các method CRUD cốt lõi
 
 ### 7.1 `findUnique`, `findFirst`, `findMany`
 
@@ -230,7 +251,7 @@ await prisma.user.upsert({
 
 ---
 
-## 8) Prisma Query: where/select/include/orderBy
+## 10) Prisma Query: where/select/include/orderBy
 
 ### 8.1 `where`
 
@@ -268,7 +289,7 @@ await prisma.user.upsert({
 
 ---
 
-## 9) Nested writes (create/update) - làm cùng lúc nhiều bảng
+## 11) Nested writes (create/update) - làm cùng lúc nhiều bảng
 
 Prisma cho phép “nested write”:
 
@@ -290,7 +311,7 @@ Ví dụ pattern trong project dạng “tạo DonThuoc và ChiTietDonThuoc”:
 
 ---
 
-## 10) Transaction trong Prisma: `$transaction`
+## 12) Transaction trong Prisma: `$transaction`
 
 Bạn dùng `$transaction` khi:
 
@@ -308,7 +329,7 @@ await prisma.$transaction(async (tx) => {
 
 ---
 
-## 11) Raw SQL khi cần (biết để dùng, không lạm dụng)
+## 13) Raw SQL khi cần (biết để dùng, không lạm dụng)
 
 Khi query Prisma không đáp ứng, có thể:
 
@@ -322,7 +343,7 @@ Lưu ý:
 
 ---
 
-## 12) Những “bẫy” thường gặp (Checklist)
+## 14) Những “bẫy” thường gặp (Checklist)
 
 ### 12.1 `findUnique` không trả gì
 
@@ -356,7 +377,7 @@ Lưu ý:
 
 ---
 
-## 13) Mapping nhanh: SQL -> Prisma (gợi ý)
+## 15) Mapping nhanh: SQL -> Prisma (gợi ý)
 
 ### 13.1 `SELECT * FROM table WHERE ...`
 
@@ -376,7 +397,7 @@ Lưu ý:
 
 ---
 
-## 14) Template nhỏ cho bạn dùng khi quên
+## 16) Template nhỏ cho bạn dùng khi quên
 
 ### 14.1 Tìm danh sách có phân trang
 
@@ -403,7 +424,7 @@ const lichHen = await prisma.datLich.findMany({
 
 ---
 
-## 15) Tài liệu tham khảo (để tự tra sâu)
+## 17) Tài liệu tham khảo (để tự tra sâu)
 
 - PostgreSQL Documentation: https://www.postgresql.org/docs/
 - Prisma Docs: https://www.prisma.io/docs

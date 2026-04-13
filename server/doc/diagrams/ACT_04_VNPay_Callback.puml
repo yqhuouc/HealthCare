@@ -1,0 +1,32 @@
+@startuml Activity_VNPay_Callback
+|VNPay Gateway|
+start
+:Gửi kết quả thanh toán qua Hash/URL;
+
+|Máy chủ / Backend|
+:Nhận IPN hoặc Callback từ VNPay;
+:Xác thực chữ ký (Checksum);
+
+if (Chữ ký hợp lệ?) then (Không)
+  :Trả về lỗi "Invalid Signature";
+  stop
+else (Có)
+  :Tìm kiếm GiaoDich theo mã tham chiếu;
+  if (Giao dịch tồn tại?) then (Không)
+    :Trả về lỗi "Order not found";
+    stop
+  else (Có)
+    :Kiểm tra trạng thái VNPay trả về;
+    if (Thành công (code=00)?) then (Có)
+       :Cập nhật GiaoDich (trangThai=1: Thành công);
+       :Cập nhật DatLich (trangThaiThanhToan=1, trangThai=1: Xác nhận);
+       :Gửi email xác nhận cho bệnh nhân;
+    else (Thất bại)
+       :Cập nhật GiaoDich (trangThai=2: Thất bại);
+       :Giữ nguyên trạng thái DatLich;
+    endif
+    :Trả kết quả cho VNPay (Xác nhận nhận IPN);
+  endif
+endif
+stop
+@enduml

@@ -1,0 +1,50 @@
+@startuml Seq_HuyLichKham
+skinparam sequenceArrowThickness 2
+actor "Bệnh nhân" as BN
+participant "Giao diện" as FE #LightBlue
+participant "Router" as RT #LightYellow
+participant "Auth\nMiddleware" as AUTH #Orange
+participant "DatLich\nService" as SV #LightGreen
+database "CSDL" as DB #LightCoral
+
+BN -> FE : Bấm hủy lịch hẹn
+activate FE
+FE -> RT : PUT /api/dat-lich/:id/status\n(Bearer token, {trangThai: 3})
+activate RT
+RT -> AUTH : authenticate(JWT)
+activate AUTH
+AUTH --> RT : req.user
+deactivate AUTH
+RT -> SV : updateStatus(id, 3)
+activate SV
+SV -> DB : findUnique({id})
+activate DB
+DB --> SV : Lịch hẹn hiện tại
+deactivate DB
+
+SV -> SV : Kiểm tra quyền sở hữu\n(benhNhanId == req.user)
+
+alt Sở hữu hợp lệ
+  SV -> SV : Kiểm tra trạng thái\ncho phép hủy\n(0: Chờ hoặc 1: Đã xác nhận)
+  alt Được phép hủy
+    SV -> DB : UPDATE DatLich\nSET trangThai = 3
+    activate DB
+    DB --> SV : Đã cập nhật
+    deactivate DB
+    SV --> RT : Thành công
+    RT --> FE : 200 OK
+    FE --> BN : Hiển thị\nhủy thành công
+  else Không được hủy (đã khám / đã hủy)
+    SV --> RT : Lỗi 400
+    RT --> FE : 400 Không thể hủy
+    FE --> BN : Hiển thị lỗi
+  end
+else Không có quyền
+  SV --> RT : Lỗi 403
+  RT --> FE : 403 Forbidden
+  FE --> BN : Hiển thị lỗi
+end
+deactivate SV
+deactivate RT
+deactivate FE
+@enduml

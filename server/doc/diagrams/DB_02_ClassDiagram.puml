@@ -1,0 +1,177 @@
+@startuml Class_Diagram
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+  ArrowColor DarkSlateGray
+}
+
+class TaiKhoan {
+  - id : bigint
+  - email : string
+  - matKhau : string
+  - vaiTro : string
+  - trangThaiTaiKhoan : int
+  - refreshToken : string
+  - gioiTinh : int
+  - ngaySinh : date
+  - diaChi : string
+  - anhDaiDien : string
+  - ngayTao : datetime
+  - ngayCapNhat : datetime
+  --
+  + dangNhap()
+  + dangXuat()
+  + doiMatKhau()
+  + capNhatHoSo()
+  + lamMoiToken()
+}
+
+class ChuyenKhoa {
+  - id : bigint
+  - tenChuyenKhoa : string
+  - anhChuyenKhoa : string
+  - moTaChuyenKhoa : text
+  - thoiLuongKham : int
+  - icon : string
+  --
+  + themChuyenKhoa()
+  + suaChuyenKhoa()
+  + xoaChuyenKhoa()
+}
+
+class BacSi {
+  - id : bigint
+  - hocViChucDanh : string
+  - tenBacSi : string
+  - moTaNgan : string
+  - moTaChiTiet : text
+  - giaKham : decimal
+  - taiKhoanId : bigint
+  - chuyenKhoaId : bigint
+  --
+  + capNhatThongTin()
+  + xemLichHen()
+}
+
+class BenhNhan {
+  - id : bigint
+  - hoTen : string
+  - soDienThoai : string
+  - emailLienHe : string
+  - taiKhoanId : bigint
+  --
+  + capNhatHoSo()
+  + datLich()
+  + huyLich()
+}
+
+class KhungGio {
+  - id : bigint
+  - gioBatDau : time
+  - gioKetThuc : time
+}
+
+class LichLamViecBacSi {
+  - id : bigint
+  - ngayLamViec : date
+  - soBenhNhanHienTai : int
+  - soBenhNhanToiDa : int
+  - sanSang : int
+  - bacSiId : bigint
+  - khungGioId : bigint
+  --
+  + taoLichLamViec()
+  + capNhatTrangThai()
+  + xoaLichLamViec()
+}
+
+class HinhThucThanhToan {
+  - id : bigint
+  - tenHinhThuc : string
+  - maLoai : string
+}
+
+class DatLich {
+  - id : bigint
+  - ngayDat : date
+  - gioBatDau : time
+  - gioKetThuc : time
+  - lyDoKham : string
+  - giaKham : decimal
+  - trangThai : int
+  - trangThaiThanhToan : int
+  - bacSiId : bigint
+  - benhNhanId : bigint
+  - hinhThucThanhToanId : bigint
+  - lichLamViecId : bigint
+  --
+  + xacNhan()
+  + huy()
+  + hoanThanh()
+}
+
+class GiaoDich {
+  - id : bigint
+  - datLichId : bigint
+  - loaiGiaoDich : string
+  - soTien : decimal
+  - maGiaoDichVNP : string
+  - maThamChieu : string
+  - trangThai : int
+  - ngayTao : datetime
+  - ngayCapNhat : datetime
+}
+
+class DonThuoc {
+  - id : bigint
+  - datLichId : bigint
+  - chanDoan : string
+  - ghiChu : text
+  - tongTien : decimal
+  - ngayTao : datetime
+  --
+  + taoDonThuoc()
+}
+
+class ChiTietDonThuoc {
+  - id : bigint
+  - donThuocId : bigint
+  - tenThuoc : string
+  - soLuong : int
+  - donGia : decimal
+  - lieuDung : string
+  - ghiChu : string
+}
+
+class CauHoiThuongGap {
+  - id : bigint
+  - cauHoi : string
+  - traLoi : string
+  - dangHoatDong : int
+  --
+  + themCauHoi()
+  + suaCauHoi()
+  + xoaCauHoi()
+}
+
+' ============================
+' QUAN HỆ VỚI MULTIPLICITY
+' ============================
+TaiKhoan "1" -- "0..1" BacSi
+TaiKhoan "1" -- "0..1" BenhNhan
+
+ChuyenKhoa "1" -- "*" BacSi
+
+BacSi "1" -- "*" LichLamViecBacSi
+KhungGio "1" -- "*" LichLamViecBacSi
+
+BacSi "1" -- "*" DatLich
+BenhNhan "1" -- "*" DatLich
+HinhThucThanhToan "1" -- "*" DatLich
+LichLamViecBacSi "1" -- "*" DatLich
+
+DatLich "1" -- "*" GiaoDich
+DatLich "1" -- "1" DonThuoc
+DonThuoc "1" -- "*" ChiTietDonThuoc
+@enduml

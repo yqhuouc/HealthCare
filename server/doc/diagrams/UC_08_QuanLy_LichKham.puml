@@ -1,0 +1,39 @@
+@startuml UseCase_ChiTiet_QuanLyLichKham
+left to right direction
+skinparam actorStyle awesome
+skinparam ranksep 100
+skinparam nodesep 50
+
+skinparam usecase {
+  BackgroundColor LightSkyBlue
+  BorderColor DarkSlateGray
+  FontSize 12
+}
+
+' ============================
+' ACTOR
+' ============================
+actor "Quản trị viên" as AD #LightCoral
+
+' ============================
+' USE CASE CHÍNH (TÂM ĐIỂM)
+' ============================
+(Quản lý lịch khám hệ thống\n--\n**extension points**\nXem danh sách lịch khám\nCập nhật trạng thái\nHủy lịch khám sai sót) as Main #DeepSkyBlue
+
+' ============================
+' CÁC USE CASE MỞ RỘNG (DÀN SANG PHẢI)
+' ============================
+(Xem danh sách lịch khám) as UC1
+(Cập nhật trạng thái lịch hẹn) as UC2
+(Hủy lịch khám) as UC3
+
+' ============================
+' KẾT NỐI
+' ============================
+AD --- Main
+
+Main <.. UC1 : <<Extend>>
+Main <.. UC2 : <<Extend>>
+Main <.. UC3 : <<Extend>>
+
+@enduml
