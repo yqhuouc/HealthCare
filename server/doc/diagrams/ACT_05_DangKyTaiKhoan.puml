@@ -17,12 +17,12 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Nguoi dung / Frontend|
+|Nguoi dung|
 start
 :Nhap ho ten, email, mat khau,\nso dien thoai, thong tin co ban;
 :Bam nut Dang ky;
 
-|May chu / Backend|
+|He thong|
 :Validate du lieu registerSchema;
 if (Du lieu hop le?) then (Khong)
   :Tra loi 400;
@@ -41,7 +41,7 @@ endif
 :Tao TaiKhoan + BenhNhan (transaction);
 :Tra 201 Dang ky thanh cong;
 
-|Nguoi dung / Frontend|
+|Nguoi dung|
 :Thong bao thanh cong;
 :Dieu huong sang trang Dang nhap;
 stop

@@ -17,22 +17,26 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Nguoi dung / Frontend|
+|Nguoi dung|
 start
 :Bam Quen mat khau;
 :Nhap email can khoi phuc;
+:Gui yeu cau khoi phuc mat khau;
 
-|May chu / Backend|
-:Kiem tra endpoint ho tro quen mat khau?;
-if (Da trien khai?) then (Khong)
-  :Tra thong bao:\nChuc nang chua duoc trien khai\ntrong he thong hien tai;
-  stop
-else (Co)
-  :Tao token OTP/reset;
-  :Gui email reset;
-  :Nguoi dung dat mat khau moi;
-  :Cap nhat mat khau moi (hash);
-  :Thong bao thanh cong;
-  stop
-endif
+|He thong|
+:Tao token OTP/reset;
+:Gui email reset;
+
+|Nguoi dung|
+:Nhan email va mo link dat lai mat khau;
+:Nhap mat khau moi;
+:Gui yeu cau cap nhat mat khau;
+
+|He thong|
+:Cap nhat mat khau moi (hash);
+:Tra thong bao cap nhat thanh cong;
+
+|Nguoi dung|
+:Hien thi thong bao thanh cong;
+stop
 @enduml

@@ -17,12 +17,12 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Nguoi dung / Frontend|
+|Nguoi dung|
 start
 :Nhap email va mat khau;
 :Bam nut Dang nhap;
 
-|May chu / Backend|
+|He thong|
 :Validate du lieu dau vao;
 
 if (Du lieu hop le?) then (Khong)
@@ -54,7 +54,7 @@ endif
 :Set cookie HttpOnly:\naccessToken(path=/)\nrefreshToken(path=/api/auth);
 :Tra thong tin user;
 
-|Nguoi dung / Frontend|
+|Nguoi dung|
 :Nhan ket qua dang nhap;
 
 if (Vai tro?) then (Admin)

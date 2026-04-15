@@ -17,12 +17,12 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Bac si / Admin|
+|Bac si/Admin|
 start
-:Chon ngay lam viec, khung gio,\nso benh nhan toi da;
+:Chon ngay lam viec, khung gio;
 :Gui yeu cau tao lich lam viec;
 
-|May chu / Backend|
+|He thong|
 :Xac thuc JWT;
 :Kiem tra quyen (admin hoac bac_si);
 :Validate lichLamViecSchema;
@@ -43,7 +43,7 @@ endif
 :Tao LichLamViecBacSi;
 :Tra 201 Tao lich thanh cong;
 
-|Bac si / Admin|
+|Bac si/Admin|
 :Cap nhat giao dien lich;
 stop
 @enduml

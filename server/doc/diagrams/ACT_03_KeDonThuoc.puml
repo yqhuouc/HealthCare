@@ -25,7 +25,7 @@ start
 :Tien hanh kham lam sang;
 :Cap nhat trang thai lich hen thanh Da kham;
 
-|May chu / Backend|
+|He thong|
 :Luu trang thai moi;
 :Mo form ke don cho bac si;
 
@@ -39,7 +39,7 @@ backward:Can them thuoc khac;
 repeat while (Can them thuoc?) is (Co) not (Khong)
 :Gui don thuoc hoan tat;
 
-|May chu / Backend|
+|He thong|
 :Tinh toan tong tien;
 :Luu DonThuoc va ChiTietDonThuoc;
 :Tra ve ket qua thanh cong;

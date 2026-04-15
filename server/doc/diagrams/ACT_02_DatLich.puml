@@ -17,7 +17,7 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Benh nhan / Frontend|
+|Benh nhan|
 start
 :Xem danh sach chuyen khoa;
 :Chon chuyen khoa;
@@ -29,7 +29,7 @@ start
 :Chon hinh thuc thanh toan;
 :Gui yeu cau dat lich (kem JWT token);
 
-|May chu / Backend|
+|He thong|
 :Xac thuc JWT va validate du lieu;
 :Kiem tra bac si, benh nhan va lich lam viec;
 :Kiem tra trung lich (unique constraint);
@@ -37,18 +37,18 @@ start
 if (Hinh thuc thanh toan?) then (Offline)
   :Tao DatLich (trangThai=0, trangThaiThanhToan=0);
   :Tra ve 201 Created;
-  |Benh nhan / Frontend|
+  |Benh nhan|
   :Nhan ket qua dat lich;
   :Hien thi Dat lich thanh cong;
   stop
 else (VNPay)
-  |May chu / Backend|
+  |He thong|
   :Tao DatLich (trangThai=0, trangThaiThanhToan=0);
   :Tao GiaoDich (trangThai=0: Cho);
   :Goi POST /api/vnpay/create-payment;
   :Tao URL thanh toan VNPay;
   :Tra ve URL VNPay cho Frontend;
-  |Benh nhan / Frontend|
+  |Benh nhan|
   :Nhan URL thanh toan;
   :Chuyen huong sang VNPay Gateway;
   :Nguoi dung thuc hien thanh toan;

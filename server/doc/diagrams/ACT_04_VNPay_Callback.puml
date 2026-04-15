@@ -21,7 +21,7 @@ skinparam ArrowColor #1E88E5
 start
 :Gui ket qua thanh toan qua IPN/Return URL;
 
-|May chu / Backend|
+|He thong|
 :Nhan callback tu VNPay;
 :Xac thuc chu ky checksum;
 

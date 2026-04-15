@@ -17,12 +17,12 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Admin / Frontend|
+|Admin|
 start
 :Mo trang Dashboard thong ke;
 :Chon loai thong ke\n(tong quan, lich hen, doanh thu);
 
-|May chu / Backend|
+|He thong|
 :Xac thuc JWT;
 :Kiem tra quyen admin;
 if (Khong du quyen?) then (Co)
@@ -41,7 +41,7 @@ endif
 
 :Tra du lieu thong ke;
 
-|Admin / Frontend|
+|Admin|
 :Ve bieu do/so lieu tren dashboard;
 stop
 @enduml
