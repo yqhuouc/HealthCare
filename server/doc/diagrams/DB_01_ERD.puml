@@ -1,26 +1,42 @@
-@startuml ERD
+@startuml ERD_Clinic_Booking_System
+left to right direction
+
 skinparam linetype ortho
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam dpi 150
+skinparam defaultFontName Arial
+skinparam ArrowColor #000000
+skinparam defaultBorderColor #F57C00
+skinparam nodesep 100
+skinparam ranksep 100
 
-' Ký hiệu: PK = Khóa chính, FK = Khóa ngoại, U = Duy nhất, N = Cho phép null
+hide circle
 
-entity "TaiKhoan" as TK #FFEFD5 {
-  * **id** : bigint <<PK>>
+' Legend:
+' <<PK>> Primary Key
+' <<FK>> Foreign Key
+' <<U>>  Unique
+' <<N>>  Nullable
+
+entity "TaiKhoan" as TK #FFE0B2 {
+  * id : bigint <<PK>>
   --
   email : varchar(255) <<U>>
   matKhau : varchar(255)
-  vaiTro : varchar(50)
-  trangThaiTaiKhoan : int
   refreshToken : text <<N>>
+  vaiTro : varchar(50) <<N>>
+  trangThaiTaiKhoan : int <<N>>
   gioiTinh : int <<N>>
   ngaySinh : date <<N>>
   diaChi : varchar(255) <<N>>
   anhDaiDien : varchar(255) <<N>>
-  ngayTao : datetime
-  ngayCapNhat : datetime
+  ngayTao : datetime <<N>>
+  ngayCapNhat : datetime <<N>>
 }
 
-entity "ChuyenKhoa" as CK #FFEFD5 {
-  * **id** : bigint <<PK>>
+entity "ChuyenKhoa" as CK #FFE0B2 {
+  * id : bigint <<PK>>
   --
   tenChuyenKhoa : varchar(120)
   anhChuyenKhoa : varchar(255) <<N>>
@@ -29,76 +45,76 @@ entity "ChuyenKhoa" as CK #FFEFD5 {
   icon : varchar(50) <<N>>
 }
 
-entity "BacSi" as BS #FFEFD5 {
-  * **id** : bigint <<PK>>
+entity "BacSi" as BS #FFE0B2 {
+  * id : bigint <<PK>>
   --
   hocViChucDanh : varchar(120) <<N>>
   tenBacSi : varchar(120)
   moTaNgan : varchar(255) <<N>>
   moTaChiTiet : text <<N>>
-  giaKham : decimal(10, 2)
-  taiKhoanId : bigint <<FK>> <<U>>
-  chuyenKhoaId : bigint <<FK>>
+  giaKham : decimal(10,2) <<N>>
+  taiKhoanId : bigint <<FK>> <<U>> <<N>>
+  chuyenKhoaId : bigint <<FK>> <<N>>
 }
 
-entity "BenhNhan" as BN #FFEFD5 {
-  * **id** : bigint <<PK>>
+entity "BenhNhan" as BN #FFE0B2 {
+  * id : bigint <<PK>>
   --
   hoTen : varchar(120)
   soDienThoai : varchar(20) <<N>>
   emailLienHe : varchar(255) <<N>>
-  taiKhoanId : bigint <<FK>> <<U>>
+  taiKhoanId : bigint <<FK>> <<U>> <<N>>
 }
 
-entity "KhungGio" as KG #FFEFD5 {
-  * **id** : bigint <<PK>>
+entity "KhungGio" as KG #FFE0B2 {
+  * id : bigint <<PK>>
   --
   gioBatDau : time
   gioKetThuc : time
 }
 
-entity "LichLamViecBacSi" as LLV #FFEFD5 {
-  * **id** : bigint <<PK>>
+entity "LichLamViecBacSi" as LLV #FFE0B2 {
+  * id : bigint <<PK>>
   --
   ngayLamViec : date
-  soBenhNhanHienTai : int
-  soBenhNhanToiDa : int
-  sanSang : int
-  bacSiId : bigint <<FK>>
-  khungGioId : bigint <<FK>>
+  soBenhNhanHienTai : int <<N>>
+  soBenhNhanToiDa : int <<N>>
+  sanSang : int <<N>>
+  bacSiId : bigint <<FK>> <<N>>
+  khungGioId : bigint <<FK>> <<N>>
 }
 
-entity "HinhThucThanhToan" as HTTT #FFEFD5 {
-  * **id** : bigint <<PK>>
+entity "HinhThucThanhToan" as HTTT #FFE0B2 {
+  * id : bigint <<PK>>
   --
   tenHinhThuc : varchar(120)
-  maLoai : varchar(50) <<U>>
+  maLoai : varchar(20)
 }
 
-entity "DatLich" as DL #FFEFD5 {
-  * **id** : bigint <<PK>>
+entity "DatLich" as DL #FFE0B2 {
+  * id : bigint <<PK>>
   --
   ngayDat : date
   gioBatDau : time
   gioKetThuc : time
   lyDoKham : varchar(255) <<N>>
-  giaKham : decimal(10, 2)
-  trangThai : int
-  trangThaiThanhToan : int
-  bacSiId : bigint <<FK>>
-  benhNhanId : bigint <<FK>>
-  hinhThucThanhToanId : bigint <<FK>>
-  lichLamViecId : bigint <<FK>>
-  ..
-  **UNIQUE**(bacSiId, ngayDat, gioBatDau)
+  giaKham : decimal(10,2) <<N>>
+  trangThai : int <<N>>
+  trangThaiThanhToan : int <<N>>
+  bacSiId : bigint <<FK>> <<N>>
+  benhNhanId : bigint <<FK>> <<N>>
+  hinhThucThanhToanId : bigint <<FK>> <<N>>
+  lichLamViecId : bigint <<FK>> <<N>>
+  --
+  UNIQUE(bacSiId, ngayDat, gioBatDau)
 }
 
-entity "GiaoDich" as GD #E6E6FA {
-  * **id** : bigint <<PK>>
+entity "GiaoDich" as GD #FFE0B2 {
+  * id : bigint <<PK>>
   --
   datLichId : bigint <<FK>>
-  loaiGiaoDich : varchar(50)
-  soTien : decimal(10, 2)
+  loaiGiaoDich : varchar(20)
+  soTien : decimal(10,2)
   maGiaoDichVNP : varchar(100) <<N>>
   maThamChieu : varchar(100) <<N>>
   trangThai : int
@@ -106,49 +122,49 @@ entity "GiaoDich" as GD #E6E6FA {
   ngayCapNhat : datetime
 }
 
-entity "DonThuoc" as DT #FFEFD5 {
-  * **id** : bigint <<PK>>
+entity "DonThuoc" as DT #FFE0B2 {
+  * id : bigint <<PK>>
   --
   datLichId : bigint <<FK>> <<U>>
-  chanDoan : varchar(255) <<N>>
+  ngayTao : datetime <<N>>
+  chanDoan : text <<N>>
   ghiChu : text <<N>>
-  tongTien : decimal(10, 2)
-  ngayTao : datetime
+  tongTien : decimal(10,2) <<N>>
 }
 
-entity "ChiTietDonThuoc" as CTDT #F0FFF0 {
-  * **id** : bigint <<PK>>
+entity "ChiTietDonThuoc" as CTDT #FFE0B2 {
+  * id : bigint <<PK>>
   --
   donThuocId : bigint <<FK>>
   tenThuoc : varchar(255)
-  soLuong : int
-  donGia : decimal(10, 2)
+  soLuong : int <<N>>
+  donGia : decimal(10,2) <<N>>
   lieuDung : varchar(255) <<N>>
   ghiChu : varchar(255) <<N>>
 }
 
-entity "CauHoiThuongGap" as FAQ #FFEFD5 {
-  * **id** : bigint <<PK>>
+entity "CauHoiThuongGap" as FAQ #FFE0B2 {
+  * id : bigint <<PK>>
   --
-  cauHoi : varchar(255)
-  traLoi : text
-  dangHoatDong : int
+  cauHoi : varchar(255) <<N>>
+  traLoi : text <<N>>
+  dangHoatDong : int <<N>>
 }
 
-' ============================
-' QUAN HỆ
-' ============================
-TK ||--o| BS : "1 — 0..1"
-TK ||--o| BN : "1 — 0..1"
-CK ||--o{ BS : "1 — N"
-BS ||--o{ LLV : "1 — N"
-KG ||--o{ LLV : "1 — N"
-BS ||--o{ DL : "1 — N"
-BN ||--o{ DL : "1 — N"
-HTTT ||--o{ DL : "1 — N"
-LLV ||--o{ DL : "1 — N"
-DL ||--o{ GD : "1 — N"
-DL ||--o| DT : "1 — 1"
-DT ||--o{ CTDT : "1 — N"
+TK   ||..o| BS
+TK   ||..o| BN
+
+CK   ||..o{ BS
+BS   ||..o{ LLV
+KG   ||..o{ LLV
+
+BS   ||..o{ DL
+BN   ||..o{ DL
+HTTT ||..o{ DL
+LLV  ||..o{ DL
+
+DL   ||..o{ GD
+DL   ||..o| DT
+DT   ||..|{ CTDT
 
 @enduml

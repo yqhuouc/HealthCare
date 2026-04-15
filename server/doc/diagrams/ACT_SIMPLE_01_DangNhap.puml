@@ -1,0 +1,43 @@
+@startuml ACT_SIMPLE_DangNhap
+
+skinparam conditionStyle diamond
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Người dùng|
+start
+:Truy cập vào trang đăng nhập;
+:Nhập email và mật khẩu;
+:Gửi yêu cầu đăng nhập;
+
+|Hệ thống|
+:Kiểm tra dữ liệu đầu vào;
+if (Dữ liệu hợp lệ?) then (Có)
+  :Xác thực tài khoản;
+  if (Tài khoản hợp lệ?) then (Có)
+    :Tạo phiên đăng nhập;
+    :Trả kết quả thành công;
+  else (Không)
+    :Trả thông báo sai thông tin đăng nhập;
+    stop
+  endif
+else (Không)
+  :Trả thông báo lỗi dữ liệu;
+  stop
+endif
+
+|Người dùng|
+:Nhận kết quả đăng nhập;
+:Điều hướng đến màn hình phù hợp;
+stop
+@enduml

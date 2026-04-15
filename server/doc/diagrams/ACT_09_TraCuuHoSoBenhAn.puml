@@ -1,0 +1,45 @@
+@startuml Activity_TraCuuHoSoBenhAn
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam conditionStyle diamond
+skinparam ConditionEndStyle hline
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Bac si / Admin|
+start
+:Mo man hinh tra cuu ho so benh an;
+:Nhap ma benh nhan hoac chon lich hen;
+
+|May chu / Backend|
+:Xac thuc JWT;
+:Kiem tra quyen (admin hoac bac_si);
+:Lay danh sach DatLich theo benh nhan;
+:Lay DonThuoc/ChiTietDonThuoc theo DatLich;
+
+if (Tim thay du lieu?) then (Khong)
+  :Tra ket qua rong;
+  |Bac si / Admin|
+  :Thong bao khong tim thay ho so;
+  stop
+else (Co)
+endif
+
+|May chu / Backend|
+:Tra ho so benh an tong hop;
+
+|Bac si / Admin|
+:Xem thong tin kham, chan doan,\ndon thuoc va lich su;
+stop
+@enduml

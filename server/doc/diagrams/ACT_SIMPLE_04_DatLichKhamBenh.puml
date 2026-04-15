@@ -1,0 +1,40 @@
+@startuml ACT_SIMPLE_DatLichKhamBenh
+
+skinparam conditionStyle diamond
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Bệnh nhân|
+start
+:Chọn chuyên khoa và bác sĩ;
+:Chọn ngày giờ khám;
+:Nhập lý do khám;
+:Gửi yêu cầu đặt lịch;
+
+|Hệ thống|
+:Kiểm tra lịch trống và thông tin;
+if (Dữ liệu hợp lệ?) then (Có)
+  :Tạo lịch hẹn;
+  :Cập nhật trạng thái lịch;
+  :Trả kết quả thành công;
+  
+  |Bệnh nhân|
+  :Nhận kết quả và mã lịch;
+  stop
+else (Không)
+  |Hệ thống|
+  :Thông báo lỗi (Trùng lịch/Sai thông tin);
+  stop
+endif
+
+@enduml

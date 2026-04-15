@@ -1,0 +1,37 @@
+@startuml ACT_SIMPLE_CapNhatThongTinCaNhan
+
+skinparam conditionStyle diamond
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Người dùng|
+start
+:Mở trang thông tin cá nhân;
+:Chỉnh sửa thông tin;
+:Gửi yêu cầu cập nhật;
+
+|Hệ thống|
+:Xác thực đăng nhập;
+:Kiểm tra dữ liệu cập nhật;
+if (Dữ liệu hợp lệ?) then (Có)
+  :Lưu thông tin mới;
+  :Thông báo cập nhật thành công;
+else (Không)
+  :Thông báo lỗi dữ liệu;
+  stop
+endif
+
+|Người dùng|
+:Nhận kết quả cập nhật;
+stop
+@enduml

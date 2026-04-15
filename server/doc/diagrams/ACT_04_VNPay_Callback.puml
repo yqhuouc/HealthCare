@@ -1,32 +1,51 @@
 @startuml Activity_VNPay_Callback
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam conditionStyle diamond
+skinparam ConditionEndStyle hline
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
 |VNPay Gateway|
 start
-:Gửi kết quả thanh toán qua Hash/URL;
+:Gui ket qua thanh toan qua IPN/Return URL;
 
-|Máy chủ / Backend|
-:Nhận IPN hoặc Callback từ VNPay;
-:Xác thực chữ ký (Checksum);
+|May chu / Backend|
+:Nhan callback tu VNPay;
+:Xac thuc chu ky checksum;
 
-if (Chữ ký hợp lệ?) then (Không)
-  :Trả về lỗi "Invalid Signature";
+if (Chu ky hop le?) then (Khong)
+  :Tra loi Invalid Signature;
   stop
-else (Có)
-  :Tìm kiếm GiaoDich theo mã tham chiếu;
-  if (Giao dịch tồn tại?) then (Không)
-    :Trả về lỗi "Order not found";
-    stop
-  else (Có)
-    :Kiểm tra trạng thái VNPay trả về;
-    if (Thành công (code=00)?) then (Có)
-       :Cập nhật GiaoDich (trangThai=1: Thành công);
-       :Cập nhật DatLich (trangThaiThanhToan=1, trangThai=1: Xác nhận);
-       :Gửi email xác nhận cho bệnh nhân;
-    else (Thất bại)
-       :Cập nhật GiaoDich (trangThai=2: Thất bại);
-       :Giữ nguyên trạng thái DatLich;
-    endif
-    :Trả kết quả cho VNPay (Xác nhận nhận IPN);
-  endif
 endif
+
+:Tim GiaoDich theo ma tham chieu;
+if (Giao dich ton tai?) then (Khong)
+  :Tra loi Order not found;
+  stop
+endif
+
+:Kiem tra ma ket qua VNPay;
+if (Thanh cong code=00?) then (Co)
+  :Cap nhat GiaoDich thanh cong;
+  :Cap nhat DatLich thanh toan=1,\ntrangThai=Da xac nhan;
+  :Gui thong bao/xac nhan cho benh nhan;
+else (Khong)
+  :Cap nhat GiaoDich that bai;
+  :Giu nguyen DatLich;
+endif
+
+:Tra ket qua xac nhan da nhan IPN cho VNPay;
 stop
 @enduml

@@ -1,0 +1,47 @@
+@startuml Activity_XemThongKe
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam conditionStyle diamond
+skinparam ConditionEndStyle hline
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Admin / Frontend|
+start
+:Mo trang Dashboard thong ke;
+:Chon loai thong ke\n(tong quan, lich hen, doanh thu);
+
+|May chu / Backend|
+:Xac thuc JWT;
+:Kiem tra quyen admin;
+if (Khong du quyen?) then (Co)
+  :Tra loi 403;
+  stop
+else (Khong)
+endif
+
+if (Loai = tong quan?) then (Co)
+  :Goi thongKeService.tongQuan();
+elseif (Loai = lich hen?)
+  :Goi thongKeService.thongKeLichHen(query);
+else (doanh thu)
+  :Goi thongKeService.thongKeDoanhThuTheoThang(nam);
+endif
+
+:Tra du lieu thong ke;
+
+|Admin / Frontend|
+:Ve bieu do/so lieu tren dashboard;
+stop
+@enduml

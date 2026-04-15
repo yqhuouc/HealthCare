@@ -1,32 +1,50 @@
-@startuml Activity_KheDon
-|Bác sĩ|
+@startuml Activity_KeDonThuoc
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam conditionStyle diamond
+skinparam ConditionEndStyle hline
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Bac si|
 start
-:Đăng nhập vào hệ thống;
-:Xem danh sách lịch hẹn "Đã xác nhận";
-:Chọn một bệnh nhân đến khám;
-:Tiến hành khám lâm sàng;
-:Cập nhật trạng thái lịch hẹn -> "Đã khám";
+:Dang nhap vao he thong;
+:Xem danh sach lich hen da xac nhan;
+:Chon mot benh nhan den kham;
+:Tien hanh kham lam sang;
+:Cap nhat trang thai lich hen thanh Da kham;
 
-|Máy chủ / Backend|
-:Lưu trạng thái mới;
-:Mở form kê đơn cho bác sĩ;
+|May chu / Backend|
+:Luu trang thai moi;
+:Mo form ke don cho bac si;
 
-|Bác sĩ|
-:Nhập **Chẩn đoán** và **Ghi chú**;
+|Bac si|
+:Nhap chan doan va ghi chu;
 repeat
-  :Chọn thuốc từ danh sách;
-  :Nhập số lượng, đơn giá, liều dùng;
-  :Thêm vào danh mục đơn thuốc;
-backward:Tiếp tục kê thêm thuốc;
-repeat while (Cần thêm thuốc?) is (Có) not (Không)
-:Gửi đơn thuốc hoàn tất;
+  :Chon thuoc tu danh sach;
+  :Nhap so luong, don gia, lieu dung;
+  :Them vao danh muc don thuoc;
+backward:Can them thuoc khac;
+repeat while (Can them thuoc?) is (Co) not (Khong)
+:Gui don thuoc hoan tat;
 
-|Máy chủ / Backend|
-:Tính toán **Tổng tiền**;
-:Lưu DonThuoc và các ChiTietDonThuoc;
-:Trả về kết quả thành công;
+|May chu / Backend|
+:Tinh toan tong tien;
+:Luu DonThuoc va ChiTietDonThuoc;
+:Tra ve ket qua thanh cong;
 
-|Bác sĩ|
-:Thông báo cho bệnh nhân;
+|Bac si|
+:Thong bao cho benh nhan;
 stop
 @enduml

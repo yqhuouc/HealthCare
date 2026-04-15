@@ -1,0 +1,44 @@
+@startuml Activity_HuyLichHenBenhNhan
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam conditionStyle diamond
+skinparam ConditionEndStyle hline
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Benh nhan / Frontend|
+start
+:Mo lich su lich hen;
+:Chon mot lich hen can huy;
+:Bam Huy lich hen;
+
+|May chu / Backend|
+:Xac thuc JWT;
+:Kiem tra quyen voi lich hen\n(chi chu lich hoac admin);
+:Kiem tra trang thai hien tai;
+if (Khong du dieu kien huy?) then (Co)
+  :Tra loi 400/403;
+  stop
+else (Khong)
+endif
+
+:Cap nhat trang thai lich hen = Da huy\n(hoac xoa theo nghiep vu hien hanh);
+:Neu da thanh toan online,\nchuyen xu ly hoan tien (neu co);
+:Tra ket qua huy thanh cong;
+
+|Benh nhan / Frontend|
+:Hien thi thong bao Da huy lich;
+:Lam moi danh sach lich hen;
+stop
+@enduml

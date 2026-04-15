@@ -1,0 +1,37 @@
+@startuml ACT_SIMPLE_DangKyTaiKhoan
+
+skinparam conditionStyle diamond
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Người dùng|
+start
+:Mở form đăng ký;
+:Nhập thông tin cá nhân;
+:Gửi yêu cầu đăng ký;
+
+|Hệ thống|
+:Kiểm tra dữ liệu đăng ký;
+:Kiểm tra email đã tồn tại;
+if (Dữ liệu hợp lệ và chưa tồn tại?) then (Có)
+  :Tạo tài khoản bệnh nhân;
+  :Trả thông báo đăng ký thành công;
+else (Không)
+  :Trả thông báo lỗi;
+  stop
+endif
+
+|Người dùng|
+:Nhận kết quả và đăng nhập;
+stop
+@enduml

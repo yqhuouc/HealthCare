@@ -1,0 +1,49 @@
+@startuml Activity_DangKyLichLamViec
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam conditionStyle diamond
+skinparam ConditionEndStyle hline
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Bac si / Admin|
+start
+:Chon ngay lam viec, khung gio,\nso benh nhan toi da;
+:Gui yeu cau tao lich lam viec;
+
+|May chu / Backend|
+:Xac thuc JWT;
+:Kiem tra quyen (admin hoac bac_si);
+:Validate lichLamViecSchema;
+if (Hop le?) then (Khong)
+  :Tra loi 400;
+  stop
+else (Co)
+endif
+
+:Kiem tra bac si/khung gio ton tai;
+:Kiem tra trung lich;
+if (Trung lich?) then (Co)
+  :Tra loi 409;
+  stop
+else (Khong)
+endif
+
+:Tao LichLamViecBacSi;
+:Tra 201 Tao lich thanh cong;
+
+|Bac si / Admin|
+:Cap nhat giao dien lich;
+stop
+@enduml

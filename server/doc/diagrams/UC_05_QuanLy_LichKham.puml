@@ -1,4 +1,4 @@
-@startuml UseCase_ChiTiet_LichKhamBacSi
+@startuml UseCase_ChiTiet_QuanLyLichKham
 left to right direction
 skinparam actorStyle awesome
 skinparam ranksep 100
@@ -13,27 +13,26 @@ skinparam usecase {
 ' ============================
 ' ACTOR
 ' ============================
-actor "Bác sĩ" as BS #LightGreen
+actor "Quản trị viên" as AD #LightCoral
 
 ' ============================
 ' USE CASE CHÍNH (TÂM ĐIỂM)
 ' ============================
-(Khám bệnh và Kê đơn\n--\n**extension points**\nXem danh sách hẹn khám\nThực hiện khám bệnh\nKê đơn thuốc điện tử) as Main #DeepSkyBlue
+(Quản lý lịch khám hệ thống\n--\n**extension points**\nXem danh sách lịch khám\nCập nhật trạng thái) as Main #DeepSkyBlue
 
 ' ============================
 ' CÁC USE CASE MỞ RỘNG (DÀN SANG PHẢI)
 ' ============================
-(Xem danh sách lịch hẹn) as UC1
-(Thực hiện khám bệnh) as UC2
-(Kê đơn thuốc điện tử) as UC3
+(Xem danh sách lịch khám) as UC1
+(Cập nhật trạng thái lịch hẹn) as UC2
 
 ' ============================
 ' KẾT NỐI
 ' ============================
-BS --- Main
+AD --- Main
 
 Main <.. UC1 : <<Extend>>
 Main <.. UC2 : <<Extend>>
-Main <.. UC3 : <<Extend>>
+
 
 @enduml

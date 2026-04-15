@@ -1,0 +1,37 @@
+@startuml ACT_SIMPLE_DangKyLichLamViec
+
+skinparam conditionStyle diamond
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Bác sĩ|
+start
+:Mở quản lý lịch làm việc;
+:Chọn ngày và khung giờ;
+:Gửi yêu cầu đăng ký lịch;
+
+|Hệ thống|
+:Kiểm tra quyền và dữ liệu;
+:Kiểm tra trùng lịch;
+if (Lịch hợp lệ?) then (Có)
+  :Lưu lịch làm việc;
+  :Thông báo tạo lịch thành công;
+else (Không)
+  :Thông báo lỗi trùng/không hợp lệ;
+  stop
+endif
+
+|Bác sĩ|
+:Xem lại lịch đã đăng ký;
+stop
+@enduml

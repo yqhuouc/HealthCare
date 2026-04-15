@@ -1,0 +1,37 @@
+@startuml ACT_SIMPLE_HuyLichHenBenhNhan
+
+skinparam conditionStyle diamond
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Bệnh nhân|
+start
+:Mở danh sách lịch hẹn;
+:Chọn lịch hẹn cần hủy;
+:Gửi yêu cầu hủy lịch;
+
+|Hệ thống|
+:Xác thực người dùng;
+:Kiểm tra điều kiện hủy lịch;
+if (Được phép hủy?) then (Có)
+  :Cập nhật trạng thái lịch hẹn đã hủy;
+  :Thông báo hủy thành công;
+else (Không)
+  :Thông báo không thể hủy lịch;
+  stop
+endif
+
+|Bệnh nhân|
+:Nhận kết quả hủy lịch;
+stop
+@enduml

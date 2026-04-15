@@ -1,0 +1,48 @@
+@startuml Activity_DangKyTaiKhoan
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam conditionStyle diamond
+skinparam ConditionEndStyle hline
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Nguoi dung / Frontend|
+start
+:Nhap ho ten, email, mat khau,\nso dien thoai, thong tin co ban;
+:Bam nut Dang ky;
+
+|May chu / Backend|
+:Validate du lieu registerSchema;
+if (Du lieu hop le?) then (Khong)
+  :Tra loi 400;
+  stop
+else (Co)
+endif
+
+:Kiem tra email da ton tai?;
+if (Email da ton tai) then (Co)
+  :Tra loi 409;
+  stop
+else (Khong)
+endif
+
+:Hash mat khau;
+:Tao TaiKhoan + BenhNhan (transaction);
+:Tra 201 Dang ky thanh cong;
+
+|Nguoi dung / Frontend|
+:Thong bao thanh cong;
+:Dieu huong sang trang Dang nhap;
+stop
+@enduml

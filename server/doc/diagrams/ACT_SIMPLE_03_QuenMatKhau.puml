@@ -1,0 +1,38 @@
+@startuml ACT_SIMPLE_QuenMatKhau
+
+skinparam conditionStyle diamond
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Người dùng|
+start
+:Chọn chức năng quên mật khẩu;
+:Nhập email tài khoản;
+:Gửi yêu cầu khôi phục;
+
+|Hệ thống|
+:Kiểm tra email hợp lệ;
+if (Tài khoản tồn tại?) then (Có)
+  :Gửi hướng dẫn đặt lại mật khẩu;
+  :Chờ người dùng đặt mật khẩu mới;
+  :Cập nhật mật khẩu;
+  :Thông báo thành công;
+else (Không)
+  :Thông báo không tìm thấy tài khoản;
+  stop
+endif
+
+|Người dùng|
+:Nhận kết quả;
+stop
+@enduml

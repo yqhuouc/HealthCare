@@ -1,0 +1,37 @@
+@startuml ACT_SIMPLE_ThemMoiChuyenKhoa
+
+skinparam conditionStyle diamond
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Admin|
+start
+:Mở quản lý chuyên khoa;
+:Nhập thông tin chuyên khoa mới;
+:Gửi yêu cầu tạo mới;
+
+|Hệ thống|
+:Xác thực và phân quyền admin;
+:Kiểm tra dữ liệu;
+if (Dữ liệu hợp lệ?) then (Có)
+  :Tạo chuyên khoa mới;
+  :Trả thông báo thành công;
+else (Không)
+  :Trả thông báo lỗi;
+  stop
+endif
+
+|Admin|
+:Cập nhật danh sách chuyên khoa;
+stop
+@enduml

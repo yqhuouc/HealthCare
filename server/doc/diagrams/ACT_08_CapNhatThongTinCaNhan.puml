@@ -1,0 +1,41 @@
+@startuml Activity_CapNhatThongTinCaNhan
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam conditionStyle diamond
+skinparam ConditionEndStyle hline
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Nguoi dung da dang nhap|
+start
+:Mo trang Ho so ca nhan;
+:Nhap thong tin can cap nhat;
+:Bam Luu;
+
+|May chu / Backend|
+:Xac thuc JWT;
+:Validate capNhatHoSoSchema;
+if (Du lieu hop le?) then (Khong)
+  :Tra loi 400;
+  stop
+else (Co)
+endif
+
+:Cap nhat TaiKhoan (gioiTinh,\nngaySinh, diaChi,...);
+:Tra ket qua cap nhat thanh cong;
+
+|Nguoi dung da dang nhap|
+:Hien thi thong bao thanh cong;
+stop
+@enduml

@@ -1,0 +1,36 @@
+@startuml ACT_SIMPLE_XemThongKe
+
+skinparam conditionStyle diamond
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Admin|
+start
+:Mở trang thống kê;
+:Chọn loại thống kê;
+:Gửi yêu cầu lấy dữ liệu;
+
+|Hệ thống|
+:Xác thực và kiểm tra quyền admin;
+if (Đủ quyền?) then (Có)
+  :Tổng hợp dữ liệu thống kê;
+  :Trả dữ liệu cho dashboard;
+else (Không)
+  :Trả thông báo không đủ quyền;
+  stop
+endif
+
+|Admin|
+:Xem biểu đồ và số liệu;
+stop
+@enduml

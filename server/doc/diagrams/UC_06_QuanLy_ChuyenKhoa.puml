@@ -1,4 +1,4 @@
-@startuml UseCase_ChiTiet_QuanLyFAQ
+@startuml UseCase_ChiTiet_QuanLyChuyenKhoa
 left to right direction
 skinparam actorStyle awesome
 skinparam ranksep 100
@@ -18,14 +18,15 @@ actor "Quản trị viên" as AD #LightCoral
 ' ============================
 ' USE CASE CHÍNH (TÂM ĐIỂM)
 ' ============================
-(Quản lý câu hỏi thường gặp\n--\n**extension points**\nThêm câu hỏi\nSửa câu hỏi\nXóa câu hỏi) as Main #DeepSkyBlue
+(Quản lý Chuyên khoa\n--\n**extension points**\nXem thông tin chuyên khoa\nThêm chuyên khoa\nSửa chuyên khoa\nXóa chuyên khoa) as Main #DeepSkyBlue
 
 ' ============================
 ' CÁC USE CASE MỞ RỘNG (DÀN SANG PHẢI)
 ' ============================
-(Thêm câu hỏi mới) as UC1
-(Sửa câu hỏi) as UC2
-(Xóa câu hỏi) as UC3
+(Xem thông tin chuyên khoa) as UC1
+(Thêm chuyên khoa mới) as UC2
+(Sửa chuyên khoa) as UC3
+(Xóa chuyên khoa) as UC4
 
 ' ============================
 ' KẾT NỐI
@@ -35,5 +36,6 @@ AD --- Main
 Main <.. UC1 : <<Extend>>
 Main <.. UC2 : <<Extend>>
 Main <.. UC3 : <<Extend>>
+Main <.. UC4 : <<Extend>>
 
 @enduml

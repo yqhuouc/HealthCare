@@ -1,0 +1,38 @@
+@startuml Activity_QuenMatKhau
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam conditionStyle diamond
+skinparam ConditionEndStyle hline
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Nguoi dung / Frontend|
+start
+:Bam Quen mat khau;
+:Nhap email can khoi phuc;
+
+|May chu / Backend|
+:Kiem tra endpoint ho tro quen mat khau?;
+if (Da trien khai?) then (Khong)
+  :Tra thong bao:\nChuc nang chua duoc trien khai\ntrong he thong hien tai;
+  stop
+else (Co)
+  :Tao token OTP/reset;
+  :Gui email reset;
+  :Nguoi dung dat mat khau moi;
+  :Cap nhat mat khau moi (hash);
+  :Thong bao thanh cong;
+  stop
+endif
+@enduml

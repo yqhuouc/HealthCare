@@ -1,36 +1,64 @@
 @startuml Activity_DatLich
-|Bệnh nhân / Frontend|
+
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam conditionStyle diamond
+skinparam ConditionEndStyle hline
+
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  FontColor #0D47A1
+  RoundCorner 15
+}
+
+skinparam activityDiamondBackgroundColor #BBDEFB
+skinparam activityDiamondBorderColor #1E88E5
+skinparam activityDiamondFontColor #0D47A1
+skinparam ArrowColor #1E88E5
+
+|Benh nhan / Frontend|
 start
-:Xem danh sách chuyên khoa;
-:Chọn chuyên khoa;
-:Xem danh sách bác sĩ\ntheo chuyên khoa;
-:Chọn bác sĩ;
-:Xem thông tin chi tiết\nbác sĩ và lịch trống;
-:Chọn **ngày** và **khung giờ**;
-:Nhập **lý do khám**;
-:Chọn **hình thức thanh toán**;
-:Gửi yêu cầu đặt lịch\n(kèm JWT token);
+:Xem danh sach chuyen khoa;
+:Chon chuyen khoa;
+:Xem danh sach bac si theo chuyen khoa;
+:Chon bac si;
+:Xem thong tin chi tiet bac si va lich trong;
+:Chon ngay va khung gio;
+:Nhap ly do kham;
+:Chon hinh thuc thanh toan;
+:Gui yeu cau dat lich (kem JWT token);
 
-|Máy chủ / Backend|
-:Xác thực JWT & Validate dữ liệu;
-:Kiểm tra Bác sĩ, Bệnh nhân & Lịch làm việc;
-:Kiểm tra trùng lịch (Unique constraint);
+|May chu / Backend|
+:Xac thuc JWT va validate du lieu;
+:Kiem tra bac si, benh nhan va lich lam viec;
+:Kiem tra trung lich (unique constraint);
 
-if (Hình thức thanh toán?) then (Offline)
-  :Tạo DatLich (trangThai=0, ttThanhToan=0);
-  :Trả về 201 Created;
-  |Bệnh nhân / Frontend|
-  :Hiển thị "Đặt lịch thành công";
+if (Hinh thuc thanh toan?) then (Offline)
+  :Tao DatLich (trangThai=0, trangThaiThanhToan=0);
+  :Tra ve 201 Created;
+  |Benh nhan / Frontend|
+  :Nhan ket qua dat lich;
+  :Hien thi Dat lich thanh cong;
   stop
 else (VNPay)
-  :Tạo DatLich (trangThai=0, ttThanhToan=0);
-  :Tạo GiaoDich (trangThai=0: Chờ);
-  :Tạo URL thanh toán VNPay;
-  :Trả về URL VNPay cho Frontend;
-  |Bệnh nhân / Frontend|
-  :Chuyển hướng người dùng\nsang VNPay Gateway;
-  :Người dùng thực hiện thanh toán;
-  :VNPay chuyển hướng về Callback URL;
-  detach
+  |May chu / Backend|
+  :Tao DatLich (trangThai=0, trangThaiThanhToan=0);
+  :Tao GiaoDich (trangThai=0: Cho);
+  :Goi POST /api/vnpay/create-payment;
+  :Tao URL thanh toan VNPay;
+  :Tra ve URL VNPay cho Frontend;
+  |Benh nhan / Frontend|
+  :Nhan URL thanh toan;
+  :Chuyen huong sang VNPay Gateway;
+  :Nguoi dung thuc hien thanh toan;
+  :VNPay redirect ve /payment/result;
+  :Frontend goi POST /api/vnpay/verify\nde xac thuc va dong bo DB;
+  if (Thanh toan thanh cong?) then (Co)
+    :Hien thi Thanh toan thanh cong;
+  else (Khong)
+    :Hien thi Giao dich that bai;
+  endif
+  stop
 endif
 @enduml
