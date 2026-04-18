@@ -1,4 +1,4 @@
-@startuml Activity_CapNhatThongTinCaNhan
+@startuml Activity_CapNhatThongTinCaNhan_V2
 
 skinparam shadowing false
 skinparam backgroundColor white
@@ -9,7 +9,8 @@ skinparam activity {
   BackgroundColor #E3F2FD
   BorderColor #1E88E5
   FontColor #0D47A1
-  RoundCorner 15
+  FontSize 13
+  RoundCorner 20
 }
 
 skinparam activityDiamondBackgroundColor #BBDEFB
@@ -17,25 +18,27 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Nguoi dung|
+|Người dùng|
 start
-:Mo trang Ho so ca nhan;
-:Nhap thong tin can cap nhat;
-:Bam Luu;
+:Mở trang Hồ sơ cá nhân;
+:Nhập thông tin cần thay đổi\n(Họ tên, ngày sinh, địa chỉ...);
+:Bấm nút "Lưu thay đổi";
 
-|He thong|
-:Xac thuc JWT;
-:Validate capNhatHoSoSchema;
-if (Du lieu hop le?) then (Khong)
-  :Tra loi 400;
+|Hệ thống|
+:Xác thực JWT (Authentication);
+:Validate dữ liệu (userUpdateSchema);
+
+if (Dữ liệu hợp lệ?) then (Không)
+  :Trả về mã 400 (Bad Request);
   stop
-else (Co)
+else (Có)
+  :Tìm kiếm tài khoản theo UserID;
+  :Cập nhật Database\n(Thông tin tài khoản & hồ sơ);
+  :Trả kết quả cập nhật thành công;
 endif
 
-:Cap nhat TaiKhoan (gioiTinh,\nngaySinh, diaChi,...);
-:Tra ket qua cap nhat thanh cong;
-
-|Nguoi dung|
-:Hien thi thong bao thanh cong;
+|Người dùng|
+:Hiển thị thông báo thành công;
+:Cập nhật thông tin trên giao diện;
 stop
 @enduml

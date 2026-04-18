@@ -1,0 +1,26 @@
+@startuml SYS_SEQ_12_Xem_ChuyenKhoa
+skinparam sequenceArrowThickness 1.5
+
+mainframe sd SYS_SEQ_12_Xem_ChuyenKhoa
+
+actor "Người dùng" as User
+participant "Hệ thống" as Sys #SkyBlue
+participant "Cơ sở dữ liệu" as DB #SkyBlue
+
+User -> Sys : 1: Yêu cầu xem danh sách chuyên khoa
+activate Sys
+
+Sys -> DB : 1.1: Truy vấn tất cả chuyên khoa
+activate DB
+DB --> Sys : 1.2: Trả về dữ liệu khoa
+deactivate DB
+
+alt Thành công
+    Sys --> User : 1.3: Hiển thị danh mục chuyên khoa
+else Lỗi
+    Sys --> User : 1.4: Hiển thị thông báo lỗi
+end
+
+deactivate Sys
+
+@enduml

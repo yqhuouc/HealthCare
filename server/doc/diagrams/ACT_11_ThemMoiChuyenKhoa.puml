@@ -1,4 +1,4 @@
-@startuml Activity_ThemMoiChuyenKhoa
+@startuml Activity_ThemMoiChuyenKhoa_V2
 
 skinparam shadowing false
 skinparam backgroundColor white
@@ -9,7 +9,8 @@ skinparam activity {
   BackgroundColor #E3F2FD
   BorderColor #1E88E5
   FontColor #0D47A1
-  RoundCorner 15
+  FontSize 13
+  RoundCorner 20
 }
 
 skinparam activityDiamondBackgroundColor #BBDEFB
@@ -17,26 +18,33 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Admin|
+|Quản trị viên (Admin)|
 start
-:Mo man hinh Quan ly chuyen khoa;
-:Nhap ten, mo ta, thoi luong kham, icon;
-:Bam Them moi;
+:Mở màn hình Quản lý chuyên khoa;
+:Nhập Tên, Mô tả, Thời lượng khám & Icon;
+:Bấm nút "Thêm mới";
 
-|He thong|
-:Xac thuc JWT;
-:Kiem tra quyen admin;
-:Validate chuyenKhoaSchema;
-if (Du lieu hop le?) then (Khong)
-  :Tra loi 400;
+|Hệ thống|
+:Xác thực JWT & Kiểm tra quyền Admin;
+:Validate dữ liệu (chuyenKhoaSchema);
+
+if (Dữ liệu hợp lệ?) then (Không)
+  :Trả về mã 400 (Bad Request);
   stop
-else (Co)
+else (Có)
+  :Kiểm tra tên chuyên khoa đã tồn tại?;
+  if (Đã tồn tại?) then (Có)
+    :Trả về mã 409 (Conflict);
+    stop
+  else (Không)
+    :Tạo bản ghi Chuyên Khoa mới;
+    :Lưu thông tin vào Database;
+    :Trả về mã 201 (Created);
+  endif
 endif
 
-:Tao ban ghi ChuyenKhoa;
-:Tra 201 Tao chuyen khoa thanh cong;
-
-|Admin|
-:Cap nhat danh sach chuyen khoa;
+|Quản trị viên (Admin)|
+:Cập nhật danh sách hiển thị;
+:Thông báo: "Thêm chuyên khoa thành công";
 stop
 @enduml

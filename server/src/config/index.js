@@ -11,5 +11,11 @@ module.exports = {
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
   jwtAccessExpires: process.env.JWT_ACCESS_EXPIRES || "15m",
   jwtRefreshExpires: process.env.JWT_REFRESH_EXPIRES || "7d",
+  jwtResetPasswordSecret: process.env.JWT_RESET_PASSWORD_SECRET,
+  jwtResetPasswordExpires: process.env.JWT_RESET_PASSWORD_EXPIRES || "15m",
   clientUrl: process.env.CLIENT_URL || "http://localhost:5173",
+  emailHost: process.env.EMAIL_HOST,
+  emailPort: process.env.EMAIL_PORT,
+  emailUser: process.env.EMAIL_USER,
+  emailPass: process.env.EMAIL_PASS,
 };

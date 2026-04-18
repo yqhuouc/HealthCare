@@ -65,4 +65,21 @@ export const authService = {
       "Content-Type": "multipart/form-data"
     }
   }),
+
+  /**
+   * Quên mật khẩu — gửi email chứa link reset
+   * @param {string} email
+   * @returns {{ success, message }}
+   */
+  forgotPassword: (email) =>
+    api.post("/auth/forgot-password", { email }),
+
+  /**
+   * Đặt lại mật khẩu — sử dụng token từ email
+   * @param {string} token - JWT token từ link email
+   * @param {string} matKhauMoi - Mật khẩu mới
+   * @returns {{ success, message }}
+   */
+  resetPassword: (token, matKhauMoi) =>
+    api.post("/auth/reset-password", { token, matKhauMoi }),
 };

@@ -1,4 +1,4 @@
-@startuml Activity_TraCuuHoSoBenhAn
+@startuml Activity_TraCuuHoSoBenhAn_V2
 
 skinparam shadowing false
 skinparam backgroundColor white
@@ -9,7 +9,8 @@ skinparam activity {
   BackgroundColor #E3F2FD
   BorderColor #1E88E5
   FontColor #0D47A1
-  RoundCorner 15
+  FontSize 13
+  RoundCorner 20
 }
 
 skinparam activityDiamondBackgroundColor #BBDEFB
@@ -17,29 +18,29 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Bac si/Admin|
+|Bác sĩ / Admin|
 start
-:Mo man hinh tra cuu ho so benh an;
-:Nhap ma benh nhan hoac chon lich hen;
+:Mở màn hình tra cứu hồ sơ;
+:Nhập mã bệnh nhân hoặc tên;
+:Gửi yêu cầu tra cứu;
 
-|He thong|
-:Xac thuc JWT;
-:Kiem tra quyen (admin hoac bac_si);
-:Lay danh sach DatLich theo benh nhan;
-:Lay DonThuoc/ChiTietDonThuoc theo DatLich;
+|Hệ thống|
+:Xác thực JWT & Kiểm tra quyền hạn;
+:Truy vấn danh sách Đặt lịch (Medical History);
+:Truy vấn Đơn thuốc & Kết quả chẩn đoán;
 
-if (Tim thay du lieu?) then (Khong)
-  :Tra ket qua rong;
-  |Bac si/Admin|
-  :Thong bao khong tim thay ho so;
+if (Tìm thấy dữ liệu hồ sơ?) then (Không)
+  :Trả về kết quả rỗng (Mã 200 - Empty);
+  |Bác sĩ / Admin|
+  :Thông báo: "Không có dữ liệu lịch sử";
   stop
-else (Co)
+else (Có)
+  |Hệ thống|
+  :Tổng hợp dữ liệu hồ sơ bệnh án;
+  :Trả về danh sách hồ sơ chi tiết;
 endif
 
-|He thong|
-:Tra ho so benh an tong hop;
-
-|Bac si/Admin|
-:Xem thong tin kham, chan doan,\ndon thuoc va lich su;
+|Bác sĩ / Admin|
+:Hiển thị lịch sử khám, chẩn đoán\nvà danh mục đơn thuốc;
 stop
 @enduml

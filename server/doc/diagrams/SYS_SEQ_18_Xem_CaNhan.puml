@@ -1,0 +1,24 @@
+@startuml SYS_SEQ_XemThongTinCaNhan
+title Chức năng xem thông tin cá nhân (Mức hệ thống)
+skinparam sequenceArrowThickness 2
+
+actor "Người dùng" as User
+participant "Hệ thống" as System #LightBlue
+database "Cơ sở dữ liệu" as DB #LightCoral
+
+User -> System : 1: Yêu cầu xem thông tin cá nhân
+activate System
+
+System -> DB : 1.1: Truy vấn dữ liệu người dùng
+activate DB
+DB --> System : 1.2: Trả về kết quả truy vấn
+deactivate DB
+
+alt Thành công
+    System --> User : 1.3: Hiển thị thông tin người dùng
+else Lỗi hoặc không tìm thấy
+    System --> User : 1.4: Hiển thị thông báo lỗi
+end
+
+deactivate System
+@enduml

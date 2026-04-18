@@ -47,4 +47,18 @@ const capNhatHoSoSchema = z.object({
   anhDaiDien: z.string().max(255).optional(),
 });
 
-module.exports = { registerSchema, loginSchema, doiMatKhauSchema, capNhatHoSoSchema };
+// POST /forgot-password — yêu cầu đặt lại mật khẩu
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Email không hợp lệ"),
+});
+
+// POST /reset-password — đặt lại mật khẩu bằng token JWT
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Token không được để trống"),
+  matKhauMoi: z
+    .string()
+    .min(6, "Mật khẩu mới phải có ít nhất 6 ký tự")
+    .max(50, "Mật khẩu mới tối đa 50 ký tự"),
+});
+
+module.exports = { registerSchema, loginSchema, doiMatKhauSchema, capNhatHoSoSchema, forgotPasswordSchema, resetPasswordSchema };

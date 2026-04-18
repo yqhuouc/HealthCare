@@ -1,4 +1,4 @@
-@startuml Activity_DangNhap
+@startuml Activity_DangNhap_V3
 
 skinparam shadowing false
 skinparam backgroundColor white
@@ -9,7 +9,8 @@ skinparam activity {
   BackgroundColor #E3F2FD
   BorderColor #1E88E5
   FontColor #0D47A1
-  RoundCorner 15
+  FontSize 13
+  RoundCorner 20
 }
 
 skinparam activityDiamondBackgroundColor #BBDEFB
@@ -17,52 +18,48 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Nguoi dung|
+|Người dùng|
 start
-:Nhap email va mat khau;
-:Bam nut Dang nhap;
+:Nhập Email và Mật khẩu;
+:Bấm nút Đăng nhập;
 
-|He thong|
-:Validate du lieu dau vao;
-
-if (Du lieu hop le?) then (Khong)
-  :Tra loi 400;
+|Hệ thống|
+:Validate dữ liệu đầu vào (loginSchema);
+if (Dữ liệu hợp lệ?) then (Không)
+  :Trả về mã 400 (Bad Request);
   stop
+else (Có)
+  :Tìm tài khoản theo Email;
+  if (Tài khoản tồn tại?) then (Không)
+    :Trả về mã 401 (Unauthorized);
+    stop
+  else (Có)
+    if (Tài khoản bị khóa?) then (Có)
+      :Trả về mã 403 (Forbidden);
+      stop
+    else (Không)
+      :So sánh mật khẩu (bcrypt.compare);
+      if (Mật khẩu chính xác?) then (Không)
+        :Trả về mã 401 (Unauthorized);
+        stop
+      else (Có)
+        :Tạo AccessToken & RefreshToken (JWT);
+        :Lưu RefreshToken vào Database;
+        :Thiết lập Cookie HttpOnly;
+        :Trả về thông tin User;
+      endif
+    endif
+  endif
 endif
 
-:Tim tai khoan theo email;
-
-if (Ton tai tai khoan?) then (Khong)
-  :Tra loi 401;
-  stop
-endif
-
-if (Tai khoan bi khoa?) then (Co)
-  :Tra loi 403;
-  stop
-endif
-
-:So sanh mat khau bcrypt;
-
-if (Mat khau dung?) then (Khong)
-  :Tra loi 401;
-  stop
-endif
-
-:Tao AccessToken + RefreshToken;
-:Luu refreshToken vao DB;
-:Set cookie HttpOnly:\naccessToken(path=/)\nrefreshToken(path=/api/auth);
-:Tra thong tin user;
-
-|Nguoi dung|
-:Nhan ket qua dang nhap;
-
-if (Vai tro?) then (Admin)
-  :Chuyen trang Admin;
-elseif (Bac si)
-  :Chuyen trang Bac si;
-else (Benh nhan)
-  :Chuyen trang Benh nhan;
+|Người dùng|
+:Nhận kết quả đăng nhập;
+if (Vai trò của User?) then (Admin)
+  :Điều hướng trang Quản trị;
+elseif (Bác sĩ)
+  :Điều hướng trang Bác sĩ;
+else (Bệnh nhân)
+  :Điều hướng trang Bệnh nhân;
 endif
 
 stop

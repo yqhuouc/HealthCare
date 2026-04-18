@@ -1,4 +1,4 @@
-@startuml Activity_QuenMatKhau
+@startuml Activity_QuenMatKhau_V2
 
 skinparam shadowing false
 skinparam backgroundColor white
@@ -9,7 +9,8 @@ skinparam activity {
   BackgroundColor #E3F2FD
   BorderColor #1E88E5
   FontColor #0D47A1
-  RoundCorner 15
+  FontSize 13
+  RoundCorner 20
 }
 
 skinparam activityDiamondBackgroundColor #BBDEFB
@@ -17,26 +18,41 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Nguoi dung|
+|Người dùng|
 start
-:Bam Quen mat khau;
-:Nhap email can khoi phuc;
-:Gui yeu cau khoi phuc mat khau;
+:Nhấn "Quên mật khẩu";
+:Nhập Email tài khoản;
+:Gửi yêu cầu khôi phục;
 
-|He thong|
-:Tao token OTP/reset;
-:Gui email reset;
+|Hệ thống|
+:Kiểm tra Email trong hệ thống;
+if (Email tồn tại?) then (Không)
+  :Trả về mã 404 (Not Found);
+  stop
+else (Có)
+  :Tạo Token Reset mật khẩu\n(Thời hạn 15-30 phút);
+  :Gửi Email chứa Link/OTP;
+endif
 
-|Nguoi dung|
-:Nhan email va mo link dat lai mat khau;
-:Nhap mat khau moi;
-:Gui yeu cau cap nhat mat khau;
+|Người dùng|
+:Mở link từ Email;
+:Nhập mật khẩu mới & Xác nhận;
+:Gửi yêu cầu cập nhật;
 
-|He thong|
-:Cap nhat mat khau moi (hash);
-:Tra thong bao cap nhat thanh cong;
+|Hệ thống|
+:Kiểm tra Token hợp lệ & Còn hạn?;
+if (Hợp lệ?) then (Không)
+  :Thông báo Token hết hạn/Không hợp lệ;
+  stop
+else (Có)
+  :Mã hóa mật khẩu mới (bcrypt);
+  :Cập nhật Database;
+  :Hủy bỏ Token đã sử dụng;
+  :Trả về thông báo thành công;
+endif
 
-|Nguoi dung|
-:Hien thi thong bao thanh cong;
+|Người dùng|
+:Hiển thị thông báo thành công;
+:Điều hướng về trang Đăng nhập;
 stop
 @enduml

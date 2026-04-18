@@ -15,6 +15,8 @@
 import HomePage from "../pages/patient/HomePage";
 import LoginPage from "../pages/patient/LoginPage";
 import RegisterPage from "../pages/patient/RegisterPage";
+import ForgotPasswordPage from "../pages/patient/ForgotPasswordPage";
+import ResetPasswordPage from "../pages/patient/ResetPasswordPage";
 import DoctorListPage from "../pages/patient/DoctorListPage";
 import DoctorDetailPage from "../pages/patient/DoctorDetailPage";
 import BookingPage from "../pages/patient/BookingPage";
@@ -67,6 +69,8 @@ export const publicRoutes = [
   { path: "/", component: HomePage },
   { path: "/login", component: LoginPage },
   { path: "/register", component: RegisterPage },
+  { path: "/forgot-password", component: ForgotPasswordPage },
+  { path: "/reset-password", component: ResetPasswordPage },
   { path: "/specialties", component: SpecialtyListPage },
   { path: "/specialties/:id", component: SpecialtyDetailPage },
   { path: "/doctors", component: DoctorListPage },

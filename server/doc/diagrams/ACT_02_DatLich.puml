@@ -1,4 +1,4 @@
-@startuml Activity_DatLich
+@startuml Activity_DatLich_Full_V3
 
 skinparam shadowing false
 skinparam backgroundColor white
@@ -9,7 +9,8 @@ skinparam activity {
   BackgroundColor #E3F2FD
   BorderColor #1E88E5
   FontColor #0D47A1
-  RoundCorner 15
+  FontSize 13
+  RoundCorner 20
 }
 
 skinparam activityDiamondBackgroundColor #BBDEFB
@@ -17,48 +18,51 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Benh nhan|
+|Bệnh nhân / Frontend|
 start
-:Xem danh sach chuyen khoa;
-:Chon chuyen khoa;
-:Xem danh sach bac si theo chuyen khoa;
-:Chon bac si;
-:Xem thong tin chi tiet bac si va lich trong;
-:Chon ngay va khung gio;
-:Nhap ly do kham;
-:Chon hinh thuc thanh toan;
-:Gui yeu cau dat lich (kem JWT token);
+:Chọn chuyên khoa & Bác sĩ;
+:Chọn ngày giờ & Nhập lý do;
+:Chọn hình thức thanh toán;
+:Gửi yêu cầu đặt lịch (JWT);
 
-|He thong|
-:Xac thuc JWT va validate du lieu;
-:Kiem tra bac si, benh nhan va lich lam viec;
-:Kiem tra trung lich (unique constraint);
+|Máy chủ / Backend|
+:Xác thực JWT & Validate dữ liệu;
+:Kiểm tra thực thể & Lịch làm việc;
+:Kiểm tra trùng lịch (Unique constraint);
 
-if (Hinh thuc thanh toan?) then (Offline)
-  :Tao DatLich (trangThai=0, trangThaiThanhToan=0);
-  :Tra ve 201 Created;
-  |Benh nhan|
-  :Nhan ket qua dat lich;
-  :Hien thi Dat lich thanh cong;
+if (Hình thức thanh toán?) then (Tại quầy)
+  :Tạo Đặt Lịch\n(trangThai=0, ttThanhToan=0);
+  :Trả về mã 201 Created;
+  
+  |Bệnh nhân / Frontend|
+  :Hiển thị "Đặt lịch thành công";
   stop
+
 else (VNPay)
-  |He thong|
-  :Tao DatLich (trangThai=0, trangThaiThanhToan=0);
-  :Tao GiaoDich (trangThai=0: Cho);
-  :Goi POST /api/vnpay/create-payment;
-  :Tao URL thanh toan VNPay;
-  :Tra ve URL VNPay cho Frontend;
-  |Benh nhan|
-  :Nhan URL thanh toan;
-  :Chuyen huong sang VNPay Gateway;
-  :Nguoi dung thuc hien thanh toan;
-  :VNPay redirect ve /payment/result;
-  :Frontend goi POST /api/vnpay/verify\nde xac thuc va dong bo DB;
-  if (Thanh toan thanh cong?) then (Co)
-    :Hien thi Thanh toan thanh cong;
-  else (Khong)
-    :Hien thi Giao dich that bai;
+  |Máy chủ / Backend|
+  :Tạo Đặt Lịch (trangThai=0, ttThanhToan=0);
+  :Tạo Giao Dịch (trangThai=0: Chờ);
+  :Gọi dịch vụ VNPay tạo URL thanh toán;
+  :Trả về URL VNPay cho Frontend;
+
+  |Bệnh nhân / Frontend|
+  :Chuyển hướng sang VNPay Gateway;
+  :Người dùng thực hiện thanh toán;
+  :VNPay redirect về /payment/result;
+  :Frontend gọi API /verify để đồng bộ;
+
+  |Máy chủ / Backend|
+  :Xác thực chữ ký & Kiểm tra kết quả;
+  :Cập nhật trạng thái Đặt lịch/Giao dịch;
+  :Trả kết quả xác thực;
+
+  |Bệnh nhân / Frontend|
+  if (Thanh toán thành công?) then (Có)
+    :Hiển thị "Thanh toán thành công";
+  else (Không)
+    :Hiển thị "Giao dịch thất bại";
   endif
   stop
 endif
+
 @enduml

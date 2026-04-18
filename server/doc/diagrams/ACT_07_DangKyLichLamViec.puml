@@ -1,4 +1,4 @@
-@startuml Activity_DangKyLichLamViec
+@startuml Activity_DangKyLichLamViec_V2
 
 skinparam shadowing false
 skinparam backgroundColor white
@@ -9,7 +9,8 @@ skinparam activity {
   BackgroundColor #E3F2FD
   BorderColor #1E88E5
   FontColor #0D47A1
-  RoundCorner 15
+  FontSize 13
+  RoundCorner 20
 }
 
 skinparam activityDiamondBackgroundColor #BBDEFB
@@ -17,33 +18,32 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Bac si/Admin|
+|Bác sĩ / Admin|
 start
-:Chon ngay lam viec, khung gio;
-:Gui yeu cau tao lich lam viec;
+:Chọn ngày làm việc & khung giờ;
+:Gửi yêu cầu tạo lịch làm việc;
 
-|He thong|
-:Xac thuc JWT;
-:Kiem tra quyen (admin hoac bac_si);
-:Validate lichLamViecSchema;
-if (Hop le?) then (Khong)
-  :Tra loi 400;
+|Hệ thống|
+:Xác thực JWT & Kiểm tra quyền hạn;
+:Validate dữ liệu (lichLamViecSchema);
+
+if (Dữ liệu hợp lệ?) then (Không)
+  :Trả về mã 400 (Bad Request);
   stop
-else (Co)
+else (Có)
+  :Kiểm tra thực thể (Bác sĩ/Khung giờ);
+  :Kiểm tra trùng lịch (Check existing);
+  
+  if (Bị trùng lịch?) then (Có)
+    :Trả về mã 409 (Conflict);
+    stop
+  else (Không)
+    :Tạo bản ghi LichLamViecBacSi;
+    :Trả về mã 201 (Created);
+  endif
 endif
 
-:Kiem tra bac si/khung gio ton tai;
-:Kiem tra trung lich;
-if (Trung lich?) then (Co)
-  :Tra loi 409;
-  stop
-else (Khong)
-endif
-
-:Tao LichLamViecBacSi;
-:Tra 201 Tao lich thanh cong;
-
-|Bac si/Admin|
-:Cap nhat giao dien lich;
+|Bác sĩ / Admin|
+:Cập nhật giao diện lịch hiển thị;
 stop
 @enduml

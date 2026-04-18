@@ -97,4 +97,16 @@ const capNhatAvatar = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Cập nhật ảnh đại diện thành công", anhDaiDien: result.anhDaiDien });
 });
 
-module.exports = { register, login, refresh, logout, getMe, doiMatKhau, capNhatHoSo, capNhatAvatar };
+// POST /forgot-password — gửi email chứa link đặt lại mật khẩu
+const forgotPassword = asyncHandler(async (req, res) => {
+  const result = await authService.forgotPassword(req.body.email);
+  res.json({ success: true, message: result.message });
+});
+
+// POST /reset-password — đặt lại mật khẩu bằng token từ email
+const resetPassword = asyncHandler(async (req, res) => {
+  const result = await authService.resetPassword(req.body.token, req.body.matKhauMoi);
+  res.json({ success: true, message: result.message });
+});
+
+module.exports = { register, login, refresh, logout, getMe, doiMatKhau, capNhatHoSo, capNhatAvatar, forgotPassword, resetPassword };

@@ -1,0 +1,26 @@
+@startuml SYS_SEQ_17_Xem_LichKham_Admin
+skinparam sequenceArrowThickness 1.5
+
+mainframe sd SYS_SEQ_17_Xem_LichKham_Admin
+
+actor "Quản trị viên" as User
+participant "Hệ thống" as Sys #SkyBlue
+participant "Cơ sở dữ liệu" as DB #SkyBlue
+
+User -> Sys : 1: Yêu cầu xem tất cả lịch hẹn
+activate Sys
+
+Sys -> DB : 1.1: Lấy toàn bộ DatLich
+activate DB
+DB --> Sys : 1.2: Trả về dữ liệu
+deactivate DB
+
+alt Thành công
+    Sys --> User : 1.3: Hiển thị danh sách
+else Lỗi kết nối
+    Sys --> User : 1.4: Hiển thị thông báo lỗi
+end
+
+deactivate Sys
+
+@enduml

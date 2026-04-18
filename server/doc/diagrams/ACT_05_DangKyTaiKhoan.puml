@@ -9,7 +9,8 @@ skinparam activity {
   BackgroundColor #E3F2FD
   BorderColor #1E88E5
   FontColor #0D47A1
-  RoundCorner 15
+  FontSize 13
+  RoundCorner 20
 }
 
 skinparam activityDiamondBackgroundColor #BBDEFB
@@ -17,32 +18,30 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Nguoi dung|
+|Người dùng|
 start
-:Nhap ho ten, email, mat khau,\nso dien thoai, thong tin co ban;
-:Bam nut Dang ky;
+:Nhập họ tên, email, mật khẩu,\nsố điện thoại & thông tin cơ bản;
+:Bấm nút Đăng ký;
 
-|He thong|
-:Validate du lieu registerSchema;
-if (Du lieu hop le?) then (Khong)
-  :Tra loi 400;
+|Hệ thống|
+:Validate dữ liệu (registerSchema);
+if (Dữ liệu hợp lệ?) then (Không)
+  :Trả về mã 400 (Bad Request);
   stop
-else (Co)
+else (Có)
+  :Kiểm tra Email đã tồn tại?;
+  if (Email đã tồn tại?) then (Có)
+    :Trả về mã 409 (Conflict);
+    stop
+  else (Không)
+    :Hash mật khẩu (bcrypt);
+    :Tạo TaiKhoan & BenhNhan\n(Database Transaction);
+    :Trả về mã 201 Created;
+  endif
 endif
 
-:Kiem tra email da ton tai?;
-if (Email da ton tai) then (Co)
-  :Tra loi 409;
-  stop
-else (Khong)
-endif
-
-:Hash mat khau;
-:Tao TaiKhoan + BenhNhan (transaction);
-:Tra 201 Dang ky thanh cong;
-
-|Nguoi dung|
-:Thong bao thanh cong;
-:Dieu huong sang trang Dang nhap;
+|Người dùng|
+:Hiển thị thông báo thành công;
+:Điều hướng sang trang Đăng nhập;
 stop
 @enduml

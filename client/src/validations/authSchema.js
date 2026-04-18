@@ -33,3 +33,15 @@ export const passwordChangeSchema = z.object({
   message: "Mật khẩu xác nhận không khớp",
   path: ["xacNhanMatKhau"],
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, "Vui lòng nhập email").email("Vui lòng nhập đúng định dạng email"),
+});
+
+export const resetPasswordSchema = z.object({
+  matKhauMoi: z.string().min(6, "Mật khẩu mới phải có ít nhất 6 ký tự"),
+  xacNhanMatKhau: z.string().min(1, "Vui lòng xác nhận mật khẩu mới"),
+}).refine((data) => data.matKhauMoi === data.xacNhanMatKhau, {
+  message: "Mật khẩu xác nhận không khớp",
+  path: ["xacNhanMatKhau"],
+});

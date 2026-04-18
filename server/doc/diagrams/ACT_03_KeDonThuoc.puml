@@ -1,4 +1,4 @@
-@startuml Activity_KeDonThuoc
+@startuml Activity_KeDonThuoc_V2
 
 skinparam shadowing false
 skinparam backgroundColor white
@@ -9,7 +9,8 @@ skinparam activity {
   BackgroundColor #E3F2FD
   BorderColor #1E88E5
   FontColor #0D47A1
-  RoundCorner 15
+  FontSize 13
+  RoundCorner 20
 }
 
 skinparam activityDiamondBackgroundColor #BBDEFB
@@ -17,34 +18,30 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Bac si|
+|Bác sĩ|
 start
-:Dang nhap vao he thong;
-:Xem danh sach lich hen da xac nhan;
-:Chon mot benh nhan den kham;
-:Tien hanh kham lam sang;
-:Cap nhat trang thai lich hen thanh Da kham;
+:Chọn bệnh nhân từ danh sách chờ khám;
+:Tiến hành khám lâm sàng & Chẩn đoán;
+:Nhập kết quả chẩn đoán & Ghi chú;
 
-|He thong|
-:Luu trang thai moi;
-:Mo form ke don cho bac si;
-
-|Bac si|
-:Nhap chan doan va ghi chu;
 repeat
-  :Chon thuoc tu danh sach;
-  :Nhap so luong, don gia, lieu dung;
-  :Them vao danh muc don thuoc;
-backward:Can them thuoc khac;
-repeat while (Can them thuoc?) is (Co) not (Khong)
-:Gui don thuoc hoan tat;
+  :Chọn thuốc từ danh mục;
+  :Nhập số lượng, liều dùng & cách dùng;
+  :Thêm vào danh sách đơn thuốc;
+backward:Cần thêm thuốc khác;
+repeat while (Tiếp tục thêm thuốc?) is (Có) not (Không)
 
-|He thong|
-:Tinh toan tong tien;
-:Luu DonThuoc va ChiTietDonThuoc;
-:Tra ve ket qua thanh cong;
+:Xác nhận hoàn tất đơn thuốc;
 
-|Bac si|
-:Thong bao cho benh nhan;
+|Hệ thống|
+:Xác thực quyền hạn Bác sĩ (JWT);
+:Tính toán tổng tiền đơn thuốc;
+:Lưu DonThuoc & ChiTietDonThuoc\n(Database Transaction);
+:Cập nhật trạng thái Lịch hẹn = "Đã khám";
+:Trả kết quả lưu đơn thuốc;
+
+|Bác sĩ|
+:Hiển thị đơn thuốc hoàn tất;
+:In đơn thuốc (nếu cần) & Thông báo bệnh nhân;
 stop
 @enduml

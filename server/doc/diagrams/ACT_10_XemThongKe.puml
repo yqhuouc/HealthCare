@@ -1,4 +1,4 @@
-@startuml Activity_XemThongKe
+@startuml Activity_XemThongKe_V2
 
 skinparam shadowing false
 skinparam backgroundColor white
@@ -9,7 +9,8 @@ skinparam activity {
   BackgroundColor #E3F2FD
   BorderColor #1E88E5
   FontColor #0D47A1
-  RoundCorner 15
+  FontSize 13
+  RoundCorner 20
 }
 
 skinparam activityDiamondBackgroundColor #BBDEFB
@@ -17,31 +18,33 @@ skinparam activityDiamondBorderColor #1E88E5
 skinparam activityDiamondFontColor #0D47A1
 skinparam ArrowColor #1E88E5
 
-|Admin|
+|Quản trị viên (Admin)|
 start
-:Mo trang Dashboard thong ke;
-:Chon loai thong ke\n(tong quan, lich hen, doanh thu);
+:Mở trang Dashboard thống kê;
+:Chọn loại báo cáo & Khoảng thời gian\n(Tổng quan, Lịch hẹn, Doanh thu);
+:Gửi yêu cầu lấy số liệu;
 
-|He thong|
-:Xac thuc JWT;
-:Kiem tra quyen admin;
-if (Khong du quyen?) then (Co)
-  :Tra loi 403;
+|Hệ thống|
+:Xác thực JWT & Kiểm tra quyền Admin;
+
+if (Có quyền Admin?) then (Không)
+  :Trả về mã 403 (Forbidden);
   stop
-else (Khong)
+else (Có)
+  if (Loại thống kê?) then (Tổng quan)
+    :Thực thi thongKeService.tongQuan();
+  elseif (Lịch hẹn) then (Lịch hẹn)
+    :Thực thi thongKeService.thongKeLichHen();
+  else (Doanh thu)
+    :Thực thi thongKeService.thongKeDoanhThu();
+  endif
+  
+  :Tổng hợp số liệu & Định dạng JSON;
+  :Trả về dữ liệu thống kê;
 endif
 
-if (Loai = tong quan?) then (Co)
-  :Goi thongKeService.tongQuan();
-elseif (Loai = lich hen?)
-  :Goi thongKeService.thongKeLichHen(query);
-else (doanh thu)
-  :Goi thongKeService.thongKeDoanhThuTheoThang(nam);
-endif
-
-:Tra du lieu thong ke;
-
-|Admin|
-:Ve bieu do/so lieu tren dashboard;
+|Quản trị viên (Admin)|
+:Xử lý dữ liệu & Vẽ biểu đồ\n(Bar Chart, Pie Chart, Statistics Card);
+:Hiển thị Dashboard hoàn thiện;
 stop
 @enduml
