@@ -24,10 +24,13 @@ Dưới đây là danh sách các công nghệ chính được áp dụng trong 
     *   **Helmet:** Bảo vệ ứng dụng khỏi các lỗ hổng bảo mật phổ biến bằng cách thiết lập các HTTP Header.
     *   **Express Rate Limit:** Hạn chế số lượng yêu cầu từ một IP để ngăn chặn tấn công Brute-force/DoS.
 *   **Xác thực dữ liệu (Validation):** [Zod](https://zod.dev/) - Thư viện kiểm tra kiểu dữ liệu và ràng buộc cho các API Request Body.
+*   **Tối ưu hiệu năng (Caching):** [Redis](https://redis.io/) - Sử dụng `ioredis` để lưu trữ bộ nhớ đệm, tăng tốc độ phản hồi API.
 
-## 3. Cơ sở dữ liệu (Database)
+## 3. Cơ sở dữ liệu và Hạ tầng (Database & Infrastructure)
 *   **Hệ quản trị CSDL:** [PostgreSQL](https://www.postgresql.org/) - Cơ sở dữ liệu quan hệ mã nguồn mở mạnh mẽ và đáng tin cậy.
-*   **Dịch vụ lưu trữ:** [Supabase](https://supabase.com/) - Cung cấp Database PostgreSQL đám mây với tính năng Connection Pooling.
+*   **Dịch vụ lưu trữ CSDL:** [Supabase](https://supabase.com/).
+*   **Dịch vụ lưu trữ Redis:** [Upstash](https://upstash.com/) - Serverless Redis dành cho các ứng dụng hiện đại.
+*   **Quản lý hình ảnh:** [Cloudinary](https://cloudinary.com/) - Lưu trữ và tối ưu hóa ảnh bác sĩ, chuyên khoa.
 
 ## 4. Công cụ hỗ trợ và Môi trường
 *   **Quản lý mã nguồn:** [Git](https://git-scm.com/) & [GitHub](https://github.com/).

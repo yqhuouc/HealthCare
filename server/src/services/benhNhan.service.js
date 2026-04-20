@@ -4,6 +4,7 @@
  */
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
+const { delCache } = require("../utils/redis.util");
 
 // Lọc theo họ tên (contains, không phân biệt hoa thường) + skip/take
 const getAll = async ({ search, page = 1, limit = 10 }) => {
@@ -174,7 +175,6 @@ const remove = async (id) => {
     }
   });
 
-  const { delCache } = require("../utils/redis.util");
   await delCache("cache:stats:overview");
 };
 

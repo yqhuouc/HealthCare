@@ -143,7 +143,7 @@ const update = async (id, data) => {
   });
   if (!existing) throw new AppError("Không tìm thấy bác sĩ", 404);
 
-  return await prisma.$transaction(async (tx) => {
+  const finalResult = await prisma.$transaction(async (tx) => {
     // 1. Cập nhật tài khoản liên kết
     if (existing.taiKhoanId) {
       const accountUpdate = {};

@@ -182,7 +182,7 @@ const createLichLamViec = async (data, requestUser = null) => {
     soBenhNhanToiDa = Math.floor(caLengthMinutes / thoiLuongKham);
   }
 
-  return prisma.lichLamViecBacSi.create({
+  const result = await prisma.lichLamViecBacSi.create({
     data: {
       ngayLamViec: new Date(data.ngayLamViec),
       soBenhNhanHienTai: 0,
@@ -202,6 +202,9 @@ const createLichLamViec = async (data, requestUser = null) => {
       khungGio: true,
     },
   });
+
+  await delCache("cache:slot:*");
+  return result;
 };
 
 /**
@@ -222,7 +225,7 @@ const updateLichLamViec = async (id, data, requestUser = null) => {
   }
 
   // undefined: Bỏ qua trường không truyền lên. Chỉ update đúng field nào có gửi giá trị.
-  return prisma.lichLamViecBacSi.update({
+  const result = await prisma.lichLamViecBacSi.update({
     where: { id: BigInt(id) },
     data: {
       sanSang: data.sanSang !== undefined ? data.sanSang : undefined,
@@ -234,6 +237,9 @@ const updateLichLamViec = async (id, data, requestUser = null) => {
         data.soBenhNhanToiDa !== undefined ? data.soBenhNhanToiDa : undefined,
     },
   });
+
+  await delCache("cache:slot:*");
+  return result;
 };
 
 /**
@@ -266,6 +272,7 @@ const deleteLichLamViec = async (id, requestUser = null) => {
 
   // Tiến hành xóa record lịch của Bác sĩ ra khỏi CSDL
   await prisma.lichLamViecBacSi.delete({ where: { id: BigInt(id) } });
+  await delCache("cache:slot:*");
 };
 
 module.exports = {

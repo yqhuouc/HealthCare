@@ -3,6 +3,7 @@
  * Xóa đơn: chi tiết cascade theo schema Prisma.
  */
 const prisma = require("../utils/prisma");
+const { delCache } = require("../utils/redis.util");
 const { AppError } = require("../middlewares/error.middleware");
 
 const defaultInclude = {
@@ -119,10 +120,7 @@ const create = async (data, requestUser = null) => {
   }
 
   if (datLich.trangThai !== 2) {
-    throw new AppError(
-      "Chỉ tạo đơn thuốc cho lịch hẹn đã khám xong (trạng thái = 2)",
-      400,
-    );
+    throw new AppError("Chỉ tạo đơn thuốc cho lịch hẹn đã khám xong (trạng thái = 2)", 400);
   }
 
   const existing = await prisma.donThuoc.findUnique({
@@ -137,7 +135,7 @@ const create = async (data, requestUser = null) => {
       return sum + lineTotal;
     }, 0) || 0;
 
-  return prisma.donThuoc.create({
+  const result = await prisma.donThuoc.create({
     data: {
       datLichId: BigInt(data.datLichId),
       chanDoan: data.chanDoan || null,
@@ -157,6 +155,9 @@ const create = async (data, requestUser = null) => {
     },
     include: defaultInclude,
   });
+
+  await delCache("cache:stats:overview");
+  return result;
 };
 
 const update = async (id, data, requestUser) => {
@@ -177,7 +178,7 @@ const update = async (id, data, requestUser) => {
 
   // Chặn sửa nếu trạng thái thanh toán là 2 (Đã thanh toán xong)
   if (existing.datLich?.trangThaiThanhToan === 2 && requestUser?.vaiTro !== "admin") {
-     throw new AppError("Đơn thuốc này đã được bệnh nhân thanh toán, không thể chỉnh sửa thêm", 400);
+    throw new AppError("Đơn thuốc này đã được bệnh nhân thanh toán, không thể chỉnh sửa thêm", 400);
   }
 
   // Tính lại tổng tiền
@@ -187,7 +188,7 @@ const update = async (id, data, requestUser) => {
       return sum + lineTotal;
     }, 0) || 0;
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     // 1. Xóa toàn bộ chiTietDonThuoc cũ
     await tx.chiTietDonThuoc.deleteMany({
       where: { donThuocId: BigInt(id) },
@@ -215,6 +216,10 @@ const update = async (id, data, requestUser) => {
       include: defaultInclude,
     });
   });
+
+  const { delCache } = require("../utils/redis.util");
+  await delCache("cache:stats:overview");
+  return updated;
 };
 
 const remove = async (id) => {
@@ -224,6 +229,8 @@ const remove = async (id) => {
   if (!existing) throw new AppError("Không tìm thấy đơn thuốc", 404);
 
   await prisma.donThuoc.delete({ where: { id: BigInt(id) } });
+
+  await delCache("cache:stats:overview");
 };
 
 module.exports = { getAll, getById, create, update, remove };

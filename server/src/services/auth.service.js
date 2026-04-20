@@ -296,6 +296,10 @@ const capNhatHoSo = async (userId, data) => {
     return updatedTaiKhoan;
   });
 
+  if (taiKhoan.vaiTro === "bac_si") {
+    await delCache("cache:bacsi:*");
+  }
+
   return updated;
 };
 
