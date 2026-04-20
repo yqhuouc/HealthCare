@@ -19,6 +19,10 @@
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 const { dayjs, vnDay } = require("../utils/dateUtils");
+const { getCache, setCache, delCache } = require("../utils/redis.util");
+
+// Cache key cho danh sách khung giờ (ca làm việc)
+const CACHE_KEY_KHUNGGIO = "cache:khunggio:all";
 
 /**
  * Hàm parseTime:
@@ -41,7 +45,12 @@ const parseTime = (timeStr) => {
  * Thường dùng làm danh sách Dropdown cho Admin hoặc Bác Sĩ chọn.
  */
 const getAllKhungGio = async () => {
-  return prisma.khungGio.findMany({ orderBy: { gioBatDau: "asc" } });
+  const cached = await getCache(CACHE_KEY_KHUNGGIO);
+  if (cached) return cached;
+
+  const data = await prisma.khungGio.findMany({ orderBy: { gioBatDau: "asc" } });
+  await setCache(CACHE_KEY_KHUNGGIO, data, 3600); // 1 giờ
+  return data;
 };
 
 /**
@@ -60,9 +69,11 @@ const createKhungGio = async (data) => {
   }
 
   // 3. Khởi tạo và lưu thẳng vào thư viện
-  return prisma.khungGio.create({
+  const result = await prisma.khungGio.create({
     data: { gioBatDau, gioKetThuc },
   });
+  await delCache(CACHE_KEY_KHUNGGIO); // Xóa cache cũ
+  return result;
 };
 
 /**
@@ -90,6 +101,7 @@ const deleteKhungGio = async (id) => {
   }
 
   await prisma.khungGio.delete({ where: { id: BigInt(id) } });
+  await delCache(CACHE_KEY_KHUNGGIO); // Xóa cache cũ
 };
 
 // ============================================================================

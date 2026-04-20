@@ -173,6 +173,9 @@ const remove = async (id) => {
       await tx.taiKhoan.delete({ where: { id: existing.taiKhoanId } });
     }
   });
+
+  const { delCache } = require("../utils/redis.util");
+  await delCache("cache:stats:overview");
 };
 
 module.exports = { getAll, getById, update, remove };

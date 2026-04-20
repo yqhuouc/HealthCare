@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const prisma = require("../utils/prisma");
 const config = require("../config");
+const { delCache } = require("../utils/redis.util");
 const { AppError } = require("../middlewares/error.middleware");
 
 const hashToken = (token) =>
@@ -68,6 +69,9 @@ const register = async ({
 
     return { taiKhoan, benhNhan };
   });
+
+
+  await delCache("cache:stats:overview");
 
   return {
     id: result.taiKhoan.id,

@@ -2,9 +2,15 @@
  * Gom số liệu dashboard: count entity, doanh thu kép (phí khám & phí thuốc), biểu đồ theo thời gian.
  */
 const prisma = require("../utils/prisma");
+const { getCache, setCache } = require("../utils/redis.util");
+
+const CACHE_KEY = "cache:stats:overview";
 
 // 1. GET /api/thong-ke/tong-quan
 const tongQuan = async () => {
+  const cached = await getCache(CACHE_KEY);
+  if (cached) return cached;
+
   const [tongBenhNhan, tongBacSi, tongLichHen, tongChuyenKhoa, lichHenTheoTrangThai] = await Promise.all([
     prisma.benhNhan.count(),
     prisma.bacSi.count(),
@@ -39,7 +45,7 @@ const tongQuan = async () => {
     doanhThuThuoc = Number(aggThuoc._sum.tongTien || 0);
   }
 
-  return {
+  const result = {
     tongBenhNhan,
     tongBacSi,
     tongLichHen,
@@ -52,6 +58,9 @@ const tongQuan = async () => {
       soLuong: item._count.id,
     })),
   };
+
+  await setCache(CACHE_KEY, result, 900); // 15 phút
+  return result;
 };
 
 // 2. GET /api/thong-ke/lich-hen

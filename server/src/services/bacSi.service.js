@@ -5,9 +5,20 @@
 const bcrypt = require("bcryptjs");
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
+const { getCache, setCache, delCache } = require("../utils/redis.util");
+
+// Các prefix cache key
+const CACHE_PREFIX = "cache:bacsi";
+const getListKey = (ck, q, p, l) => `${CACHE_PREFIX}:all:ck:${ck || 'all'}:q:${q || 'none'}:p:${p}:l:${l}`;
+const getDetailKey = (id) => `${CACHE_PREFIX}:${id}`;
 
 // Lọc chuyenKhoaId + search tên; include chuyenKhoa + taiKhoan (không matKhau)
 const getAll = async ({ chuyenKhoaId, search, page = 1, limit = 10 }) => {
+  // 1. Check cache
+  const cacheKey = getListKey(chuyenKhoaId, search, page, limit);
+  const cachedData = await getCache(cacheKey);
+  if (cachedData) return cachedData;
+
   const skip = (Number(page) - 1) * Number(limit);
   const where = {};
   if (chuyenKhoaId) where.chuyenKhoaId = BigInt(chuyenKhoaId);
@@ -43,10 +54,19 @@ const getAll = async ({ chuyenKhoaId, search, page = 1, limit = 10 }) => {
       totalPages: Math.ceil(total / Number(limit)),
     },
   };
+
+  // 2. Save result to cache (TTL 10 mins = 600s)
+  await setCache(cacheKey, result, 600);
+  return result;
 };
 
 // Chi tiết + chuyenKhoa + taiKhoan (không trả matKhau)
 const getById = async (id) => {
+  // 1. Check cache
+  const cacheKey = getDetailKey(id);
+  const cached = await getCache(cacheKey);
+  if (cached) return cached;
+
   const bacSi = await prisma.bacSi.findUnique({
     where: { id: BigInt(id) },
     include: {
@@ -66,6 +86,9 @@ const getById = async (id) => {
   });
 
   if (!bacSi) throw new AppError("Không tìm thấy bác sĩ", 404);
+
+  // 2. Save to cache (TTL 15 mins = 900s)
+  await setCache(cacheKey, bacSi, 900);
   return bacSi;
 };
 
@@ -106,6 +129,9 @@ const create = async (data) => {
     return bacSi;
   });
 
+  // Xóa mọi cache liên quan đến bác sĩ (bao gồm detail và list)
+  await delCache(`${CACHE_PREFIX}:*`);
+  await delCache("cache:stats:overview");
   return result;
 };
 
@@ -168,6 +194,11 @@ const update = async (id, data) => {
       },
     });
   });
+
+  // Xóa mọi cache liên quan đến bác sĩ
+  await delCache(`${CACHE_PREFIX}:*`);
+
+  return finalResult;
 };
 
 // Cấm xóa nếu còn lịch; xóa bacSi rồi taiKhoan liên kết
@@ -191,6 +222,10 @@ const remove = async (id) => {
       await tx.taiKhoan.delete({ where: { id: existing.taiKhoanId } });
     }
   });
+
+  // Xóa mọi cache liên quan đến bác sĩ
+  await delCache(`${CACHE_PREFIX}:*`);
+  await delCache("cache:stats:overview");
 };
 
 module.exports = { getAll, getById, create, update, remove };

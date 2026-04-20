@@ -3,15 +3,26 @@
  */
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
+const { getCache, setCache, delCache } = require("../utils/redis.util");
+
+// Cache key cho danh sách hình thức thanh toán
+const CACHE_KEY = "cache:thanhtoan:all";
 
 const getAll = async () => {
-  return prisma.hinhThucThanhToan.findMany({ orderBy: { id: "asc" } });
+  const cached = await getCache(CACHE_KEY);
+  if (cached) return cached;
+
+  const data = await prisma.hinhThucThanhToan.findMany({ orderBy: { id: "asc" } });
+  await setCache(CACHE_KEY, data, 7200); // 2 giờ
+  return data;
 };
 
 const create = async (data) => {
-  return prisma.hinhThucThanhToan.create({
+  const result = await prisma.hinhThucThanhToan.create({
     data: { tenHinhThuc: data.tenHinhThuc, maLoai: data.maLoai || "OFFLINE" },
   });
+  await delCache(CACHE_KEY);
+  return result;
 };
 
 const remove = async (id) => {
@@ -24,6 +35,7 @@ const remove = async (id) => {
   }
 
   await prisma.hinhThucThanhToan.delete({ where: { id: BigInt(id) } });
+  await delCache(CACHE_KEY);
 };
 
 module.exports = { getAll, create, remove };

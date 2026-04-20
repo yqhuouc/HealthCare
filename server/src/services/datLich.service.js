@@ -15,6 +15,10 @@
 const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 const { dayjs, vnDay } = require("../utils/dateUtils");
+const { getCache, setCache, delCache } = require("../utils/redis.util");
+
+// Cache key helper
+const getSlotCacheKey = (bsId, date) => `cache:slot:${bsId}:${dayjs(date).format("YYYY-MM-DD")}`;
 
 // ============================================================================
 // 1. TIỆN ÍCH XỬ LÝ THỜI GIAN VÀ DỮ LIỆU
@@ -400,6 +404,10 @@ const create = async (data, requestUser = null) => {
       data: { soBenhNhanHienTai: { increment: 1 } },
     });
 
+    // Xóa cache slot trống và cache dashboard
+    await delCache(getSlotCacheKey(data.bacSiId, data.ngayDat));
+    await delCache("cache:stats:overview");
+
     // Trả về kèm maLoai để controller xử lý redirect phí khám
     return {
       ...datLich,
@@ -450,6 +458,10 @@ const updateTrangThai = async (id, trangThai, requestUser = null) => {
       });
     }
 
+    // Xóa cache slot trống khi có thay đổi trạng thái (đặc biệt là hủy/khôi phục)
+    await delCache(getSlotCacheKey(existing.bacSiId, existing.ngayDat));
+    await delCache("cache:stats:overview");
+
     return datLich;
   });
 };
@@ -465,11 +477,14 @@ const updateThanhToan = async (id, trangThaiThanhToan) => {
 
   if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
-  return prisma.datLich.update({
+  const result = await prisma.datLich.update({
     where: { id: BigInt(id) },
     data: { trangThaiThanhToan: Number(trangThaiThanhToan) },
     include: defaultInclude,
   });
+
+  await delCache("cache:stats:overview");
+  return result;
 };
 
 /**
@@ -524,6 +539,10 @@ const remove = async (id, requestUser) => {
       });
     }
   });
+
+  // Xóa cache slot trống và dashboard
+  await delCache(getSlotCacheKey(existing.bacSiId, existing.ngayDat));
+  await delCache("cache:stats:overview");
 };
 
 /**
@@ -534,6 +553,11 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
   if (!bacSiId || !ngayDat) {
     throw new AppError("Yêu cầu thông tin Bác sĩ và Ngày đặt", 400);
   }
+
+  // 1. Kiểm tra cache
+  const cacheKey = getSlotCacheKey(bacSiId, ngayDat);
+  const cached = await getCache(cacheKey);
+  if (cached) return cached;
 
   const bacSi = await prisma.bacSi.findUnique({
     where: { id: BigInt(bacSiId) },
@@ -612,6 +636,10 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
     slots: allSlots,
     slotTrong: allSlots.filter((s) => !s.daDat && s.conTrong),
   };
+
+  // 2. Lưu vào cache (TTL 5 mins = 300s)
+  await setCache(cacheKey, result, 300);
+  return result;
 };
 
 /**
