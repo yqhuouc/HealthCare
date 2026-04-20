@@ -12,6 +12,9 @@
 2. [Kết nối Supabase](#2-kết-nối-supabase)
 3. [Thiết lập Postman](#3-thiết-lập-postman)
 4. [Test Authentication](#4-test-authentication)
+   - 4.1 -> 4.11 (Login/Logout/Me...)
+   - [4.12 Quên mật khẩu](#412-quên-mật-khẩu)
+   - [4.13 Đặt lại mật khẩu](#413-đặt-lại-mật-khẩu)
 5. [Test Chuyên khoa](#5-test-chuyên-khoa)
 6. [Test Bác sĩ](#6-test-bác-sĩ)
 7. [Test Bệnh nhân](#7-test-bệnh-nhân)
@@ -639,6 +642,64 @@ Không cần header — cookie `accessToken` được Postman tự gửi.
 
 > Sau khi logout, cả 2 cookie `accessToken` và `refreshToken` bị xóa, Refresh Token trong DB cũng bị xóa.
 > Mọi request sau đều sẽ nhận `401`.
+
+---
+
+### 4.12 Quên mật khẩu
+
+> Gửi yêu cầu đặt lại mật khẩu tới email người dùng.
+
+```
+POST {{base_url}}/auth/forgot-password
+```
+
+**Body** (raw → JSON):
+```json
+{
+  "email": "benhnhan@gmail.com"
+}
+```
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "message": "Nếu email tồn tại, một liên kết đặt lại mật khẩu sẽ được gửi đi."
+}
+```
+
+> **Lưu ý**: Để bảo mật, API không báo email có tồn tại hay không mà luôn trả về thông báo chung chung.
+
+---
+
+### 4.13 Đặt lại mật khẩu
+
+> Sử dụng Token nhận được từ Email để tạo mật khẩu mới.
+
+```
+POST {{base_url}}/auth/reset-password
+```
+
+**Body** (raw → JSON):
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "matKhauMoi": "newsecurepassword123"
+}
+```
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "message": "Đặt lại mật khẩu thành công"
+}
+```
+
+**Kiểm thử lỗi**:
+- Token sai/hết hạn (sau 15p) → `401` "Mã xác thực không hợp lệ hoặc đã hết hạn"
+- Dùng lại token cũ sau khi đã đổi pass thành công → `401` "Mã xác thực không hợp lệ..." (Cơ chế tự hủy stateless).
+- Mật khẩu mới quá ngắn → `400` "Mật khẩu phải có ít nhất 6 ký tự"
 
 ---
 
@@ -1757,31 +1818,442 @@ Cung cấp số liệu tài chính của 12 tháng phân tách 2 loại tiền �
 
 ## 14. Test Thanh toán Online (VNPay)
 
-### 14.1 Tạo URL thanh toán
+> **Mục này hướng dẫn kiểm thử luồng Đặt lịch khám với hình thức thanh toán VNPay**
+> (từ tạo lịch hẹn → tạo URL thanh toán → thanh toán trên sandbox → xác thực kết quả).
+
+### 14.0 Điều kiện tiên quyết — Cấu hình VNPay Sandbox
+
+#### a) Thêm biến VNPay vào file `.env`
+
+Mở file `server/.env`, thêm 4 biến sau (dưới phần JWT):
+
+```env
+# ===== VNPay Sandbox =====
+VNP_TMN_CODE=GFTUB922
+VNP_HASH_SECRET=YWQJP8SRO6SPTA9HKD27K7IRDV3HYT09
+VNP_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+VNP_RETURN_URL=http://localhost:5173/payment/result
+```
+
+> **Lưu ý**: Đây là thông tin sandbox **dùng để test**, không phải production.
+> `VNP_RETURN_URL` là URL mà VNPay sẽ redirect bệnh nhân về sau khi thanh toán xong.
+
+#### b) Tài khoản test thanh toán trên VNPay Sandbox
+
+Khi VNPay redirect ra trang thanh toán sandbox, dùng thông tin thẻ test sau:
+
+| Thông tin | Giá trị |
+|-----------|---------|
+| Ngân hàng | **NCB** (Ngân hàng NCB) |
+| Số thẻ | `9704198526191432198` |
+| Tên chủ thẻ | `NGUYEN VAN A` |
+| Ngày phát hành | `07/15` |
+| Mật khẩu OTP | `123456` |
+
+#### c) Kiểm tra hình thức thanh toán VNPay đã tồn tại trong DB
 
 ```
-POST {{base_url}}/vnpay/create_payment_url
+GET {{base_url}}/hinh-thuc-thanh-toan
 ```
 
-**Headers**: Authorization: Bearer {{patient_token}}
+Kết quả mong đợi sẽ có bản ghi:
+```json
+{ "id": 2, "tenHinhThuc": "Chuyển khoản online (VNPay)", "maLoai": "VNPAY" }
+```
+
+> Ghi nhớ `id` của hình thức VNPay (ví dụ `id = 2`) để dùng ở bước đặt lịch.
+
+---
+
+### 14.1 Bước 1 — Đặt lịch khám với hình thức thanh toán VNPay
+
+> **Đăng nhập bệnh nhân trước**: `POST /api/auth/login` với `benhnhan@gmail.com / patient123`
+> (Cookie `accessToken` sẽ được Postman tự lưu và gửi kèm các request tiếp theo)
+
+```
+POST {{base_url}}/dat-lich
+```
+
+**Headers**:
+| Key | Value |
+|-----|-------|
+| Content-Type | application/json |
+
+> Cookie `accessToken` được Postman tự gửi kèm request.
+
+**Body** (raw → JSON):
+```json
+{
+  "ngayDat": "2026-04-25",
+  "gioBatDau": "08:00",
+  "lyDoKham": "Đau đầu kéo dài, chóng mặt",
+  "bacSiId": 1,
+  "benhNhanId": 1,
+  "hinhThucThanhToanId": 2,
+  "trangThaiThanhToan": 0
+}
+```
+
+> **Chú ý quan trọng**:
+> - `hinhThucThanhToanId: 2` → Chuyển khoản online (VNPay)
+> - `trangThaiThanhToan: 0` → Chưa thanh toán (sẽ thanh toán qua VNPay ở bước sau)
+> - Phải đảm bảo **bác sĩ có lịch làm việc** vào ngày `2026-04-25` (xem mục 9.4)
+
+**Kết quả mong đợi** (Status: `201 Created`):
+```json
+{
+  "success": true,
+  "message": "Đặt lịch thành công",
+  "data": {
+    "id": 1,
+    "ngayDat": "2026-04-25T00:00:00.000Z",
+    "gioBatDau": "1970-01-01T08:00:00.000Z",
+    "gioKetThuc": "1970-01-01T08:20:00.000Z",
+    "lyDoKham": "Đau đầu kéo dài, chóng mặt",
+    "giaKham": "500000",
+    "trangThai": 0,
+    "trangThaiThanhToan": 0,
+    "hinhThucThanhToan": {
+      "id": 2,
+      "tenHinhThuc": "Chuyển khoản online (VNPay)"
+    },
+    "bacSi": {
+      "id": 1,
+      "tenBacSi": "Nguyễn Văn An"
+    },
+    "benhNhan": {
+      "id": 1,
+      "hoTen": "Nguyễn Bệnh Nhân"
+    }
+  }
+}
+```
+
+> **Ghi nhớ `id` của lịch hẹn** (VD: `id = 1`) — sẽ dùng cho bước tạo URL thanh toán.
+
+---
+
+### 14.2 Bước 2 — Tạo URL thanh toán VNPay (⭐ API Chính)
+
+> 👉 **GÓC CHÈN ẢNH 4**: Bật Postman, bấm send API `POST /api/vnpay/create-payment`, chụp màn hình kết quả trả về cái link `https://sandbox.vnpayment...`
+
+```
+POST {{base_url}}/vnpay/create-payment
+```
+
+**Headers**:
+| Key | Value |
+|-----|-------|
+| Content-Type | application/json |
+
+> Cookie `accessToken` của **bệnh nhân** được Postman tự gửi kèm request.
+
+**Body** (raw → JSON):
+```json
+{
+  "datLichId": 1,
+  "loaiGiaoDich": "PHI_KHAM"
+}
+```
+
+> **Giải thích các trường**:
+> - `datLichId`: ID lịch hẹn vừa tạo ở bước 14.1
+> - `loaiGiaoDich`: Loại giao dịch cần thanh toán. Có 3 giá trị:
+>   - `"PHI_KHAM"` — Thanh toán phí khám (lấy từ `giaKham` của bác sĩ)
+>   - `"DON_THUOC"` — Thanh toán tiền thuốc (lấy từ `tongTien` của đơn thuốc — yêu cầu đã có đơn thuốc)
+>   - `"TAT_CA"` — Thanh toán gộp phí khám + tiền thuốc (yêu cầu đã có đơn thuốc)
+>
+> ⚠️ **KHÔNG cần** truyền `amount` hay `bankCode` — Backend tự lấy số tiền từ Database.
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "paymentUrl": "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_Amount=50000000&vnp_Command=pay&vnp_CreateDate=20260418160000&vnp_CurrCode=VND&vnp_IpAddr=127.0.0.1&vnp_Locale=vn&vnp_OrderInfo=Thanh+toan+phi+kham+Ma+1&vnp_OrderType=other&vnp_ReturnUrl=http%3A%2F%2Flocalhost%3A5173%2Fpayment%2Fresult&vnp_TmnCode=GFTUB922&vnp_TxnRef=1_PHI_KHAM_1713434400000&vnp_Version=2.1.0&vnp_SecureHash=..."
+}
+```
+
+> **Lưu ý quan trọng**:
+> - `vnp_Amount` = `500000 × 100 = 50000000` (VNPay quy đổi đơn vị = VNĐ × 100)
+> - Copy `paymentUrl` → mở trên trình duyệt → Trang thanh toán VNPay sandbox hiện ra
+> - Dùng thẻ test ở mục 14.0b để hoàn tất thanh toán
+> - Backend cũng tạo 1 bản ghi `GiaoDich` trong DB với `trangThai = 0` (đang chờ)
+
+**Kiểm thử lỗi**:
+
+| Test case | Body | Kết quả mong đợi |
+|-----------|------|-------------------|
+| Thiếu datLichId | `{ "loaiGiaoDich": "PHI_KHAM" }` | `400` "Thiếu thông tin đặt lịch hoặc loại giao dịch" |
+| Thiếu loaiGiaoDich | `{ "datLichId": 1 }` | `400` "Thiếu thông tin đặt lịch hoặc loại giao dịch" |
+| datLichId không tồn tại | `{ "datLichId": 99999, "loaiGiaoDich": "PHI_KHAM" }` | `404` "Không tìm thấy lịch hẹn" |
+| Phí khám đã thanh toán rồi | Gửi lại sau khi đã thanh toán thành công | `400` "Phí khám đã được thanh toán" |
+| Loại giao dịch sai | `{ "datLichId": 1, "loaiGiaoDich": "ABC" }` | `400` "Loại giao dịch không hợp lệ" |
+| Thanh toán đơn thuốc nhưng chưa có đơn | `{ "datLichId": 1, "loaiGiaoDich": "DON_THUOC" }` | `400` "Lịch hẹn chưa có đơn thuốc" |
+| Thanh toán gộp nhưng chưa có đơn thuốc | `{ "datLichId": 1, "loaiGiaoDich": "TAT_CA" }` | `400` "Lịch hẹn chưa có đơn thuốc để thanh toán gộp" |
+| Bệnh nhân A thanh toán cho lịch BN B | Đăng nhập BN A, truyền datLichId của BN B | `403` "Bạn không có quyền thanh toán cho lịch hẹn này" |
+
+---
+
+### 14.3 Bước 3 — Thanh toán trên VNPay Sandbox
+
+> Bước này thực hiện **trên trình duyệt** (không phải Postman).
+
+1. Copy `paymentUrl` từ response ở bước 14.2
+2. Paste vào trình duyệt → Trang thanh toán VNPay hiện ra
+3. Chọn ngân hàng **NCB**
+4. Nhập thông tin thẻ test:
+   - Số thẻ: `9704198526191432198`
+   - Tên: `NGUYEN VAN A`
+   - Ngày: `07/15`
+5. Bấm **"Tiếp tục"**
+6. Nhập OTP: `123456`
+7. Bấm **"Thanh toán"**
+8. VNPay sẽ redirect về `VNP_RETURN_URL` kèm query params kết quả
+
+> **Kết quả**: Sau khi thanh toán thành công, VNPay sẽ:
+> - Redirect bệnh nhân về `VNP_RETURN_URL` kèm các tham số kết quả
+> - Gọi IPN (Server-to-Server callback) đến `/api/vnpay/ipn` để cập nhật DB
+
+---
+
+### 14.4 Bước 4 — VNPay Return (Redirect URL cho người dùng)
+
+> Endpoint này được gọi **tự động** khi VNPay redirect bệnh nhân về.
+> Bạn có thể test thủ công trên Postman bằng cách copy query params từ URL redirect.
+
+```
+GET {{base_url}}/vnpay/return?vnp_Amount=50000000&vnp_BankCode=NCB&vnp_BankTranNo=VNP14729013&vnp_CardType=ATM&vnp_OrderInfo=Thanh+toan+phi+kham+Ma+1&vnp_PayDate=20260418160530&vnp_ResponseCode=00&vnp_TmnCode=GFTUB922&vnp_TransactionNo=14729013&vnp_TransactionStatus=00&vnp_TxnRef=1_PHI_KHAM_1713434400000&vnp_SecureHash=...
+```
+
+**Kết quả mong đợi khi thanh toán thành công** (`vnp_ResponseCode=00`):
+```json
+{
+  "success": true,
+  "message": "Thanh toán thành công"
+}
+```
+
+**Kết quả khi thanh toán thất bại** (`vnp_ResponseCode != 00`):
+```json
+{
+  "success": false,
+  "message": "Thanh toán thất bại",
+  "code": "24"
+}
+```
+
+**Kết quả khi chữ ký không hợp lệ** (bị sửa query params):
+```json
+{
+  "success": false,
+  "message": "Chữ ký không hợp lệ"
+}
+```
+
+---
+
+### 14.5 Bước 5 — VNPay IPN (Server-to-Server Callback)
+
+> Endpoint này được **VNPay gọi tự động** (Server-to-Server) để cập nhật kết quả thanh toán vào Database.
+> Trên localhost, VNPay **không thể gọi IPN** được (vì server không public). Do đó ta dùng **Bước 6 (Verify)** thay thế.
+
+```
+GET {{base_url}}/vnpay/ipn?vnp_Amount=50000000&vnp_BankCode=NCB&...&vnp_ResponseCode=00&vnp_SecureHash=...
+```
+
+**Kết quả mong đợi khi thành công**:
+```json
+{
+  "RspCode": "00",
+  "Message": "Confirm Success"
+}
+```
+
+**Kết quả khi checksum sai**:
+```json
+{
+  "RspCode": "97",
+  "Message": "Invalid Checksum"
+}
+```
+
+> **Khi IPN thành công**, Backend tự động:
+> 1. Cập nhật `DatLich.trangThaiThanhToan`:
+>    - `PHI_KHAM` → `trangThaiThanhToan = 1`
+>    - `DON_THUOC` hoặc `TAT_CA` → `trangThaiThanhToan = 2`
+> 2. Cập nhật `GiaoDich.trangThai = 1` (thành công) + lưu `maGiaoDichVNP`
+
+---
+
+### 14.6 Bước 6 — Xác thực chủ động từ Frontend (Verify & Sync)
+
+> **Quan trọng cho localhost**: Vì VNPay không gọi được IPN đến localhost, Frontend gọi endpoint này để chủ động đồng bộ kết quả thanh toán vào Database.
+
+```
+POST {{base_url}}/vnpay/verify
+```
+
+**Headers**:
+| Key | Value |
+|-----|-------|
+| Content-Type | application/json |
+
+**Body** (raw → JSON) — Copy toàn bộ query params từ URL redirect của VNPay:
+```json
+{
+  "vnp_Amount": "50000000",
+  "vnp_BankCode": "NCB",
+  "vnp_BankTranNo": "VNP14729013",
+  "vnp_CardType": "ATM",
+  "vnp_OrderInfo": "Thanh toan phi kham Ma 1",
+  "vnp_PayDate": "20260418160530",
+  "vnp_ResponseCode": "00",
+  "vnp_TmnCode": "GFTUB922",
+  "vnp_TransactionNo": "14729013",
+  "vnp_TransactionStatus": "00",
+  "vnp_TxnRef": "1_PHI_KHAM_1713434400000",
+  "vnp_SecureHash": "abc123...xyz"
+}
+```
+
+> **Hướng dẫn lấy body**: Sau khi thanh toán trên VNPay sandbox, trình duyệt sẽ redirect về URL dạng:
+> `http://localhost:5173/payment/result?vnp_Amount=50000000&vnp_BankCode=NCB&...`
+> Copy tất cả query params và chuyển thành JSON object.
+
+**Kết quả mong đợi khi thành công** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "message": "Thanh toán thành công",
+  "vnp_ResponseCode": "00"
+}
+```
+
+**Kết quả khi thất bại**:
+```json
+{
+  "success": false,
+  "message": "Thanh toán thất bại",
+  "vnp_ResponseCode": "24"
+}
+```
+
+**Kiểm thử lỗi**:
+- Chữ ký bị sửa → `400` "Chữ ký giao dịch không hợp lệ"
+
+---
+
+### 14.7 Bước 7 — Xác nhận kết quả trong Database
+
+Sau khi thanh toán thành công (qua IPN hoặc Verify), kiểm tra lại dữ liệu:
+
+#### a) Kiểm tra trạng thái lịch hẹn
+
+```
+GET {{base_url}}/dat-lich/1
+```
+
+**Kết quả mong đợi**: `trangThaiThanhToan` đã chuyển thành `1` (Đã trả phí khám):
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "trangThaiThanhToan": 1,
+    "hinhThucThanhToan": {
+      "id": 2,
+      "tenHinhThuc": "Chuyển khoản online (VNPay)"
+    }
+  }
+}
+```
+
+#### b) Kiểm tra bản ghi giao dịch trên Prisma Studio
+
+Mở `http://localhost:5555` (Prisma Studio) → Bảng `GiaoDich`:
+
+| Cột | Giá trị mong đợi |
+|-----|-------------------|
+| `datLichId` | 1 |
+| `loaiGiaoDich` | PHI_KHAM |
+| `soTien` | 500000 |
+| `maThamChieu` | 1_PHI_KHAM_... |
+| `trangThai` | 1 (Thành công) |
+| `maGiaoDichVNP` | 14729013 (mã từ VNPay) |
+
+---
+
+### 14.8 Tổng kết luồng test Đặt lịch + VNPay
+
+```
+Luồng hoàn chỉnh:
+
+1. Đăng nhập bệnh nhân
+   POST /api/auth/login
+
+2. Đặt lịch khám (chọn hình thức VNPay)
+   POST /api/dat-lich
+   → hinhThucThanhToanId: 2, trangThaiThanhToan: 0
+
+3. Tạo URL thanh toán
+   POST /api/vnpay/create-payment
+   → Nhận paymentUrl (sandbox.vnpayment.vn)
+
+4. Thanh toán trên VNPay Sandbox
+   → Mở paymentUrl trên trình duyệt
+   → Dùng thẻ NCB test
+   → Hoàn tất thanh toán
+
+5. Xác thực kết quả (Verify & Sync cho localhost)
+   POST /api/vnpay/verify
+   → DB cập nhật trangThaiThanhToan = 1
+
+6. Kiểm tra kết quả
+   GET /api/dat-lich/:id
+   → Xác nhận trangThaiThanhToan đã thay đổi
+```
+
+---
+
+### 14.9 Test nâng cao — Thanh toán đơn thuốc qua VNPay
+
+> Sau khi lịch hẹn đã khám xong (`trangThai = 2`) và bác sĩ đã kê đơn thuốc:
+
+```
+POST {{base_url}}/vnpay/create-payment
+```
 
 **Body**:
 ```json
 {
   "datLichId": 1,
-  "loaiGiaoDich": "PHI_KHAM",
-  "amount": 500000,
-  "bankCode": ""
+  "loaiGiaoDich": "DON_THUOC"
 }
 ```
 
-**Kết quả mong đợi**: Trả về `paymentUrl` để redirect người dùng sang VNPay.
+**Kết quả mong đợi**: Trả về `paymentUrl` với `vnp_Amount` = `tongTien đơn thuốc × 100`.
 
-### 14.2 Test IPN (Mô phỏng VNPay gọi lại server)
+> Sau khi thanh toán thành công → `trangThaiThanhToan` chuyển thành `2` (Đã trả toàn bộ).
+
+---
+
+### 14.10 Test nâng cao — Thanh toán gộp (Phí khám + Đơn thuốc)
+
+> Chỉ dùng khi bệnh nhân chưa thanh toán gì và đã có đơn thuốc:
 
 ```
-GET {{base_url}}/vnpay/vnpay_ipn?vnp_Amount=50000000&vnp_BankCode=NCB&vnp_BankTranNo=VNP123&vnp_CardType=ATM&vnp_OrderInfo=Thanh+toan+phi+kham&vnp_PayDate=20260320153000&vnp_ResponseCode=00&vnp_TmnCode=...&vnp_TransactionNo=123456&vnp_TxnRef=GD_123&vnp_SecureHash=...
+POST {{base_url}}/vnpay/create-payment
 ```
+
+**Body**:
+```json
+{
+  "datLichId": 1,
+  "loaiGiaoDich": "TAT_CA"
+}
+```
+
+**Kết quả mong đợi**: `vnp_Amount` = `(giaKham + tongTienThuoc) × 100`
 
 ---
 
@@ -1947,6 +2419,22 @@ Dùng checklist này để đánh dấu các API đã test qua:
 - [ ] Thống kê lịch hẹn (admin) `GET /api/thong-ke/lich-hen?tuNgay=&denNgay=`
 - [ ] Phân quyền: chỉ admin mới xem được thống kê
 
+### VNPay — Thanh toán Online (4 endpoints)
+- [ ] Cấu hình VNPay sandbox trong `.env`
+- [ ] Đặt lịch với `hinhThucThanhToanId: 2` (VNPay)
+- [ ] Tạo URL thanh toán `POST /api/vnpay/create-payment` (loaiGiaoDich: PHI_KHAM)
+- [ ] Nhận paymentUrl dạng `https://sandbox.vnpayment.vn/...`
+- [ ] Thanh toán trên VNPay sandbox (thẻ NCB test)
+- [ ] Xác thực kết quả `POST /api/vnpay/verify` (đồng bộ DB trên localhost)
+- [ ] Kiểm tra `trangThaiThanhToan` đã cập nhật trong `DatLich`
+- [ ] Kiểm tra bản ghi `GiaoDich` trong DB (trangThai, maGiaoDichVNP)
+- [ ] VNPay Return `GET /api/vnpay/return`
+- [ ] VNPay IPN `GET /api/vnpay/ipn`
+- [ ] Lỗi: thiếu datLichId / loaiGiaoDich
+- [ ] Lỗi: thanh toán đơn thuốc khi chưa có đơn
+- [ ] Lỗi: BN thanh toán cho lịch của BN khác → `403`
+- [ ] Lỗi: phí khám đã thanh toán rồi → `400`
+
 ---
 
 ## Thứ tự test đề xuất
@@ -1960,14 +2448,15 @@ Dùng checklist này để đánh dấu các API đã test qua:
 5. **Bệnh nhân** → Xem + cập nhật
 6. **Khung giờ & Lịch làm việc** → Tạo lịch cho bác sĩ
 7. **Hình thức thanh toán** → Dữ liệu phụ trợ
-8. **Đặt lịch** → Tạo → test trùng → cập nhật trạng thái (0 → 1 → 2)
-9. **Thanh toán phí khám** → Cập nhật `trangThaiThanhToan = 1`
-10. **Đơn thuốc** → Tạo sau khi lịch đã khám xong (trangThai = 2) + truyền `donGia`
-11. **Thanh toán toàn bộ** → Cập nhật `trangThaiThanhToan = 2` sau khi có đơn thuốc
-12. **FAQ** → CRUD + ẩn/hiện
-13. **Thống kê** → Xem dashboard + thống kê lịch hẹn
-14. **Auth nâng cao** → Đổi mật khẩu, cập nhật hồ sơ, refresh token, logout
-15. **Edge cases** → Phân quyền, ownership, ràng buộc dữ liệu
+8. **Đặt lịch (offline)** → Tạo lịch với `hinhThucThanhToanId: 1` → test trùng → cập nhật trạng thái (0 → 1 → 2)
+9. **Đặt lịch + VNPay** → Tạo lịch với `hinhThucThanhToanId: 2` → `POST /api/vnpay/create-payment` → thanh toán sandbox → verify
+10. **Thanh toán phí khám** → Cập nhật `trangThaiThanhToan = 1` (manual hoặc VNPay)
+11. **Đơn thuốc** → Tạo sau khi lịch đã khám xong (trangThai = 2) + truyền `donGia`
+12. **Thanh toán toàn bộ** → Cập nhật `trangThaiThanhToan = 2` sau khi có đơn thuốc (manual hoặc VNPay `DON_THUOC`)
+13. **FAQ** → CRUD + ẩn/hiện
+14. **Thống kê** → Xem dashboard + thống kê lịch hẹn
+15. **Auth nâng cao** → Đổi mật khẩu, cập nhật hồ sơ, refresh token, logout
+16. **Edge cases** → Phân quyền, ownership, ràng buộc dữ liệu
 
 ---
 

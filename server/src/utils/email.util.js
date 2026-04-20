@@ -10,6 +10,7 @@ const config = require("../config");
 const transporter = nodemailer.createTransport({
   host: config.emailHost,
   port: Number(config.emailPort),
+  secure: Number(config.emailPort) === 465, // true cho cổng 465 (Gmail SSL), false cho cổng khác
   auth: {
     user: config.emailUser,
     pass: config.emailPass,

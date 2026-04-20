@@ -53,6 +53,10 @@ Ghi chú câu hỏi — trả lời khi đọc / làm backend. **Mỗi mục có
 | [qa-auth-008](#qa-auth-008) | Phân biệt `bcrypt.hash` (Mật khẩu) và `hashToken` (SHA-256 cho Refresh Token) |
 | [qa-auth-009](#qa-auth-009) | Tại sao đăng ký tài khoản mặc định là bệnh nhân? Admin tạo tài khoản bác sĩ như thế nào? |
 | [qa-auth-010](#qa-auth-010) | Luồng upload ảnh avatar lên Cloudinary qua multer hoạt động như thế nào? |
+| [qa-auth-011](#qa-auth-011) | Tại sao link Reset Password lại là chuỗi Token dài mà không phải mã số 6 chữ số? |
+| [qa-auth-012](#qa-auth-012) | Cơ chế "One-time use" (dùng một lần) của link đặt lại mật khẩu hoạt động như thế nào (Stateless)? |
+| [qa-auth-013](#qa-auth-013) | Tại sao cần `jwt.decode` trước khi `jwt.verify` trong luồng đặt lại mật khẩu? |
+| [qa-auth-014](#qa-auth-014) | Phân biệt `port` và `secure` trong cấu hình gửi Email (SMTP)? |
 
 <a id="toc-db"></a>
 
@@ -528,6 +532,79 @@ Dòng code mẫu: `router.put("/cap-nhat-avatar", authenticate, multerUpload.sin
 
 **Tóm tắt luồng:**
 Frontend gửi ảnh $\rightarrow$ qua thẻ Auth kiểm tra đăng nhập $\rightarrow$ Middleware Multer tóm file $\rightarrow$ Đẩy lên Cloudinary $\rightarrow$ Nhận về Link ảnh (`req.file`) $\rightarrow$ Controller quét Link $\rightarrow$ Service UPDATE DB.
+
+[↑ Về mục lục AUTH](#toc-auth)
+
+---
+
+<a id="qa-auth-011"></a>
+
+### AUTH-011 — Tại sao link Reset Password lại là chuỗi Token dài mà không phải mã số 6 chữ số?
+
+**Vấn đề:** 
+Có 2 cách làm phổ biến: Gửi mã OTP (6 số) hoặc gửi Link chứa Token (JWT). Project chọn dùng Link Token vì:
+1. **Trải nghiệm người dùng (UX):** Người dùng chỉ cần click chuột thay vì phải nhớ số và quay lại web gõ thủ công.
+2. **Bảo mật cao hơn:** Chuỗi Token JWT dài hàng trăm ký tự, cực kỳ khó để hacker dùng Brute-force "đoán" được. Với mã 6 số, nếu không cấu hình giới hạn số lần nhập (Rate Limiting) chặt chẽ, hacker có thể thử hết 1 triệu trường hợp rất nhanh.
+3. **Chứa thông tin (Stateful within stateless):** Token bản thân nó đã chứa ID người dùng và thời điểm hết hạn, giúp Server không cần tra cứu (lookup) bất cứ đâu cho đến giây phút cuối cùng.
+
+---
+
+<a id="qa-auth-012"></a>
+
+### AUTH-012 — Cơ chế "One-time use" (dùng một lần) của link đặt lại mật khẩu hoạt động như thế nào (Stateless)?
+
+**Thách thức:** 
+Thông thường, để Link chỉ dùng được 1 lần, người ta hay thêm một cột `isUsed` vào DB. Nhưng project này dùng cách **Stateless** (không lưu trạng thái) cực kỳ thông minh:
+
+- **Chiếc chìa khóa động (Dynamic Secret):** Khi ký JWT, ta dùng `Secret của .env` cộng thêm `Hash mật khẩu hiện tại`.
+- **Cơ chế tự hủy:** 
+  - Khi người dùng đổi mật khẩu thành công $\rightarrow$ Hash mật khẩu trong DB thay đổi.
+  * Khi người dùng click lại cái link cũ lần nữa $\rightarrow$ Lúc này Server dùng cái "mật khẩu mới" trong DB để cố gắng giải mã cái "token cũ". 
+  * Kết quả: Chìa khóa không khớp $\rightarrow$ Token chính thức vô hiệu hóa.
+- **Lợi ích:** Tiết kiệm bộ nhớ DB, không cần quản lý trạng thái Token.
+
+---
+
+<a id="qa-auth-013"></a>
+
+### AUTH-013 — Tại sao cần `jwt.decode` trước khi `jwt.verify` trong luồng đặt lại mật khẩu?
+
+Trong hàm `resetPassword` (file `auth.service.js`), ta có một bước "lạ" là decode trước khi verify:
+
+```js
+decoded = jwt.decode(token); // Bước 1: Chỉ lấy thông tin, chưa kiểm tra
+const taiKhoan = await prisma.taiKhoan.findUnique(...); // Bước 2: Lấy pass cũ
+jwt.verify(token, config.secret + taiKhoan.matKhau); // Bước 3: Kiểm tra thật sự
+```
+
+**Tại sao phải làm vậy?**
+Vì chúng ta sử dụng **Mật khẩu cũ làm chìa khóa Verify**.
+- Để Verify được, ta cần cái mật khẩu cũ trong DB.
+- Để lấy được mật khẩu cũ từ DB, ta phải biết User đó là ai (`id` là gì).
+- Mà cái `id` đó lại đang nằm "kẹt" bên trong cái Token chưa được Verify.
+
+$\rightarrow$ Vì thế, ta dùng `jwt.decode` để "nhìn trộm" vào bên trong lấy cái `id` ra trước (lúc này chưa tin tưởng cái id này). Sau đó cầm ID xuống DB lấy mật khẩu, rồi mới dùng mật khẩu đó để `verify` xem cái Token này có đúng xịn hay không. Nếu hacker sửa ID trong token, chữ ký sẽ không khớp và bước Verify cuối cùng sẽ đá văng request ra ngoài.
+
+[↑ Về mục lục AUTH](#toc-auth)
+
+---
+
+<a id="qa-auth-014"></a>
+
+### AUTH-014 — Phân biệt `port` và `secure` trong cấu hình gửi Email (SMTP)?
+
+Khi cấu hình Nodemailer gửi mail qua Gmail/Outlook, ta thường gặp cặp giá trị này:
+
+**1) `port: 465` đi kèm `secure: true` (SSL)**
+- **Cơ chế:** Kết nối bảo mật ngay từ lúc bắt đầu (Implicit SSL).
+- **Ứng dụng:** Gmail khuyến nghị dùng cổng này để đảm bảo an toàn tuyệt đối.
+
+**2) `port: 587` đi kèm `secure: false` (STARTTLS)**
+- **Cơ chế:** Kết nối bằng cổng thường trước, sau đó mới nâng cấp lên bảo mật bằng lệnh STARTTLS (Explicit TLS). 
+- **Lưu ý:** Dù `secure: false` nhưng dữ liệu vẫn được mã hóa sau bước nâng cấp, không phải là gửi mail "không bảo mật".
+
+**Tại sao code dùng `secure: Number(config.emailPort) === 465`?**
+- Để tạo tính **linh hoạt**. Khi thay đổi cổng trong file `.env`, logic code sẽ tự động điều chỉnh thuộc tính `secure` tương ứng mà không cần lập trình viên phải sửa code thủ công. Điều này giúp hệ thống dễ dàng chuyển đổi giữa các nhà cung cấp dịch vụ Email khác nhau.
 
 [↑ Về mục lục AUTH](#toc-auth)
 
