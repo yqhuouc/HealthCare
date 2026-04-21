@@ -52,9 +52,10 @@ const forgotPasswordSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
 });
 
-// POST /reset-password — đặt lại mật khẩu bằng token JWT
+// POST /reset-password — đặt lại mật khẩu bằng mã OTP và email
 const resetPasswordSchema = z.object({
-  token: z.string().min(1, "Token không được để trống"),
+  email: z.string().email("Email không hợp lệ"),
+  otp: z.string().length(6, "Mã OTP phải có đúng 6 chữ số"),
   matKhauMoi: z
     .string()
     .min(6, "Mật khẩu mới phải có ít nhất 6 ký tự")

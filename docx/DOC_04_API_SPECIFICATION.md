@@ -75,6 +75,8 @@ Hệ thống sử dụng cơ chế **Token Rotation** để đảm bảo an toà
 - `PUT /api/auth/doi-mat-khau`: Đổi mật khẩu.
 - `PUT /api/auth/cap-nhat-ho-so`: Cập nhật Profile.
 - `PUT /api/auth/cap-nhat-avatar`: Upload ảnh lên Cloudinary.
+- `POST /api/auth/forgot-password`: Yêu cầu gửi mã OTP đặt lại mật khẩu.
+- `POST /api/auth/reset-password`: Xác thực mã OTP và đặt lại mật khẩu mới.
 
 ### 4.2 Nghiệp vụ Khám bệnh
 - `GET /api/chuyen-khoa`: Danh sách chuyên khoa.
@@ -94,15 +96,23 @@ Hệ thống sử dụng cơ chế **Token Rotation** để đảm bảo an toà
 - `GET /api/vnpay/vnpay_return`: Redirect sau khi thanh toán.
 - `GET /api/vnpay/vnpay_ipn`: Xử lý giao dịch ngầm (Server-to-Server).
 
-### 4.5 Quản trị & Thống kê (Admin)
-- `GET /api/thong-ke/tong-quan`: Dashboard số liệu.
-- `GET /api/thong-ke/lich-hen`: Thống kê tần suất theo ngày.
-- `GET /api/thong-ke/doanh-thu`: Doanh thu 12 tháng (Khám vs Thuốc).
 - `CRUD` cho Chuyên khoa, Bác sĩ, Bệnh nhân, FAQ, Khung giờ.
 
 ---
 
-## 5. Định dạng Response chuẩn
+## 5. Chiến lược Caching (Redis Optimization)
+
+Để đảm bảo hiệu năng cao, hệ thống áp dụng cơ chế Caching tích cực cho các Endpoint có tần suất truy cập lớn:
+
+| Loại Cache | Endpoints tiêu biểu | Cơ chế Invalidation |
+| :--- | :--- | :--- |
+| **Static Cache** | `/api/chuyen-khoa`, `/api/cau-hoi-thuong-gap` | Xóa khi Admin cập nhật danh mục. |
+| **Dynamic Cache** | `/api/bac-si`, `/api/dat-lich/slot-trong` | Xóa theo Prefix khi bác sĩ thay đổi lịch trực/hồ sơ. |
+| **Dashboard Stats** | `/api/thong-ke/tong-quan` | Xóa khi có các thay đổi về Tài chính hoặc Đăng ký. |
+
+---
+
+## 6. Định dạng Response chuẩn
 
 Hệ thống luôn trả về JSON thống nhất giúp Frontend xử lý dễ dàng:
 

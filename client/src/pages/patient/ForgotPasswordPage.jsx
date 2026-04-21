@@ -21,7 +21,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { forgotPasswordSchema } from "../../validations/authSchema";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { authService } from "../../services/authService";
 
@@ -34,7 +34,7 @@ const LABEL_CLASS = "block text-sm font-semibold text-slate-700 mb-2";
 
 function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const navigate = useNavigate();
 
   const {
     register,
@@ -48,8 +48,8 @@ function ForgotPasswordPage() {
     setLoading(true);
     try {
       await authService.forgotPassword(data.email);
-      setSubmitted(true);
-      toast.success("Đã gửi email đặt lại mật khẩu!");
+      toast.success("Mã OTP đã được gửi về email của bạn!");
+      navigate("/reset-password", { state: { email: data.email } });
     } catch (err) {
       toast.error(err.message || "Có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
@@ -73,72 +73,47 @@ function ForgotPasswordPage() {
             </div>
 
             <div className="max-w-md mx-auto w-full">
-              {!submitted ? (
-                <>
-                  {/* Icon + Tiêu đề */}
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="material-symbols-outlined text-4xl text-primary">lock_reset</span>
-                    <h2 className="text-3xl font-bold text-slate-900">Quên mật khẩu</h2>
-                  </div>
-                  <p className="text-slate-500 mb-8">
-                    Nhập email bạn đã đăng ký, chúng tôi sẽ gửi link đặt lại mật khẩu cho bạn.
-                  </p>
+              {/* Icon + Tiêu đề */}
+              <div className="flex items-center gap-3 mb-2">
+                <span className="material-symbols-outlined text-4xl text-primary">lock_reset</span>
+                <h2 className="text-3xl font-bold text-slate-900">Quên mật khẩu</h2>
+              </div>
+              <p className="text-slate-500 mb-8">
+                Nhập email bạn đã đăng ký, chúng tôi sẽ gửi mã xác thực (OTP) cho bạn.
+              </p>
 
-                  <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-                    {/* Trường Email */}
-                    <div className="space-y-2">
-                      <label className={LABEL_CLASS}>Email</label>
-                      <input
-                        type="email"
-                        placeholder="example@gmail.com"
-                        className={`${INPUT_CLASS} ${errors.email ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
-                        {...register("email")}
-                      />
-                      {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-                    </div>
-
-                    {/* Nút submit */}
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                      {loading ? (
-                        <>
-                          <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                          Đang gửi...
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined">send</span>
-                          Gửi yêu cầu
-                        </>
-                      )}
-                    </button>
-                  </form>
-                </>
-              ) : (
-                /* Trạng thái đã gửi thành công */
-                <div className="text-center py-8">
-                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="material-symbols-outlined text-4xl text-green-600">mark_email_read</span>
-                  </div>
-                  <h2 className="text-2xl font-bold text-slate-900 mb-3">Kiểm tra hộp thư</h2>
-                  <p className="text-slate-500 mb-6 leading-relaxed">
-                    Chúng tôi đã gửi link đặt lại mật khẩu tới email của bạn. 
-                    Vui lòng kiểm tra hộp thư (bao gồm cả thư rác) và làm theo hướng dẫn.
-                  </p>
-                  <p className="text-sm text-slate-400 mb-8">
-                    ⏱️ Link sẽ hết hạn sau <strong>15 phút</strong>.
-                  </p>
-                  <button
-                    onClick={() => setSubmitted(false)}
-                    className="text-primary font-semibold hover:underline underline-offset-4"
-                  >
-                    Gửi lại email
-                  </button>
+              <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+                {/* Trường Email */}
+                <div className="space-y-2">
+                  <label className={LABEL_CLASS}>Email</label>
+                  <input
+                    type="email"
+                    placeholder="example@gmail.com"
+                    className={`${INPUT_CLASS} ${errors.email ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
+                    {...register("email")}
+                  />
+                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                 </div>
-              )}
+
+                {/* Nút submit */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                      Đang gửi...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined">send</span>
+                      Gửi yêu cầu
+                    </>
+                  )}
+                </button>
+              </form>
 
               {/* Link quay về đăng nhập */}
               <div className="mt-10 text-center">

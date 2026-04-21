@@ -103,9 +103,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
   res.json({ success: true, message: result.message });
 });
 
-// POST /reset-password — đặt lại mật khẩu bằng token từ email
+// POST /reset-password — đặt lại mật khẩu bằng mã OTP từ email
 const resetPassword = asyncHandler(async (req, res) => {
-  const result = await authService.resetPassword(req.body.token, req.body.matKhauMoi);
+  const result = await authService.resetPassword(req.body.email, req.body.otp, req.body.matKhauMoi);
   res.json({ success: true, message: result.message });
 });
 

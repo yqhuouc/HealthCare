@@ -18,6 +18,7 @@ Hệ thống được xây dựng trên nền tảng công nghệ hiện đại,
 - **Thanh toán trực tuyến**: VNPay (Môi trường Sandbox)
 - **Kiểm định dữ liệu (Validation)**: Zod
 - **Xử lý thời gian**: Dayjs
+- **Hệ thống Caching**: Redis (Upstash) - Tối ưu tốc độ phản hồi API và giảm tải Database.
 - **Bảo mật**: Helmet (Security Headers), CORS, Express Rate Limit.
 
 ### 1.2. Frontend (Client-side)
@@ -253,6 +254,26 @@ CodeDoAnTotNghiep/
 56. `POST /`: Thêm FAQ.
 57. `PUT /:id`: Sửa FAQ.
 58. `DELETE /:id`: Xóa FAQ.
+
+---
+
+## 5. Các Kỹ thuật Tối ưu & Bảo mật Nâng cao
+
+Hệ thống được tích hợp các giải pháp hiện đại để đảm bảo trải nghiệm người dùng mượt mà và an toàn:
+
+### 5.1. Redis Caching (Upstash)
+*   **Chiến lược**: Cache-aside (Lazy loading).
+*   **Đối tượng áp dụng**:
+    *   **Dữ liệu tĩnh**: Chuyên khoa, câu hỏi thường gặp (TTL 1h).
+    *   **Dữ liệu động**: Danh sách bác sĩ, slot khám trống (TTL 5-15p).
+    *   **Dữ liệu Dashboard**: Các chỉ số doanh thu, thống kê (Cập nhật sau mỗi giao dịch/đăng ký).
+*   **Hiệu năng**: Giảm thời gian phản hồi API từ ~200-500ms xuống còn < 10ms đối với dữ liệu đã được cache.
+
+### 5.2. Bảo mật & Xác thực OTP (Đã triển khai)
+*   **Quên mật khẩu bằng OTP kết hợp Redis**: Nâng cấp luồng quên mật khẩu từ Link-based (JWT) sang Redis-backed OTP cục bộ.
+    *   Mã OTP 6 số sinh tự động và gửi qua email chuyên nghiệp.
+    *   Bảo vệ mã OTP bằng Redis với thời gian sống (TTL) giới hạn chặt chẽ trong vòng 5 phút (300 giây). Hủy bỏ mã ngay sau khi đổi thành công.
+*   Thêm lớp bảo vệ Cloudflare Turnstile cho các form quan trọng (Sắp triển khai Phase 4).
 
 ---
 

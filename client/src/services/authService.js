@@ -75,11 +75,12 @@ export const authService = {
     api.post("/auth/forgot-password", { email }),
 
   /**
-   * Đặt lại mật khẩu — sử dụng token từ email
-   * @param {string} token - JWT token từ link email
-   * @param {string} matKhauMoi - Mật khẩu mới
+   * Đặt lại mật khẩu — sử dụng email và mã OTP
+   * @param {string} email
+   * @param {string} otp
+   * @param {string} matKhauMoi
    * @returns {{ success, message }}
    */
-  resetPassword: (token, matKhauMoi) =>
-    api.post("/auth/reset-password", { token, matKhauMoi }),
+  resetPassword: (email, otp, matKhauMoi) =>
+    api.post("/auth/reset-password", { email, otp, matKhauMoi }),
 };

@@ -7,7 +7,8 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const prisma = require("../utils/prisma");
 const config = require("../config");
-const { delCache } = require("../utils/redis.util");
+const { getCache, setCache, delCache } = require("../utils/redis.util");
+const { sendOTPEmail } = require("../utils/email.util");
 const { AppError } = require("../middlewares/error.middleware");
 
 const hashToken = (token) =>
@@ -313,81 +314,73 @@ const capNhatAvatar = async (userId, avatarUrl) => {
   return taiKhoan;
 };
 
-// ===================== QUÊN MẬT KHẨU (JWT Stateless) =====================
-
-const { sendResetPasswordEmail } = require("../utils/email.util");
+// ===================== QUÊN MẬT KHẨU (OTP + Redis) =====================
 
 /**
- * Quên mật khẩu — tạo JWT token (ký kèm hash mật khẩu hiện tại để đảm bảo dùng 1 lần)
- * và gửi email chứa link reset cho người dùng.
+ * Quên mật khẩu — tạo mã OTP 6 số lưu vào Redis với TTL 5 phút
+ * và gửi email chứa mã OTP cho người dùng.
  */
 const forgotPassword = async (email) => {
   const taiKhoan = await prisma.taiKhoan.findUnique({ where: { email } });
 
   // Không tiết lộ email có tồn tại hay không (bảo mật)
   if (!taiKhoan) {
-    return { message: "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được link đặt lại mật khẩu." };
+    return { message: "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được mã OTP đặt lại mật khẩu." };
   }
 
   if (taiKhoan.trangThaiTaiKhoan === 0) {
     throw new AppError("Tài khoản đã bị khóa. Vui lòng liên hệ admin.", 403);
   }
 
-  // Ký JWT với secret = resetPasswordSecret + hash mật khẩu hiện tại
-  // → Khi mật khẩu thay đổi, hash thay đổi → token cũ tự động vô hiệu hóa
-  const resetToken = jwt.sign(
-    { id: Number(taiKhoan.id), email: taiKhoan.email },
-    config.jwtResetPasswordSecret + taiKhoan.matKhau,
-    { expiresIn: config.jwtResetPasswordExpires }
-  );
+  // Tạo mã OTP 6 số ngẫu nhiên
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Gửi email chứa link reset
-  await sendResetPasswordEmail(email, resetToken);
+  // Lưu OTP vào Redis với key dạng `otp:reset:${email}` và TTL 5 phút (300s)
+  const otpKey = `otp:reset:${email}`;
+  await setCache(otpKey, otp, 300);
 
-  return { message: "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được link đặt lại mật khẩu." };
+  // Gửi email chứa mã OTP
+  await sendOTPEmail(email, otp);
+
+  return { message: "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được mã OTP đặt lại mật khẩu." };
 };
 
 /**
- * Đặt lại mật khẩu — giải mã JWT, kiểm tra tính hợp lệ, cập nhật mật khẩu mới.
+ * Đặt lại mật khẩu — kiểm tra mã OTP từ Redis, nếu hợp lệ thì cập nhật mật khẩu.
  */
-const resetPassword = async (token, matKhauMoi) => {
-  // Bước 1: Giải mã JWT chỉ để lấy id (không verify signature vì chưa biết secret đầy đủ)
-  let decoded;
-  try {
-    decoded = jwt.decode(token);
-  } catch {
-    throw new AppError("Token không hợp lệ", 400);
+const resetPassword = async (email, otp, matKhauMoi) => {
+  // Lấy OTP từ Redis
+  const otpKey = `otp:reset:${email}`;
+  const storedOtp = await getCache(otpKey);
+
+  if (!storedOtp) {
+    throw new AppError("Mã OTP không hợp lệ hoặc đã qua 5 phút", 400);
   }
 
-  if (!decoded || !decoded.id) {
-    throw new AppError("Token không hợp lệ", 400);
+  if (storedOtp !== otp) {
+    throw new AppError("Mã OTP không chính xác", 400);
   }
 
-  // Bước 2: Lấy tài khoản để có hash mật khẩu hiện tại → dùng làm secret verify
+  // Kiểm tra tài khoản
   const taiKhoan = await prisma.taiKhoan.findUnique({
-    where: { id: BigInt(decoded.id) },
+    where: { email },
   });
 
-  if (!taiKhoan) {
-    throw new AppError("Token không hợp lệ hoặc tài khoản không tồn tại", 400);
+  if (!taiKhoan || taiKhoan.trangThaiTaiKhoan === 0) {
+    throw new AppError("Tài khoản không tồn tại hoặc đã bị khóa", 400);
   }
 
-  // Bước 3: Verify JWT với secret = resetPasswordSecret + hash mật khẩu hiện tại
-  // Nếu mật khẩu đã đổi trước đó → hash khác → verify thất bại → token dùng 1 lần
-  try {
-    jwt.verify(token, config.jwtResetPasswordSecret + taiKhoan.matKhau);
-  } catch {
-    throw new AppError("Token không hợp lệ hoặc đã hết hạn", 400);
-  }
-
-  // Bước 4: Hash mật khẩu mới và cập nhật
+  // Hash mật khẩu mới và cập nhật
   const hashedPassword = await bcrypt.hash(matKhauMoi, 10);
   await prisma.taiKhoan.update({
     where: { id: taiKhoan.id },
     data: { matKhau: hashedPassword },
   });
 
-  return { message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới." };
+  // Hủy OTP sau khi sử dụng thành công
+  await delCache(otpKey);
+
+  return { message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại." };
 };
 
 module.exports = {

@@ -39,6 +39,7 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
+  otp: z.string().length(6, "Mã OTP phải có đúng 6 số"),
   matKhauMoi: z.string().min(6, "Mật khẩu mới phải có ít nhất 6 ký tự"),
   xacNhanMatKhau: z.string().min(1, "Vui lòng xác nhận mật khẩu mới"),
 }).refine((data) => data.matKhauMoi === data.xacNhanMatKhau, {

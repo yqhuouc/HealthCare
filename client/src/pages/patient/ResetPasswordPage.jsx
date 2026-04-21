@@ -23,7 +23,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { resetPasswordSchema } from "../../validations/authSchema";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { authService } from "../../services/authService";
 
@@ -39,9 +39,9 @@ function ResetPasswordPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const token = searchParams.get("token");
+  const email = location.state?.email;
 
   const {
     register,
@@ -52,13 +52,13 @@ function ResetPasswordPage() {
   });
 
   const onSubmit = async (data) => {
-    if (!token) {
-      toast.error("Link đặt lại mật khẩu không hợp lệ.");
+    if (!email) {
+      toast.error("Thiếu thông tin email. Vui lòng thử lại.");
       return;
     }
     setLoading(true);
     try {
-      await authService.resetPassword(token, data.matKhauMoi);
+      await authService.resetPassword(email, data.otp, data.matKhauMoi);
       setSuccess(true);
       toast.success("Đặt lại mật khẩu thành công!");
     } catch (err) {
@@ -68,17 +68,17 @@ function ResetPasswordPage() {
     }
   };
 
-  // Nếu không có token trong URL → hiển thị thông báo lỗi
-  if (!token && !success) {
+  // Nếu không có email trong state → hiển thị thông báo yêu cầu làm lại
+  if (!email && !success) {
     return (
       <div className="grow flex items-center justify-center py-12">
         <div className="text-center max-w-md mx-auto p-8">
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <span className="material-symbols-outlined text-4xl text-red-500">error</span>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">Link không hợp lệ</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">Quy trình không hợp lệ</h2>
           <p className="text-slate-500 mb-6">
-            Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu gửi lại email.
+            Thiếu thông tin email. Vui lòng thực hiện lại quy trình từ bước đầu tiên.
           </p>
           <Link
             to="/forgot-password"
@@ -116,10 +116,23 @@ function ResetPasswordPage() {
                     <h2 className="text-3xl font-bold text-slate-900">Đặt lại mật khẩu</h2>
                   </div>
                   <p className="text-slate-500 mb-8">
-                    Nhập mật khẩu mới cho tài khoản của bạn.
+                    Nhập mã OTP gồm 6 chữ số đã được gửi tới email <strong>{email}</strong> và mật khẩu mới cho tài khoản của bạn.
                   </p>
 
                   <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+                    {/* Mã OTP */}
+                    <div>
+                      <label className={LABEL_CLASS}>Mã xác thực (OTP)</label>
+                      <input
+                        type="text"
+                        placeholder="VD: 123456"
+                        maxLength={6}
+                        className={`${INPUT_CLASS} text-center tracking-widest font-mono text-lg ${errors.otp ? "border-red-400 focus:ring-red-200 focus:border-red-400" : ""}`}
+                        {...register("otp")}
+                      />
+                      {errors.otp && <p className="text-red-500 text-xs mt-1 text-center">{errors.otp.message}</p>}
+                    </div>
+
                     {/* Mật khẩu mới */}
                     <div>
                       <label className={LABEL_CLASS}>Mật khẩu mới</label>
