@@ -273,7 +273,7 @@ Hệ thống được tích hợp các giải pháp hiện đại để đảm b
 *   **Quên mật khẩu bằng OTP kết hợp Redis**: Nâng cấp luồng quên mật khẩu từ Link-based (JWT) sang Redis-backed OTP cục bộ.
     *   Mã OTP 6 số sinh tự động và gửi qua email chuyên nghiệp.
     *   Bảo vệ mã OTP bằng Redis với thời gian sống (TTL) giới hạn chặt chẽ trong vòng 5 phút (300 giây). Hủy bỏ mã ngay sau khi đổi thành công.
-*   Thêm lớp bảo vệ Cloudflare Turnstile cho các form quan trọng (Sắp triển khai Phase 4).
+*   **Chống Spam bằng Cloudflare Turnstile (Đã triển khai)** Lắp đặt khiên bảo vệ Cloudflare tại các Form nhạy cảm (Đăng nhập, Đăng ký, Quên mật khẩu). Sử dụng công nghệ AI check ngầm thay thế hoàn toàn cho CAPTCHA truyền thống để ngăn chặn hình thức tấn công Brute-force & Bot Spam.
 
 ---
 

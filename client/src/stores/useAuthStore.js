@@ -52,9 +52,9 @@ const useAuthStore = create((set) => ({
    * @param {{ email: string, password: string }} credentials
    * @returns {object} user data đầy đủ (sau khi đã fetch profile)
    */
-  login: async (credentials) => {
+  login: async (credentials, turnstileToken) => {
     // 1. Gọi login API để xác thực và nhận cookie
-    await authService.login(credentials);
+    await authService.login(credentials, turnstileToken);
 
     // 2. Ngay sau khi login thành công (server đã set cookie),
     // Gọi fetchUser để lấy đầy đủ thông tin (bacSi, chuyên khoa...)

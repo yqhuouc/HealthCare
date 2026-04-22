@@ -30,6 +30,7 @@ import { registerSchema } from "../../validations/authSchema";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { authService } from "../../services/authService";
+import TurnstileWidget from "../../components/common/TurnstileWidget";
 
 /** Đường dẫn ảnh nền cho panel trái (dùng chung với LoginPage) */
 const IMAGE_URL = "/images/login-bg.jpg";
@@ -42,6 +43,7 @@ function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   const navigate = useNavigate();
 
   const {
@@ -54,6 +56,10 @@ function RegisterPage() {
 
   // Xử lý đăng ký: gọi API → thông báo thành công → chuyển sang trang đăng nhập
   const onSubmit = async (data) => {
+    if (!turnstileToken) {
+      toast.error("Vui lòng xác minh bảo mật (Turnstile).");
+      return;
+    }
     setLoading(true);
     try {
       await authService.register({
@@ -61,7 +67,7 @@ function RegisterPage() {
         email: data.email,
         soDienThoai: data.phone,
         matKhau: data.password,
-      });
+      }, turnstileToken);
       toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
       navigate("/login");
     } catch (err) {
@@ -172,6 +178,8 @@ function RegisterPage() {
                     <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
                   )}
                 </div>
+
+                <TurnstileWidget onVerify={(token) => setTurnstileToken(token)} />
 
                 {/* Nút submit — disabled khi đang loading */}
                 <button

@@ -7,13 +7,14 @@ const authController = require("../controllers/auth.controller");
 const { authenticate, authorize } = require("../middlewares/auth.middleware");
 const { validate } = require("../middlewares/validate.middleware");
 const { multerUpload } = require("../config/cloudinary.config");
+const { verifyTurnstile } = require("../middlewares/turnstile.middleware");
 const { registerSchema, loginSchema, doiMatKhauSchema, capNhatHoSoSchema, forgotPasswordSchema, resetPasswordSchema } = require("../validations/auth.validation");
 
 // POST /api/auth/register - Đăng ký (bệnh nhân)
-router.post("/register", validate(registerSchema), authController.register);
+router.post("/register", verifyTurnstile, validate(registerSchema), authController.register);
 
 // POST /api/auth/login - Đăng nhập
-router.post("/login", validate(loginSchema), authController.login);
+router.post("/login", verifyTurnstile, validate(loginSchema), authController.login);
 
 // POST /api/auth/refresh - Làm mới access token
 router.post("/refresh", authController.refresh);
@@ -34,7 +35,7 @@ router.put("/cap-nhat-ho-so", authenticate, validate(capNhatHoSoSchema), authCon
 router.put("/cap-nhat-avatar", authenticate, multerUpload.single("avatar"), authController.capNhatAvatar);
 
 // POST /api/auth/forgot-password - Quên mật khẩu (gửi email reset)
-router.post("/forgot-password", validate(forgotPasswordSchema), authController.forgotPassword);
+router.post("/forgot-password", verifyTurnstile, validate(forgotPasswordSchema), authController.forgotPassword);
 
 // POST /api/auth/reset-password - Đặt lại mật khẩu (dùng token từ email)
 router.post("/reset-password", validate(resetPasswordSchema), authController.resetPassword);

@@ -24,6 +24,7 @@ import { forgotPasswordSchema } from "../../validations/authSchema";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { authService } from "../../services/authService";
+import TurnstileWidget from "../../components/common/TurnstileWidget";
 
 /** Đường dẫn ảnh nền cho panel trái (dùng chung với LoginPage) */
 const IMAGE_URL = "/images/login-bg.jpg";
@@ -34,6 +35,7 @@ const LABEL_CLASS = "block text-sm font-semibold text-slate-700 mb-2";
 
 function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   const navigate = useNavigate();
 
   const {
@@ -45,9 +47,13 @@ function ForgotPasswordPage() {
   });
 
   const onSubmit = async (data) => {
+    if (!turnstileToken) {
+      toast.error("Vui lòng xác minh bảo mật (Turnstile).");
+      return;
+    }
     setLoading(true);
     try {
-      await authService.forgotPassword(data.email);
+      await authService.forgotPassword(data.email, turnstileToken);
       toast.success("Mã OTP đã được gửi về email của bạn!");
       navigate("/reset-password", { state: { email: data.email } });
     } catch (err) {
@@ -94,6 +100,8 @@ function ForgotPasswordPage() {
                   />
                   {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                 </div>
+
+                <TurnstileWidget onVerify={(token) => setTurnstileToken(token)} />
 
                 {/* Nút submit */}
                 <button

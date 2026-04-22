@@ -14,17 +14,18 @@ export const authService = {
    * Đăng nhập — server set cookie accessToken + refreshToken
    * @returns {{ success, message, data: { user: { id, email, vaiTro, hoTen } } }}
    */
-  login: (credentials) =>
+  login: (credentials, turnstileToken) =>
     api.post("/auth/login", {
       email: credentials.email,
       matKhau: credentials.password || credentials.matKhau,
+      cfTurnstileResponse: turnstileToken,
     }),
 
   /**
    * Đăng ký tài khoản bệnh nhân
    * @returns {{ success, message, data: { id, email, vaiTro, hoTen } }}
    */
-  register: (userData) =>
+  register: (userData, turnstileToken) =>
     api.post("/auth/register", {
       email: userData.email,
       matKhau: userData.password || userData.matKhau,
@@ -33,6 +34,7 @@ export const authService = {
       gioiTinh: userData.gioiTinh || undefined,
       ngaySinh: userData.ngaySinh || undefined,
       diaChi: userData.diaChi || undefined,
+      cfTurnstileResponse: turnstileToken,
     }),
 
   /**
@@ -71,8 +73,11 @@ export const authService = {
    * @param {string} email
    * @returns {{ success, message }}
    */
-  forgotPassword: (email) =>
-    api.post("/auth/forgot-password", { email }),
+  forgotPassword: (email, turnstileToken) =>
+    api.post("/auth/forgot-password", { 
+      email,
+      cfTurnstileResponse: turnstileToken
+    }),
 
   /**
    * Đặt lại mật khẩu — sử dụng email và mã OTP

@@ -28,6 +28,7 @@ import { loginSchema } from "../../validations/authSchema";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import useAuthStore from "../../stores/useAuthStore";
+import TurnstileWidget from "../../components/common/TurnstileWidget";
 
 /** Đường dẫn ảnh nền cho panel trái */
 const IMAGE_URL = "/images/login-bg.jpg";
@@ -39,6 +40,7 @@ const LABEL_CLASS = "block text-sm font-semibold text-slate-700 mb-2";
 function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
 
@@ -52,9 +54,13 @@ function LoginPage() {
 
   // Xử lý đăng nhập: gọi API → server set cookie → redirect theo vai trò
   const onSubmit = async (data) => {
+    if (!turnstileToken) {
+      toast.error("Vui lòng xác minh bảo mật (Turnstile).");
+      return;
+    }
     setLoading(true);
     try {
-      const user = await login({ email: data.email, password: data.password });
+      const user = await login({ email: data.email, password: data.password }, turnstileToken);
       toast.success("Đăng nhập thành công!");
       // Redirect theo vai trò từ server
       if (user.vaiTro === "admin") navigate("/admin");
@@ -138,6 +144,8 @@ function LoginPage() {
                     Quên mật khẩu?
                   </Link>
                 </div>
+
+                <TurnstileWidget onVerify={(token) => setTurnstileToken(token)} />
 
                 {/* Nút submit — disabled khi đang loading */}
                 <button
