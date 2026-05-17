@@ -374,11 +374,6 @@ const create = async (data, requestUser = null) => {
 
   // 7. Transaction: Ghi nhận lịch hẹn và phân bổ slot
   return prisma.$transaction(async (tx) => {
-    // Lấy mã loại để phân luồng thanh toán (OFFLINE / VNPAY)
-    const hinhThuc = await tx.hinhThucThanhToan.findUnique({
-      where: { id: BigInt(data.hinhThucThanhToanId) },
-    });
-
     const datLich = await tx.datLich.create({
       data: {
         ngayDat: new Date(data.ngayDat),
@@ -408,11 +403,7 @@ const create = async (data, requestUser = null) => {
     await delCache(getSlotCacheKey(data.bacSiId, data.ngayDat));
     await delCache("cache:stats:overview");
 
-    // Trả về kèm maLoai để controller xử lý redirect phí khám
-    return {
-      ...datLich,
-      _maLoai: hinhThuc?.maLoai || "OFFLINE",
-    };
+    return datLich;
   });
 };
 
@@ -473,13 +464,28 @@ const updateTrangThai = async (id, trangThai, requestUser = null) => {
 const updateThanhToan = async (id, trangThaiThanhToan) => {
   const existing = await prisma.datLich.findUnique({
     where: { id: BigInt(id) },
+    include: { donThuoc: true },
   });
 
   if (!existing) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
+  if (existing.trangThai !== 2) {
+    throw new AppError("Chỉ cập nhật thanh toán khi lịch hẹn đã khám xong", 400);
+  }
+
+  const status = Number(trangThaiThanhToan);
+  const updateData = { trangThaiThanhToan: status };
+
+  if (status >= 1) {
+    const offline = await prisma.hinhThucThanhToan.findFirst({
+      where: { maLoai: "OFFLINE" },
+    });
+    if (offline) updateData.hinhThucThanhToanId = offline.id;
+  }
+
   const result = await prisma.datLich.update({
     where: { id: BigInt(id) },
-    data: { trangThaiThanhToan: Number(trangThaiThanhToan) },
+    data: updateData,
     include: defaultInclude,
   });
 

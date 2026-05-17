@@ -87,6 +87,13 @@ export default function MedicalResultPage() {
   const medicineFee = Number(donThuoc?.tongTien || 0);
   const totalAmount = examFee + medicineFee;
 
+  const daKham = appointment.trangThai === 2;
+  const coDonThuoc = !!donThuoc;
+  const daThanhToanXong = coDonThuoc
+    ? appointment.trangThaiThanhToan >= 2
+    : appointment.trangThaiThanhToan >= 1;
+  const canShowPayment = daKham && !daThanhToanXong;
+
   return (
     <div className="max-w-4xl mx-auto py-6 sm:py-10 px-4 sm:px-6">
       {/* Nút điều hướng & In (Ẩn khi in) */}
@@ -287,20 +294,28 @@ export default function MedicalResultPage() {
 
         {/* TỔNG KẾT & THANH TOÁN */}
         <div className="border-t border-slate-200 pt-16">
+          {!daKham && (
+            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-4 py-3 mb-8 print:hidden">
+              Lịch hẹn chưa hoàn tất khám. Thanh toán sẽ khả dụng sau khi bác sĩ cập nhật trạng thái đã khám.
+            </p>
+          )}
+
           <div className="flex flex-col lg:flex-row justify-between items-start gap-12">
             {/* Status Section */}
             <div className="space-y-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tình trạng thanh toán</h3>
               <div className="flex items-center gap-3">
                 <span
-                  className={`w-3 h-3 rounded-full ${appointment.trangThaiThanhToan >= 2 ? "bg-green-500" : "bg-red-500"}`}
+                  className={`w-3 h-3 rounded-full ${daThanhToanXong ? "bg-green-500" : "bg-red-500"}`}
                 />
                 <p className="text-sm font-bold text-slate-900">
-                  {appointment.trangThaiThanhToan >= 2
-                    ? "Đã hoàn tất thanh toán"
-                    : appointment.trangThaiThanhToan === 1
-                      ? "Đã trả phí khám - Còn nợ phí thuốc"
-                      : "Chưa thanh toán hồ sơ"}
+                  {!daKham
+                    ? "Chưa khám xong"
+                    : daThanhToanXong
+                      ? "Đã hoàn tất thanh toán"
+                      : coDonThuoc
+                        ? "Chưa thanh toán (phí khám + thuốc)"
+                        : "Chưa thanh toán phí khám"}
                 </p>
               </div>
               {appointment.hinhThucThanhToan && (
@@ -328,45 +343,32 @@ export default function MedicalResultPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="space-y-3 print:hidden">
-                {appointment.trangThaiThanhToan === 0 && donThuoc && (
-                  <button
-                    onClick={() => handlePayment("TAT_CA")}
-                    disabled={paying}
-                    className="w-full py-4 bg-primary text-white rounded-lg font-bold text-sm shadow-md hover:bg-primary/95 active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined">payments</span>
-                    Thanh toán toàn bộ ({formatPrice(totalAmount)})
-                  </button>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
-                  {appointment.trangThaiThanhToan === 0 && (
+              {canShowPayment && (
+                <div className="space-y-3 print:hidden">
+                  {coDonThuoc ? (
+                    <button
+                      onClick={() => handlePayment("TAT_CA")}
+                      disabled={paying}
+                      className="w-full py-4 bg-primary text-white rounded-lg font-bold text-sm shadow-md hover:bg-primary/95 active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined">payments</span>
+                      Thanh toán online ({formatPrice(totalAmount)})
+                    </button>
+                  ) : (
                     <button
                       onClick={() => handlePayment("PHI_KHAM")}
                       disabled={paying}
-                      className="py-3 bg-white border-2 border-amber-500 text-amber-600 rounded-lg font-bold text-xs hover:bg-amber-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-4 bg-primary text-white rounded-lg font-bold text-sm shadow-md hover:bg-primary/95 active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer"
                     >
-                      Trả tiền khám
+                      <span className="material-symbols-outlined">payments</span>
+                      Thanh toán phí khám ({formatPrice(examFee)})
                     </button>
                   )}
-                  {(appointment.trangThaiThanhToan === 0 || appointment.trangThaiThanhToan === 1) && donThuoc && (
-                    <button
-                      onClick={() => handlePayment("DON_THUOC")}
-                      disabled={paying}
-                      className="py-3 bg-white border-2 border-emerald-500 text-emerald-600 rounded-lg font-bold text-xs hover:bg-emerald-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      Trả tiền thuốc
-                    </button>
-                  )}
-                </div>
-
-                {appointment.trangThaiThanhToan < 2 && (
                   <p className="text-[10px] text-slate-400 text-center italic leading-normal">
-                    * Hỗ trợ thanh toán online qua thẻ ATM/Tín dụng (VNPay) <br /> hoặc trả tiền mặt tại quầy đón tiếp.
+                    Thanh toán qua VNPay hoặc trả tiền mặt tại quầy — nhân viên sẽ xác nhận trên hệ thống.
                   </p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

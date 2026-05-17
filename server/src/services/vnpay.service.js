@@ -59,6 +59,10 @@ const initiatePayment = async ({ datLichId, loaiGiaoDich, ipAddr, user }) => {
     throw new AppError("Bạn không có quyền thanh toán cho lịch hẹn này", 403);
   }
 
+  if (datLich.trangThai !== 2) {
+    throw new AppError("Chỉ thanh toán sau khi đã khám xong", 400);
+  }
+
   let amount = 0;
   if (loaiGiaoDich === "PHI_KHAM") {
     amount = Number(datLich.giaKham);
@@ -142,10 +146,17 @@ const processIpn = async (vnpParams) => {
     console.log(`[VNPAY IPN] datLichId: ${datLichId}, loai: ${loaiGiaoDich}, status: ${newStatus}`);
 
 
+    const vnpayMethod = await prisma.hinhThucThanhToan.findFirst({
+      where: { maLoai: "VNPAY" },
+    });
+
     await prisma.$transaction([
       prisma.datLich.update({
         where: { id: datLichId },
-        data: { trangThaiThanhToan: newStatus },
+        data: {
+          trangThaiThanhToan: newStatus,
+          ...(vnpayMethod ? { hinhThucThanhToanId: vnpayMethod.id } : {}),
+        },
       }),
       prisma.giaoDich.updateMany({
         where: { maThamChieu: vnp_TxnRef },

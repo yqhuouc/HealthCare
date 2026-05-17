@@ -337,10 +337,10 @@ function AdminAppointmentDetailPage() {
                 <div className="grid grid-cols-1 gap-2">
                   <button
                     onClick={() => handleUpdatePayment(2)}
-                    disabled={updating || appointment.trangThaiThanhToan === 2}
+                    disabled={updating || appointment.trangThaiThanhToan === 2 || appointment.trangThai !== 2}
                     className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 disabled:opacity-50"
                   >
-                    Xác nhận đã thanh toán
+                    Xác nhận thanh toán tại quầy
                   </button>
                   <button
                     onClick={() => handleUpdatePayment(0)}

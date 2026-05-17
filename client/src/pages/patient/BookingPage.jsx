@@ -6,13 +6,12 @@
  *
  * Chức năng:
  * - Quy trình đặt lịch 2 bước (step wizard):
- *   + Bước 1: Chọn ngày khám (14 ngày tiếp theo) + chọn slot trống + lý do + hình thức thanh toán
+ *   + Bước 1: Chọn ngày khám (14 ngày tiếp theo) + chọn slot trống + lý do khám
  *   + Bước 2: Xác nhận thông tin → gửi yêu cầu đặt lịch
  * - Gọi API slot trống theo bác sĩ + ngày
- * - Gọi API hình thức thanh toán
- * - Gửi POST /api/dat-lich để tạo lịch hẹn
+ * - Gửi POST /api/dat-lich để tạo lịch hẹn (thanh toán sau khi khám xong)
  *
- * Dữ liệu: API /api/bac-si/:id, /api/dat-lich/slot-trong, /api/hinh-thuc-thanh-toan
+ * Dữ liệu: API /api/bac-si/:id, /api/dat-lich/slot-trong
  * ============================================================
  */
 import { useState, useMemo } from "react";
@@ -20,11 +19,9 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useDoctor } from "../../hooks/queries/useDoctorQueries";
 import { useSlotTrong, useCreateAppointment } from "../../hooks/queries/useAppointmentQueries";
-import { usePaymentMethods } from "../../hooks/queries/usePaymentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { formatPrice } from "../../utils/formatters";
 import { toDateString, dayjs } from "../../utils/dateUtils";
-import { paymentService } from "../../services/paymentService";
 
 const DAY_NAMES = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
@@ -60,15 +57,10 @@ export default function BookingPage() {
   const { data: docRes, isLoading: loadingDoctor } = useDoctor(doctorId);
   const doctor = docRes?.data || null;
 
-  // TanStack Query: Lấy hình thức thanh toán
-  const { data: pmRes } = usePaymentMethods();
-  const paymentMethods = pmRes?.data || [];
-
   // Form states
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [reason, setReason] = useState("");
-  const [selectedPayment, setSelectedPayment] = useState("");
   const [step, setStep] = useState(1);
 
   // TanStack Query: Lấy slot trống khi chọn ngày (auto-refetch)
@@ -108,7 +100,7 @@ export default function BookingPage() {
 
   const specialtyName = doctor.chuyenKhoa?.tenChuyenKhoa || "Chưa phân khoa";
   const avatarUrl = doctor.taiKhoan?.anhDaiDien;
-  const canContinue = selectedDate && selectedSlot && selectedPayment;
+  const canContinue = selectedDate && selectedSlot;
 
   const handleContinue = () => {
     if (!canContinue) return;
@@ -131,36 +123,11 @@ export default function BookingPage() {
         ngayDat: selectedDate,
         gioBatDau: selectedSlot.gioBatDau,
         lyDoKham: reason || undefined,
-        hinhThucThanhToanId: Number(selectedPayment),
       },
       {
-        onSuccess: (res) => {
-          // Kiểm tra xem hình thức thanh toán có yêu cầu redirect sang VNPay không
-          if (res.maLoai === "VNPAY") {
-            toast.info("Đang xử lý thanh toán VNPay...");
-            paymentService
-              .createVnpayPayment({
-                datLichId: res.data.id,
-                loaiGiaoDich: "PHI_KHAM",
-              })
-              .then((vnpRes) => {
-                if (vnpRes.paymentUrl) {
-                  window.location.href = vnpRes.paymentUrl;
-                } else {
-                  toast.success("Đặt lịch thành công! Vui lòng thanh toán sau.");
-                  navigate("/appointments");
-                }
-              })
-              .catch(() => {
-                toast.warning(
-                  "Đặt lịch thành công nhưng không thể tạo liên kết thanh toán. Bạn có thể thử lại sau trong phần Lịch sử.",
-                );
-                navigate("/appointments");
-              });
-          } else {
-            toast.success("Đặt lịch thành công! Vui lòng chờ xác nhận từ phòng khám.");
-            navigate("/appointments");
-          }
+        onSuccess: () => {
+          toast.success("Đặt lịch thành công! Vui lòng chờ xác nhận từ phòng khám.");
+          navigate("/appointments");
         },
         onError: (err) => {
           toast.error(err?.message || "Đặt lịch thất bại. Vui lòng thử lại.");
@@ -314,34 +281,10 @@ export default function BookingPage() {
             )}
           </section>
 
-          {/* Hình thức thanh toán */}
-          {paymentMethods.length > 0 && (
-            <section>
-              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">payments</span>
-                Hình thức thanh toán
-              </h3>
-              <select
-                value={selectedPayment}
-                onChange={(e) => setSelectedPayment(e.target.value)}
-                required
-                className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition bg-white"
-              >
-                <option value="">-- Chọn hình thức thanh toán (Bắt buộc) --</option>
-                {paymentMethods.map((pm) => (
-                  <option key={pm.id} value={pm.id}>
-                    {pm.tenHinhThuc} {pm.maLoai === "VNPAY" ? "(Thanh toán online ngay)" : "(Trả sau tại quầy)"}
-                  </option>
-                ))}
-              </select>
-              {selectedPayment && paymentMethods.find((p) => String(p.id) === selectedPayment)?.maLoai === "VNPAY" && (
-                <p className="mt-2 text-[11px] text-amber-600 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">info</span>
-                  Bạn sẽ được chuyển hướng sang cổng thanh toán VNPay sau khi nhấn xác nhận.
-                </p>
-              )}
-            </section>
-          )}
+          <p className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-4 py-3 flex items-start gap-2">
+            <span className="material-symbols-outlined text-primary text-lg shrink-0">info</span>
+            Thanh toán sau khi khám xong (online qua VNPay hoặc tại quầy đón tiếp).
+          </p>
 
           {/* Lý do khám */}
           <section>
@@ -419,18 +362,6 @@ export default function BookingPage() {
                 <div className="text-sm">
                   <p className="text-slate-400 mb-1">Lý do khám</p>
                   <p className="text-slate-700">{reason}</p>
-                </div>
-              </>
-            )}
-
-            {selectedPayment && (
-              <>
-                <div className="border-t border-slate-100" />
-                <div className="text-sm">
-                  <p className="text-slate-400 mb-1">Hình thức thanh toán</p>
-                  <p className="text-slate-700 font-medium">
-                    {paymentMethods.find((p) => String(p.id) === selectedPayment)?.tenHinhThuc || "—"}
-                  </p>
                 </div>
               </>
             )}

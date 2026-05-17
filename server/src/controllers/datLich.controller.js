@@ -43,7 +43,6 @@ const create = asyncHandler(async (req, res) => {
     success: true,
     message: "Đặt lịch thành công",
     data: datLich,
-    maLoai: datLich._maLoai,
   });
 });
 

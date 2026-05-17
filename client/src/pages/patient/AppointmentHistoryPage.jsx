@@ -17,14 +17,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import {
-  useAppointmentsByPatient,
-  useDeleteAppointment,
-  useChangePaymentMethod,
-} from "../../hooks/queries/useAppointmentQueries";
+import { useAppointmentsByPatient, useDeleteAppointment } from "../../hooks/queries/useAppointmentQueries";
 import useAuthStore from "../../stores/useAuthStore";
 import { formatTime, formatDate } from "../../utils/dateUtils";
-import { paymentService } from "../../services/paymentService";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 
 const STATUS_CONFIG = {
@@ -69,7 +64,6 @@ export default function AppointmentHistoryPage() {
 
   // TanStack Query: Mutation chính
   const deleteMutation = useDeleteAppointment();
-  const changeMethodMutation = useChangePaymentMethod();
 
   const filteredAppointments =
     filterStatus === "all" ? appointments : appointments.filter((a) => a.trangThai === filterStatus);
@@ -95,44 +89,10 @@ export default function AppointmentHistoryPage() {
     });
   };
 
-  /** Thử lại thanh toán VNPay */
-  const handleRetryPayment = async (appointmentId) => {
-    try {
-      toast.info("Đang tạo liên kết thanh toán...");
-      const res = await paymentService.createVnpayPayment({
-        datLichId: appointmentId,
-        loaiGiaoDich: "PHI_KHAM",
-      });
-      if (res.paymentUrl) {
-        window.location.assign(res.paymentUrl);
-      } else {
-        toast.error("Không thể khởi tạo thanh toán. Vui lòng thử lại sau.");
-      }
-    } catch (err) {
-      toast.error("Không thể khởi tạo thanh toán. Vui lòng thử lại sau.", err);
-    }
-  };
-
-  /** Chuyển sang thanh toán tại quầy (ID 6 - Offline) */
-  const handleSwitchToOfflineClick = (appointmentId) => {
-    openModal({
-      title: "Đổi phương thức thanh toán?",
-      message: "Bạn muốn chuyển sang thanh toán trực tiếp tại quầy khi đến khám?",
-      type: "warning",
-      confirmLabel: "Đồng ý chuyển",
-      onConfirm: () => {
-        changeMethodMutation.mutate(
-          { id: appointmentId, hinhThucThanhToanId: 6 },
-          {
-            onSuccess: () => {
-              toast.success("Đã chuyển sang thanh toán tại quầy.");
-              closeModal();
-            },
-            onError: (err) => toast.error(err?.message || "Không thể đổi phương thức."),
-          },
-        );
-      },
-    });
+  const needsPayment = (apt) => {
+    if (apt.trangThai !== 2) return false;
+    if (apt.donThuoc) return apt.trangThaiThanhToan < 2;
+    return apt.trangThaiThanhToan < 1;
   };
 
   if (loading) {
@@ -238,29 +198,6 @@ export default function AppointmentHistoryPage() {
                     )}
                   </div>
 
-                  {isPending && appointment.trangThaiThanhToan === 0 && (
-                    <div className="flex flex-col gap-2 w-full sm:w-auto">
-                      {appointment.hinhThucThanhToan?.maLoai === "VNPAY" && (
-                        <button
-                          onClick={() => handleRetryPayment(appointment.id)}
-                          className="w-full sm:w-auto px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 transition cursor-pointer flex items-center justify-center gap-2 shadow-sm whitespace-nowrap"
-                        >
-                          <span className="material-symbols-outlined text-sm">payments</span>
-                          Thanh toán phí khám
-                        </button>
-                      )}
-
-                      {appointment.hinhThucThanhToan?.maLoai === "VNPAY" && (
-                        <button
-                          onClick={() => handleSwitchToOfflineClick(appointment.id)}
-                          className="w-full sm:w-auto px-4 py-2 rounded-lg border border-slate-200 text-slate-500 text-[10px] font-medium hover:bg-slate-50 transition cursor-pointer whitespace-nowrap"
-                        >
-                          Chuyển trả tại quầy
-                        </button>
-                      )}
-                    </div>
-                  )}
-
                   {isPending && (
                     <button
                       onClick={() => handleCancelClick(appointment.id)}
@@ -275,7 +212,7 @@ export default function AppointmentHistoryPage() {
                       to={`/medical-results/${appointment.id}`}
                       className="w-full sm:w-auto px-4 py-2 rounded-lg border border-primary text-primary text-xs font-medium hover:bg-primary/5 transition text-center"
                     >
-                      Xem kết quả
+                      {needsPayment(appointment) ? "Xem kết quả & thanh toán" : "Xem kết quả"}
                     </Link>
                   )}
                 </div>
@@ -289,7 +226,7 @@ export default function AppointmentHistoryPage() {
       <ConfirmModal
         {...modalConfig}
         onClose={closeModal}
-        isLoading={deleteMutation.isPending || changeMethodMutation.isPending}
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );
