@@ -346,7 +346,8 @@ POST {{base_url}}/auth/register
   "soDienThoai": "0912345678",
   "gioiTinh": 1,
   "ngaySinh": "1998-05-20",
-  "diaChi": "Hà Nội"
+  "diaChi": "Hà Nội",
+  "cfTurnstileResponse": "1x00000000000000000000AA"
 }
 ```
 
@@ -384,7 +385,8 @@ POST {{base_url}}/auth/login
 ```json
 {
   "email": "admin@clinic.vn",
-  "matKhau": "admin123"
+  "matKhau": "admin123",
+  "cfTurnstileResponse": "1x00000000000000000000AA"
 }
 ```
 
@@ -426,7 +428,8 @@ POST {{base_url}}/auth/login
 ```json
 {
   "email": "bacsi1@clinic.vn",
-  "matKhau": "doctor123"
+  "matKhau": "doctor123",
+  "cfTurnstileResponse": "1x00000000000000000000AA"
 }
 ```
 
@@ -444,7 +447,8 @@ POST {{base_url}}/auth/login
 ```json
 {
   "email": "benhnhan@gmail.com",
-  "matKhau": "patient123"
+  "matKhau": "patient123",
+  "cfTurnstileResponse": "1x00000000000000000000AA"
 }
 ```
 
@@ -656,7 +660,8 @@ POST {{base_url}}/auth/forgot-password
 **Body** (raw → JSON):
 ```json
 {
-  "email": "benhnhan@gmail.com"
+  "email": "benhnhan@gmail.com",
+  "cfTurnstileResponse": "1x00000000000000000000AA"
 }
 ```
 
@@ -814,6 +819,31 @@ DELETE {{base_url}}/chuyen-khoa/9
 **Kiểm thử lỗi**:
 - Xóa chuyên khoa có bác sĩ → `400` "Không thể xóa vì có X bác sĩ thuộc chuyên khoa này"
 - ID không tồn tại → `404` "Không tìm thấy chuyên khoa"
+
+---
+
+### 5.6 Tải ảnh chuyên khoa lên Cloudinary (Admin)
+
+```
+PUT {{base_url}}/chuyen-khoa/1/upload-anh
+```
+
+**Headers**: Authorization: Bearer {{admin_token}}
+> **Lưu ý:** Không tự điền `Content-Type`, để Postman tự động sinh boundary cho multipart.
+
+**Body** (form-data):
+| Key | Type | Value |
+|-----|------|-------|
+| `image` | **File** | (Chọn ảnh từ máy tính) |
+
+**Kết quả mong đợi** (Status: `200 OK`):
+```json
+{
+  "success": true,
+  "message": "Cập nhật ảnh chuyên khoa thành công",
+  "anhChuyenKhoa": "https://res.cloudinary.com/helthcare/image/upload/..."
+}
+```
 
 ---
 
@@ -1263,7 +1293,27 @@ PUT {{base_url}}/dat-lich/1/thanh-toan
 
 ---
 
-### 8.11 Hủy lịch hẹn
+### 8.11 Đổi hình thức thanh toán (Bệnh nhân)
+
+```
+PATCH {{base_url}}/dat-lich/1/payment-method
+```
+
+**Headers**: Cookie chứa accessToken (tự động gửi)
+
+**Body**:
+```json
+{
+  "hinhThucThanhToanId": 2
+}
+```
+
+> **Lưu ý**: Chỉ được đổi khi lịch hẹn chưa thanh toán (`trangThaiThanhToan = 0`). 
+> Bệnh nhân chỉ đổi được phương thức cho lịch hẹn của chính mình.
+
+---
+
+### 8.12 Hủy lịch hẹn
 
 ```
 PUT {{base_url}}/dat-lich/2/trang-thai
@@ -1284,7 +1334,7 @@ PUT {{base_url}}/dat-lich/2/trang-thai
 
 ---
 
-### 8.12 Xóa lịch hẹn
+### 8.13 Xóa lịch hẹn
 
 ```
 DELETE {{base_url}}/dat-lich/2
@@ -1666,7 +1716,17 @@ Hỗ trợ phân trang: `?page=1&limit=20`
 
 ---
 
-### 11.3 Tạo FAQ mới (Admin)
+### 11.3 Lấy chi tiết FAQ (Public)
+
+```
+GET {{base_url}}/cau-hoi-thuong-gap/1
+```
+
+Không cần token. Trả về chi tiết câu hỏi theo ID.
+
+---
+
+### 11.4 Tạo FAQ mới (Admin)
 
 ```
 POST {{base_url}}/cau-hoi-thuong-gap
@@ -1685,7 +1745,7 @@ POST {{base_url}}/cau-hoi-thuong-gap
 
 ---
 
-### 11.4 Cập nhật FAQ (Admin)
+### 11.5 Cập nhật FAQ (Admin)
 
 ```
 PUT {{base_url}}/cau-hoi-thuong-gap/6
@@ -1706,7 +1766,7 @@ PUT {{base_url}}/cau-hoi-thuong-gap/6
 
 ---
 
-### 11.5 Xóa FAQ (Admin)
+### 11.6 Xóa FAQ (Admin)
 
 ```
 DELETE {{base_url}}/cau-hoi-thuong-gap/6

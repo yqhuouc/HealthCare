@@ -78,25 +78,78 @@ Hệ thống sử dụng cơ chế **Token Rotation** để đảm bảo an toà
 - `POST /api/auth/forgot-password`: Yêu cầu gửi mã OTP đặt lại mật khẩu.
 - `POST /api/auth/reset-password`: Xác thực mã OTP và đặt lại mật khẩu mới.
 
-### 4.2 Nghiệp vụ Khám bệnh
+### 4.2 Chuyên Khoa (`/api/chuyen-khoa`)
 - `GET /api/chuyen-khoa`: Danh sách chuyên khoa.
-- `GET /api/bac-si`: Tìm kiếm & Lọc bác sĩ (Phân trang).
-- `GET /api/lich-lam-viec`: Xem lịch trống của bác sĩ.
-- `POST /api/dat-lich`: Đặt lịch khám mới (Transaction).
-- `GET /api/dat-lich/benh-nhan/:id`: Lịch sử khám của tôi.
-- `PUT /api/dat-lich/:id/trang-thai`: Bác sĩ xác nhận/hủy lịch.
+- `GET /api/chuyen-khoa/:id`: Chi tiết chuyên khoa.
+- `POST /api/chuyen-khoa`: Thêm chuyên khoa mới.
+- `PUT /api/chuyen-khoa/:id`: Cập nhật chuyên khoa.
+- `DELETE /api/chuyen-khoa/:id`: Xóa chuyên khoa.
+- `PUT /api/chuyen-khoa/:id/upload-anh`: Tải ảnh chuyên khoa.
 
-### 4.3 Kê đơn & Đơn thuốc
-- `POST /api/don-thuoc`: Bác sĩ kê đơn (Tự động tính tổng tiền).
-- `GET /api/don-thuoc/:id`: Xem đơn thuốc (Bản rút gọn nếu chưa thanh toán).
-- `GET /api/don-thuoc/all`: Admin quản lý kho đơn thuốc.
+### 4.3 Bác Sĩ (`/api/bac-si`)
+- `GET /api/bac-si`: Danh sách bác sĩ.
+- `GET /api/bac-si/:id`: Chi tiết bác sĩ.
+- `POST /api/bac-si`: Thêm bác sĩ mới.
+- `PUT /api/bac-si/:id`: Cập nhật bác sĩ.
+- `DELETE /api/bac-si/:id`: Xóa bác sĩ.
 
-### 4.4 Thanh toán Online (VNPay)
-- `POST /api/vnpay/create_payment_url`: Tạo link thanh toán phí khám/thuốc.
-- `GET /api/vnpay/vnpay_return`: Redirect sau khi thanh toán.
-- `GET /api/vnpay/vnpay_ipn`: Xử lý giao dịch ngầm (Server-to-Server).
+### 4.4 Bệnh Nhân (`/api/benh-nhan`)
+- `GET /api/benh-nhan`: Danh sách bệnh nhân (Admin).
+- `GET /api/benh-nhan/:id`: Chi tiết bệnh nhân.
+- `PUT /api/benh-nhan/:id`: Cập nhật hồ sơ bệnh nhân.
+- `DELETE /api/benh-nhan/:id`: Xóa bệnh nhân.
 
-- `CRUD` cho Chuyên khoa, Bác sĩ, Bệnh nhân, FAQ, Khung giờ.
+### 4.5 Lịch Làm Việc & Khung Giờ (`/api/lich-lam-viec`)
+- `GET /api/lich-lam-viec/khung-gio`: Danh sách ca làm việc.
+- `POST /api/lich-lam-viec/khung-gio`: Thêm ca làm việc mới.
+- `DELETE /api/lich-lam-viec/khung-gio/:id`: Xóa ca làm việc.
+- `GET /api/lich-lam-viec`: Danh sách lịch làm việc của bác sĩ.
+- `POST /api/lich-lam-viec`: Đăng ký lịch làm việc mới.
+- `PUT /api/lich-lam-viec/:id`: Cập nhật lịch làm việc (Tạm ngưng/Sẵn sàng).
+- `DELETE /api/lich-lam-viec/:id`: Xóa lịch làm việc.
+
+### 4.6 Đặt Lịch Hẹn (`/api/dat-lich`)
+- `GET /api/dat-lich/slot-trong`: Lấy danh sách slot khám trống.
+- `GET /api/dat-lich`: Lấy tất cả lịch hẹn (Admin).
+- `GET /api/dat-lich/benh-nhan/:id`: Lịch sử khám của bệnh nhân.
+- `GET /api/dat-lich/bac-si/:id`: Danh sách lịch khám của bác sĩ.
+- `GET /api/dat-lich/:id`: Xem chi tiết lịch hẹn.
+- `POST /api/dat-lich`: Đặt lịch khám mới.
+- `PUT /api/dat-lich/:id/trang-thai`: Cập nhật trạng thái lịch hẹn (Xác nhận/Hủy/Đã khám).
+- `PUT /api/dat-lich/:id/thanh-toan`: Cập nhật trạng thái thanh toán.
+- `PATCH /api/dat-lich/:id/payment-method`: Đổi phương thức thanh toán.
+- `DELETE /api/dat-lich/:id`: Xóa lịch hẹn.
+
+### 4.7 Đơn Thuốc (`/api/don-thuoc`)
+- `GET /api/don-thuoc`: Danh sách đơn thuốc.
+- `GET /api/don-thuoc/:id`: Xem chi tiết đơn thuốc.
+- `POST /api/don-thuoc`: Bác sĩ kê đơn mới.
+- `PUT /api/don-thuoc/:id`: Bác sĩ cập nhật đơn thuốc.
+- `DELETE /api/don-thuoc/:id`: Xóa đơn thuốc.
+
+### 4.8 Câu Hỏi Thường Gặp (FAQ) (`/api/cau-hoi-thuong-gap`)
+- `GET /api/cau-hoi-thuong-gap`: Lấy FAQ đang hoạt động (Public).
+- `GET /api/cau-hoi-thuong-gap/all`: Lấy tất cả FAQ (Admin).
+- `GET /api/cau-hoi-thuong-gap/:id`: Chi tiết FAQ.
+- `POST /api/cau-hoi-thuong-gap`: Thêm FAQ mới.
+- `PUT /api/cau-hoi-thuong-gap/:id`: Cập nhật FAQ.
+- `DELETE /api/cau-hoi-thuong-gap/:id`: Xóa FAQ.
+
+### 4.9 Hình Thức Thanh Toán (`/api/hinh-thuc-thanh-toan`)
+- `GET /api/hinh-thuc-thanh-toan`: Danh sách hình thức.
+- `POST /api/hinh-thuc-thanh-toan`: Thêm hình thức thanh toán mới.
+- `DELETE /api/hinh-thuc-thanh-toan/:id`: Xóa hình thức thanh toán.
+
+### 4.10 Thống Kê & Báo Cáo (`/api/thong-ke`)
+- `GET /api/thong-ke/tong-quan`: Dashboard tổng quan (Admin).
+- `GET /api/thong-ke/lich-hen`: Thống kê lịch hẹn theo ngày/bác sĩ.
+- `GET /api/thong-ke/doanh-thu`: Thống kê doanh thu theo tháng.
+
+### 4.11 Thanh Toán Online VNPay (`/api/vnpay`)
+- `POST /api/vnpay/create-payment`: Tạo link thanh toán VNPay.
+- `GET /api/vnpay/return`: Redirect URL sau khi thanh toán.
+- `GET /api/vnpay/ipn`: Webhook xử lý giao dịch ngầm.
+- `POST /api/vnpay/verify`: Chủ động xác thực kết quả thanh toán.
 
 ---
 
