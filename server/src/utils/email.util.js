@@ -135,6 +135,13 @@ const sendPostExamEmail = async (toEmail, patientName, diagnosis, totalAmount) =
       </div>
     `,
   };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email] Đã gửi thông báo sau khám cho ${toEmail}`);
+  } catch (error) {
+    console.error(`[Email Error] Lỗi gửi mail cho ${toEmail}:`, error);
+  }
 };
 
 module.exports = { sendOTPEmail, sendPostExamEmail };

@@ -4,6 +4,7 @@
  */
 const prisma = require("../utils/prisma");
 const { delCache } = require("../utils/redis.util");
+const { sendPostExamEmail } = require("../utils/email.util");
 const { AppError } = require("../middlewares/error.middleware");
 
 const defaultInclude = {
@@ -113,9 +114,9 @@ const create = async (data, requestUser = null) => {
     where: { id: BigInt(data.datLichId) },
     include: {
       benhNhan: {
-        include: { taiKhoan: true }
-      }
-    }
+        include: { taiKhoan: true },
+      },
+    },
   });
   if (!datLich) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
@@ -166,14 +167,10 @@ const create = async (data, requestUser = null) => {
   // Gửi email thông báo chẩn đoán sau khám (fire-and-forget)
   const emailTo = datLich.benhNhan?.emailLienHe || datLich.benhNhan?.taiKhoan?.email;
   if (emailTo) {
-    const { sendPostExamEmail } = require("../utils/email.util");
     const tongThuTien = Number(datLich.giaKham || 0) + Number(tongTien || 0);
-    sendPostExamEmail(
-      emailTo,
-      datLich.benhNhan?.hoTen || "Quý khách",
-      data.chanDoan,
-      tongThuTien
-    ).catch(err => console.error("[Email Error] Lỗi gửi email sau khám:", err));
+    sendPostExamEmail(emailTo, datLich.benhNhan?.hoTen || "Quý khách", data.chanDoan, tongThuTien).catch((err) =>
+      console.error("[Email Error] Lỗi gửi email sau khám:", err),
+    );
   }
 
   return result;

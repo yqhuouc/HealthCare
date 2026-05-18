@@ -64,6 +64,7 @@ function DoctorSchedulePage() {
   const todayStr = toDateString(dayjs());
 
   const getShiftStatus = (item) => {
+    if (item.sanSang === 0) return "pending";
     const dStr = toDateString(item.ngayLamViec);
     if (dStr < todayStr) return "completed";
     if (dStr === todayStr) return "active";
@@ -75,6 +76,7 @@ function DoctorSchedulePage() {
     active: { label: "Hôm nay", style: "border-blue-200 text-blue-700 bg-blue-50" },
     upcoming: { label: "Sắp tới", style: "border-amber-200 text-amber-700 bg-amber-50" },
     completed: { label: "Đã qua", style: "border-slate-200 text-slate-500 bg-slate-50" },
+    pending: { label: "Chờ duyệt", style: "border-orange-200 text-orange-700 bg-orange-50" },
   };
 
   /**
