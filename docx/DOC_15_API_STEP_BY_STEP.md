@@ -142,8 +142,8 @@ HTTP Request
 
 | Giá trị | Hành vi frontend |
 |---------|------------------|
-| `OFFLINE` | Chỉ thông báo chờ xác nhận / trả tại quầy |
-| `VNPAY` | Sau đặt lịch → gọi thêm API VNPay → redirect |
+| `OFFLINE` | Trả tại quầy sau khi khám |
+| `VNPAY` | Gọi API VNPay → redirect từ trang Kết quả (sau khi đã khám) |
 
 ---
 
@@ -495,8 +495,7 @@ Origin: http://localhost:5173
   "benhNhanId": 5,
   "ngayDat": "2026-05-17",
   "gioBatDau": "08:20",
-  "lyDoKham": "Đau đầu",
-  "hinhThucThanhToanId": 2
+  "lyDoKham": "Đau đầu"
 }
 ```
 
@@ -506,7 +505,7 @@ Origin: http://localhost:5173
 | Body | `benhNhanId` | Có | Phải trùng tài khoản đang login (bệnh nhân) |
 | Body | `ngayDat` | Có | Chuỗi ngày |
 | Body | `gioBatDau` | Có | `HH:mm` |
-| Body | `hinhThucThanhToanId` | Có | 1=tiền mặt, 2=VNPay... |
+| Body | `hinhThucThanhToanId` | Không | 1=tiền mặt, 2=VNPay... (có thể để trống) |
 | Body | `lyDoKham` | Không | Max 255 ký tự |
 | Body | `giaKham` | Không | Không gửi → lấy `bacSi.giaKham` |
 | Body | `gioKetThuc` | **Không gửi** | Server tự tính |
@@ -538,7 +537,7 @@ Origin: http://localhost:5173
     - `datLich.create` — `trangThai=0`, `trangThaiThanhToan=0`
     - `soBenhNhanHienTai++` trên ca
     - Xóa cache slot
-11. Đọc `hinhThucThanhToan.maLoai` → gắn `_maLoai` (`OFFLINE` / `VNPAY`)
+11. (Optional) Nếu có truyền `hinhThucThanhToanId`, gắn thông tin `hinhThucThanhToan`.
 
 ### Bước 4 — Response thành công
 
@@ -556,10 +555,8 @@ Origin: http://localhost:5173
     "trangThai": 0,
     "trangThaiThanhToan": 0,
     "bacSi": { },
-    "benhNhan": { },
-    "hinhThucThanhToan": { "maLoai": "VNPAY" }
-  },
-  "maLoai": "VNPAY"
+    "benhNhan": { }
+  }
 }
 ```
 
@@ -574,8 +571,7 @@ Origin: http://localhost:5173
 
 ### Bước 6 — Frontend sau response
 
-- `maLoai === "VNPAY"` → `POST /api/vnpay/create-payment` → `window.location.href = paymentUrl`
-- `OFFLINE` → toast + `/appointments`
+- Bệnh nhân sẽ đợi xác nhận và đến khám. Sau khi khám xong (`trangThai = 2`), bệnh nhân vào trang Kết quả Khám để thanh toán VNPay hoặc tại quầy.
 
 ---
 
@@ -666,7 +662,7 @@ Chỉ `authorize("admin")`.
 { "hinhThucThanhToanId": 1 }
 ```
 
-Bệnh nhân — khi VNPay lỗi muốn chuyển trả tại quầy.
+Bệnh nhân — khi muốn đổi từ VNPay sang trả tại quầy (hoặc ngược lại) ở màn hình Kết quả Khám.
 
 ---
 
@@ -676,7 +672,7 @@ Bệnh nhân — khi VNPay lỗi muốn chuyển trả tại quầy.
 
 ## D.1. Tạo link thanh toán
 
-**Sau khi đặt lịch hoặc từ MedicalResultPage**  
+**Từ MedicalResultPage (chỉ khi lịch hẹn có trangThai = 2, tức là Đã khám)**  
 **Endpoint:** `POST /api/vnpay/create-payment`
 
 ### Bước 1 — Client
@@ -889,7 +885,7 @@ Admin / bác sĩ: luôn xem full.
 
 ### “API đặt lịch nhận gì?”
 
-> Em dùng `POST /api/dat-lich`. Client gửi **body JSON** gồm ID bác sĩ, ID bệnh nhân, ngày khám, giờ bắt đầu, hình thức thanh toán và có thể kèm lý do khám. Request có **cookie HttpOnly** chứng minh đã đăng nhập. Server validate bằng Zod, kiểm tra ca làm việc và slot trống, lưu database và trả JSON kèm `maLoai` để biết có redirect VNPay hay không.
+> Em dùng `POST /api/dat-lich`. Client gửi **body JSON** gồm ID bác sĩ, ID bệnh nhân, ngày khám, giờ bắt đầu và có thể kèm lý do khám. Request có **cookie HttpOnly** chứng minh đã đăng nhập. Server validate bằng Zod, kiểm tra ca làm việc và slot trống, lưu database và trả kết quả. Việc thanh toán (VNPay) sẽ được thực hiện sau khi bác sĩ đánh dấu "Đã khám".
 
 ### “Body là gì?”
 

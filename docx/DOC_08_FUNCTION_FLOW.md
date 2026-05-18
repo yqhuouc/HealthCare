@@ -616,25 +616,28 @@ Mở `http://localhost:5555` → duyệt/sửa dữ liệu trực tiếp trên c
 
 ### Luồng chi tiết (Tạo thanh toán)
 
-1. Bệnh nhân vào trang lịch sử lịch hẹn → bấm **"Thanh toán VNPay"** cho một gói (Phí khám hoặc Toàn bộ đơn thuốc).
-2. Frontend gọi `POST /api/vnpay/create_payment_url`.
+1. Lịch hẹn của bệnh nhân phải ở trạng thái **Đã khám** (`trangThai === 2`). Bệnh nhân vào trang **Kết quả khám** (`MedicalResultPage.jsx`) → bấm **"Thanh toán VNPay"** cho một gói (Phí khám `PHI_KHAM`, Đơn thuốc `DON_THUOC`, hoặc thanh toán gộp `TAT_CA`).
+2. Frontend gọi `POST /api/vnpay/create-payment`.
 3. Backend flow:
-   - `vnpayController.createPaymentUrl` nhận: `datLichId`, `loaiGiaoDich`, `amount`.
+   - `vnpayController.createPayment` nhận: `datLichId`, `loaiGiaoDich` (không cần truyền `amount`, server tự tính dựa trên cơ sở dữ liệu).
+   - Kiểm tra xem lịch hẹn đã ở trạng thái `trangThai === 2` hay chưa. Nếu chưa, trả về lỗi `400`.
    - Tạo bản ghi `GiaoDich` trong DB với trạng thái = 0 (Chờ).
-   - Sử dụng `crypto` và cấu hình VNPay để tạo chuỗi băm (SHA512).
+   - Sử dụng thư viện `vnpay` để tạo chuỗi băm bảo mật (HMAC-SHA512).
    - Trả về `paymentUrl`.
-4. Frontend chuyển hướng người dùng sang trang thanh toán của VNPay.
+4. Frontend chuyển hướng người dùng sang trang thanh toán của VNPay Sandbox.
 
-### Luồng chi tiết (Xử lý kết quả - IPN)
+### Luồng chi tiết (Xử lý kết quả - IPN & Verify)
 
-1. Sau khi người dùng thanh toán/hủy trên VNPay, VNPay gọi ngầm về Server qua `GET /api/vnpay/vnpay_ipn`.
+1. Sau khi người dùng thanh toán/hủy trên VNPay, VNPay gọi ngầm về Server qua `GET /api/vnpay/ipn`.
 2. Backend flow:
-   - Kiểm tra mã băm `vnp_SecureHash` để đảm bảo dữ liệu đúng từ VNPay.
+   - Kiểm tra chữ ký `vnp_SecureHash` bằng `verifyIpnCall` để đảm bảo dữ liệu đúng từ VNPay.
    - Tìm bản ghi `GiaoDich` tương ứng qua mã tham chiếu.
    - Nếu thành công (`vnp_ResponseCode === '00'`):
      - Cập nhật `GiaoDich.trangThai = 1` (Thành công).
      - Cập nhật `DatLich.trangThaiThanhToan` dựa trên loại giao dịch:
        - Nếu `PHI_KHAM` → `trangThaiThanhToan = 1`.
-       - Nếu `DON_THUOC` → `trangThaiThanhToan = 2`.
+       - Nếu `DON_THUOC` hoặc `TAT_CA` → `trangThaiThanhToan = 2`.
+     - Đồng thời, tự động gán hình thức thanh toán `hinhThucThanhToanId` sang hình thức **VNPay**.
    - Trả về mã phản hồi cho VNPay (`RspCode: '00'`).
-3. Người dùng được redirect về trang `vnpay_return` trên Frontend để xem thông báo kết quả.
+3. Người dùng được redirect về trang kết quả `/payment/result` trên Frontend. Tại đây, Frontend gọi `POST /api/vnpay/verify` gửi kèm các tham số URL để chủ động xác thực và đồng bộ dữ liệu ngay lập tức (giúp môi trường dev local không có IPN public vẫn đồng bộ được DB).
+

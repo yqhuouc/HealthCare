@@ -1,5 +1,15 @@
 # Nâng Cấp Hệ Thống Thanh Toán + Tích Hợp VNPay
 
+> [!WARNING]
+> **CẬP NHẬT QUAN TRỌNG (SỬA ĐỔI CHO BẢO VỆ ĐỒ ÁN TỐT NGHIỆP):**
+> 
+> Một số đề xuất dưới đây về việc **bắt buộc chọn hình thức thanh toán khi đặt lịch** và **tự động redirect VNPay ngay sau khi đặt lịch** đã được **BÃI BỎ/HOÀN TÁC** để tối ưu hóa nghiệp vụ thực tế phòng khám theo yêu cầu của Hội đồng:
+> 1. **Booking:** `hinhThucThanhToanId` **không bắt buộc** khi đặt lịch. Bệnh nhân không cần chọn HTTT lúc đặt lịch trên `BookingPage`.
+> 2. **VNPay:** **Chỉ cho phép** tạo link thanh toán VNPay khi lịch hẹn ở trạng thái `trangThai === 2` (Đã khám xong). Không gọi VNPay sau khi đặt lịch ở màn hình booking.
+> 3. **Settlement:** Admin hoặc Doctor cập nhật trạng thái "Đã khám" xong -> Bệnh nhân vào trang Kết quả khám thấy nút thanh toán VNPay (gộp/phí khám/đơn thuốc) -> Sau khi IPN thành công tự động gán `hinhThucThanhToanId` tương ứng. Nếu thanh toán tại quầy (offline), Admin duyệt xác nhận tại quầy (chỉ khi đã khám) -> tự động gán `OFFLINE`.
+> 
+> *Vui lòng tham khảo tài liệu [DOC_08_FUNCTION_FLOW.md](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/docx/DOC_08_FUNCTION_FLOW.md) và [DOC_05_TESTING_GUIDE.md](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/docx/DOC_05_TESTING_GUIDE.md) để biết chi tiết luồng nghiệp vụ và quy trình kiểm thử mới nhất.*
+
 ## Tóm tắt các quyết định đã xác nhận
 
 | Câu hỏi | Quyết định |

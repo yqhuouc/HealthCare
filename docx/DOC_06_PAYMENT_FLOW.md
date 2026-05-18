@@ -13,40 +13,45 @@ sequenceDiagram
     participant VN as Cổng VNPay (Sandbox)
     participant DB as Database (Prisma/PostgreSQL)
 
-    Note over BN, BE: Bước 1: Khởi tạo
-    BN->>BE: Gửi yêu cầu Đặt lịch (Phí khám 500k)
-    BE->>DB: Tạo bản ghi DatLich (Trạng thái: Chưa thanh toán)
-    BE-->>BN: Trả về ID lịch hẹn mới tạo
+    Note over BN, BE: Bước 1: Đặt lịch khám (Không cần chọn HTTT)
+    BN->>BE: Gửi yêu cầu Đặt lịch
+    BE->>DB: Tạo bản ghi DatLich (Trạng thái: Chờ khám, trangThaiThanhToan: 0)
+    BE-->>BN: Trả về ID lịch hẹn mới tạo -> Vào trang Lịch sử
 
-    Note over BN, BE: Bước 2: Tạo Link Thanh toán
+    Note over BE, DB: Bước 2: Bác sĩ khám bệnh
+    BE->>DB: Cập nhật DatLich (Trạng thái: Đã khám - trangThai = 2)
+
+    Note over BN, BE: Bước 3: Tạo Link Thanh toán (Sau khi đã khám)
     BN->>BE: Gọi API lấy link VNPay (truyền ID lịch hẹn + loaiGiaoDich)
+    BE->>BE: Kiểm tra trangThai === 2 (Chỉ thanh toán khi đã khám xong)
     BE->>DB: Tạo bản ghi GiaoDich (Trạng thái: 0 - Chờ)
-    BE->>BE: Tính toán chữ ký bảo mật (Checksum) & Số tiền
+    BE->>BE: Tính toán chữ ký bảo mật (Checksum) & Số tiền (tự tính Phí khám/Thuốc/Gộp)
     BE-->>BN: Trả về Payment URL (sandbox.vnpayment.vn/...)
 
-    Note over BN, VN: Bước 3: Người dùng Thanh toán
+    Note over BN, VN: Bước 4: Người dùng Thanh toán
     BN->>VN: Chuyển hướng trình duyệt sang VNPay
     BN->>VN: Nhập thẻ Test (NCB) & Xác thực OTP
     VN->>VN: Xử lý giao dịch nội bộ
 
-    Note over VN, BE: Bước 4: Cập nhật trạng thái (IPN)
+    Note over VN, BE: Bước 5: Cập nhật trạng thái (IPN)
     VN->>BE: VNPay gọi ngầm API IPN (Server-to-Server)
     BE->>BE: Kiểm tra chữ ký & Kiểm tra số tiền
-    BE->>DB: Cập nhật GiaoDich (Thành công) & Cập nhật DatLich (trangThaiThanhToan)
+    BE->>DB: Cập nhật GiaoDich (Thành công), DatLich (trangThaiThanhToan) & hinhThucThanhToanId (VNPAY)
     BE-->>VN: Phản hồi "Confirm Success" (RspCode 00)
 
-    Note over VN, BN: Bước 5: Trả kết quả (Return URL)
-    VN->>BN: Redirect trình duyệt về website của mình
-    BN->>BN: PaymentResultPage đọc URL để hiện HÓA ĐƠN
+    Note over VN, BN: Bước 6: Trả kết quả (Return URL & Verify chủ động)
+    VN->>BN: Redirect trình duyệt về website (/payment/result)
+    BN->>BE: Gửi request verify để đồng bộ dữ liệu ngay lập tức
+    BN->>BN: PaymentResultPage đọc URL để hiển thị HÓA ĐƠN & MỞ KHÓA ĐƠN THUỐC
 ```
 
 ---
 
 ## 2. Giải thích chi tiết các thành phần
 
-### A. BookingPage.jsx (Cửa ngõ ra)
-*   **Vị trí**: `client/src/pages/patient/BookingPage.jsx`
-*   **Nhiệm vụ**: Sau khi Backend báo "Đặt lịch thành công", nếu người dùng chọn VNPay, file này sẽ gọi API nạp tiền và dùng `window.location.href` để chuyển bạn đi.
+### A. MedicalResultPage.jsx (Cửa ngõ ra)
+*   **Vị trí**: `client/src/pages/patient/MedicalResultPage.jsx`
+*   **Nhiệm vụ**: Sau khi bác sĩ đã khám xong (`trangThai === 2`), bệnh nhân sẽ truy cập trang Kết quả khám. Nếu chưa thanh toán hoặc chưa thanh toán hết (phí khám hoặc đơn thuốc), file này sẽ hiển thị các nút thanh toán tương ứng (VNPay). Khi bấm nút, nó gọi API nạp tiền `/api/vnpay/create-payment` và dùng `window.location.href` để chuyển sang VNPay.
 
 ### B. vnpay.service.js (Bộ não xử lý)
 *   **Vị trí**: `server/src/services/vnpay.service.js`

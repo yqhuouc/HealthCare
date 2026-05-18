@@ -1089,7 +1089,6 @@ POST {{base_url}}/dat-lich
   "lyDoKham": "Đau đầu kéo dài, chóng mặt",
   "bacSiId": 1,
   "benhNhanId": 1,
-  "hinhThucThanhToanId": 1,
   "trangThaiThanhToan": 0
 }
 ```
@@ -1154,8 +1153,7 @@ Gửi lại **cùng request** ở 8.1 (cùng bác sĩ + cùng ngày + cùng gi�
   "gioBatDau": "08:20",
   "lyDoKham": "Khám định kỳ",
   "bacSiId": 2,
-  "benhNhanId": 1,
-  "hinhThucThanhToanId": 2
+  "benhNhanId": 1
 }
 ```
 
@@ -1921,11 +1919,7 @@ Kết quả mong đợi sẽ có bản ghi:
 { "id": 2, "tenHinhThuc": "Chuyển khoản online (VNPay)", "maLoai": "VNPAY" }
 ```
 
-> Ghi nhớ `id` của hình thức VNPay (ví dụ `id = 2`) để dùng ở bước đặt lịch.
-
----
-
-### 14.1 Bước 1 — Đặt lịch khám với hình thức thanh toán VNPay
+> Ghi nhớ `id` của hình thức VNPay (ví dụ `id = 2`) để dùng ở bước đặt lịch.### 14.1 Bước 1 — Đặt lịch khám và Chuyển trạng thái "Đã khám"
 
 > **Đăng nhập bệnh nhân trước**: `POST /api/auth/login` với `benhnhan@gmail.com / patient123`
 > (Cookie `accessToken` sẽ được Postman tự lưu và gửi kèm các request tiếp theo)
@@ -1949,13 +1943,11 @@ POST {{base_url}}/dat-lich
   "lyDoKham": "Đau đầu kéo dài, chóng mặt",
   "bacSiId": 1,
   "benhNhanId": 1,
-  "hinhThucThanhToanId": 2,
   "trangThaiThanhToan": 0
 }
 ```
 
 > **Chú ý quan trọng**:
-> - `hinhThucThanhToanId: 2` → Chuyển khoản online (VNPay)
 > - `trangThaiThanhToan: 0` → Chưa thanh toán (sẽ thanh toán qua VNPay ở bước sau)
 > - Phải đảm bảo **bác sĩ có lịch làm việc** vào ngày `2026-04-25` (xem mục 9.4)
 
@@ -1973,10 +1965,6 @@ POST {{base_url}}/dat-lich
     "giaKham": "500000",
     "trangThai": 0,
     "trangThaiThanhToan": 0,
-    "hinhThucThanhToan": {
-      "id": 2,
-      "tenHinhThuc": "Chuyển khoản online (VNPay)"
-    },
     "bacSi": {
       "id": 1,
       "tenBacSi": "Nguyễn Văn An"
@@ -1990,6 +1978,9 @@ POST {{base_url}}/dat-lich
 ```
 
 > **Ghi nhớ `id` của lịch hẹn** (VD: `id = 1`) — sẽ dùng cho bước tạo URL thanh toán.
+
+> **CẬP NHẬT TRẠNG THÁI "ĐÃ KHÁM"**:
+> Bệnh nhân chỉ được thanh toán qua VNPay sau khi bác sĩ đã khám. Bạn cần gọi `PUT /api/dat-lich/1/trang-thai` với `{ "trangThai": 2 }` bằng quyền Admin hoặc Doctor.
 
 ---
 
@@ -2251,11 +2242,15 @@ Luồng hoàn chỉnh:
 1. Đăng nhập bệnh nhân
    POST /api/auth/login
 
-2. Đặt lịch khám (chọn hình thức VNPay)
+2. Đặt lịch khám
    POST /api/dat-lich
-   → hinhThucThanhToanId: 2, trangThaiThanhToan: 0
+   → trangThaiThanhToan: 0
 
-3. Tạo URL thanh toán
+3. Đánh dấu "Đã khám" (Bác sĩ/Admin)
+   PUT /api/dat-lich/:id/trang-thai
+   → { "trangThai": 2 }
+
+4. Tạo URL thanh toán
    POST /api/vnpay/create-payment
    → Nhận paymentUrl (sandbox.vnpayment.vn)
 
@@ -2481,8 +2476,8 @@ Dùng checklist này để đánh dấu các API đã test qua:
 
 ### VNPay — Thanh toán Online (4 endpoints)
 - [ ] Cấu hình VNPay sandbox trong `.env`
-- [ ] Đặt lịch với `hinhThucThanhToanId: 2` (VNPay)
-- [ ] Tạo URL thanh toán `POST /api/vnpay/create-payment` (loaiGiaoDich: PHI_KHAM)
+- [ ] Đặt lịch và chuyển trạng thái "Đã khám" (trangThai = 2)
+- [ ] Tạo URL thanh toán `POST /api/vnpay/create-payment` (loaiGiaoDich: PHI_KHAM hoặc TAT_CA)
 - [ ] Nhận paymentUrl dạng `https://sandbox.vnpayment.vn/...`
 - [ ] Thanh toán trên VNPay sandbox (thẻ NCB test)
 - [ ] Xác thực kết quả `POST /api/vnpay/verify` (đồng bộ DB trên localhost)
@@ -2508,15 +2503,17 @@ Dùng checklist này để đánh dấu các API đã test qua:
 5. **Bệnh nhân** → Xem + cập nhật
 6. **Khung giờ & Lịch làm việc** → Tạo lịch cho bác sĩ
 7. **Hình thức thanh toán** → Dữ liệu phụ trợ
-8. **Đặt lịch (offline)** → Tạo lịch với `hinhThucThanhToanId: 1` → test trùng → cập nhật trạng thái (0 → 1 → 2)
-9. **Đặt lịch + VNPay** → Tạo lịch với `hinhThucThanhToanId: 2` → `POST /api/vnpay/create-payment` → thanh toán sandbox → verify
-10. **Thanh toán phí khám** → Cập nhật `trangThaiThanhToan = 1` (manual hoặc VNPay)
-11. **Đơn thuốc** → Tạo sau khi lịch đã khám xong (trangThai = 2) + truyền `donGia`
-12. **Thanh toán toàn bộ** → Cập nhật `trangThaiThanhToan = 2` sau khi có đơn thuốc (manual hoặc VNPay `DON_THUOC`)
-13. **FAQ** → CRUD + ẩn/hiện
-14. **Thống kê** → Xem dashboard + thống kê lịch hẹn
-15. **Auth nâng cao** → Đổi mật khẩu, cập nhật hồ sơ, refresh token, logout
-16. **Edge cases** → Phân quyền, ownership, ràng buộc dữ liệu
+8. **Đặt lịch** → Tạo lịch không cần chọn hình thức thanh toán → test trùng.
+9. **Cập nhật trạng thái** → Chờ (0) → Xác nhận (1) → Đã khám (2).
+10. **Thanh toán VNPay** → Sau khi đã khám xong (trạng thái = 2), gọi `POST /api/vnpay/create-payment` → thanh toán sandbox → verify.
+11. **Thanh toán phí khám / tại quầy** → Cập nhật `trangThaiThanhToan = 1` hoặc `2` bằng nút xác nhận thanh toán (admin/bs).
+12. **Đơn thuốc** → Tạo sau khi lịch đã khám xong (trangThai = 2) + truyền `donGia`
+13. **Thanh toán toàn bộ** → Cập nhật `trangThaiThanhToan = 2` sau khi có đơn thuốc (manual hoặc VNPay `DON_THUOC`/`TAT_CA`)
+14. **FAQ** → CRUD + ẩn/hiện
+15. **Thống kê** → Xem dashboard + thống kê lịch hẹn
+16. **Auth nâng cao** → Đổi mật khẩu, cập nhật hồ sơ, refresh token, logout
+17. **Edge cases** → Phân quyền, ownership, ràng buộc dữ liệu
+
 
 ---
 
