@@ -111,6 +111,11 @@ const getById = async (id, user = null) => {
 const create = async (data, requestUser = null) => {
   const datLich = await prisma.datLich.findUnique({
     where: { id: BigInt(data.datLichId) },
+    include: {
+      benhNhan: {
+        include: { taiKhoan: true }
+      }
+    }
   });
   if (!datLich) throw new AppError("Không tìm thấy lịch hẹn", 404);
 
@@ -157,6 +162,20 @@ const create = async (data, requestUser = null) => {
   });
 
   await delCache("cache:stats:overview");
+
+  // Gửi email thông báo chẩn đoán sau khám (fire-and-forget)
+  const emailTo = datLich.benhNhan?.emailLienHe || datLich.benhNhan?.taiKhoan?.email;
+  if (emailTo) {
+    const { sendPostExamEmail } = require("../utils/email.util");
+    const tongThuTien = Number(datLich.giaKham || 0) + Number(tongTien || 0);
+    sendPostExamEmail(
+      emailTo,
+      datLich.benhNhan?.hoTen || "Quý khách",
+      data.chanDoan,
+      tongThuTien
+    ).catch(err => console.error("[Email Error] Lỗi gửi email sau khám:", err));
+  }
+
   return result;
 };
 

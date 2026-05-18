@@ -68,4 +68,73 @@ const sendOTPEmail = async (toEmail, otp) => {
   await transporter.sendMail(mailOptions);
 };
 
-module.exports = { sendOTPEmail };
+/**
+ * Gửi email thông báo sau khi khám (Cảm ơn + Chẩn đoán)
+ * @param {string} toEmail - Email bệnh nhân
+ * @param {string} patientName - Tên bệnh nhân
+ * @param {string} diagnosis - Chẩn đoán bệnh
+ * @param {number} totalAmount - Tổng tiền thanh toán (Phí khám + Thuốc)
+ */
+const sendPostExamEmail = async (toEmail, patientName, diagnosis, totalAmount) => {
+  const loginUrl = `${config.clientUrl}/login`;
+
+  // Format tiền tệ
+  const formattedAmount = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(totalAmount);
+
+  const mailOptions = {
+    from: '"HealthCare Clinic" <no-reply@healthcare.vn>',
+    to: toEmail,
+    subject: "Kết quả thăm khám và Chẩn đoán bệnh — HealthCare",
+    html: `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #0ea5e9, #0369a1); padding: 35px 20px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 26px; letter-spacing: 0.5px;">🏥 Phòng Khám HealthCare</h1>
+          <p style="color: #e0f2fe; margin: 8px 0 0; font-size: 15px;">Cảm ơn bạn đã tin tưởng và sử dụng dịch vụ</p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 40px 30px;">
+          <h2 style="color: #0f172a; margin: 0 0 15px; font-size: 20px;">Kính gửi ${patientName},</h2>
+          <p style="color: #475569; line-height: 1.6; font-size: 15px; margin-bottom: 25px;">
+            Quá trình thăm khám của bạn đã hoàn tất. Dưới đây là thông tin chẩn đoán sơ bộ từ Bác sĩ điều trị:
+          </p>
+
+          <!-- Diagnosis Box -->
+          <div style="background-color: #f8fafc; border-left: 4px solid #0ea5e9; padding: 20px; border-radius: 0 8px 8px 0; margin-bottom: 30px;">
+            <p style="margin: 0; font-size: 13px; color: #64748b; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Kết luận chẩn đoán</p>
+            <p style="margin: 8px 0 0; font-size: 18px; color: #0f172a; font-weight: 500;">
+              ${diagnosis || "Chưa có kết luận cụ thể"}
+            </p>
+          </div>
+
+          <!-- Payment Info -->
+          <div style="background-color: #fffbeb; border: 1px solid #fef3c7; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
+            <p style="margin: 0; color: #b45309; font-size: 14px; font-weight: 500;">Tổng thanh toán (Bao gồm tiền thuốc)</p>
+            <p style="margin: 5px 0 0; color: #d97706; font-size: 24px; font-weight: bold;">${formattedAmount}</p>
+          </div>
+
+          <p style="color: #475569; line-height: 1.6; font-size: 15px; margin-bottom: 25px;">
+            Để xem chi tiết Toa Thuốc (bao gồm danh sách thuốc và liều lượng) cũng như tiến hành thanh toán Online tiện lợi, vui lòng truy cập hệ thống của chúng tôi.
+          </p>
+
+          <!-- Call to Action -->
+          <div style="text-align: center; margin: 35px 0;">
+            <a href="${loginUrl}" style="background-color: #0ea5e9; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.2);">
+              Xem Chi Tiết & Thanh Toán
+            </a>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+
+          <p style="color: #94a3b8; font-size: 13px; text-align: center; margin: 0; line-height: 1.5;">
+            Trân trọng,<br/>
+            <strong>Đội ngũ Y Bác sĩ HealthCare</strong>
+          </p>
+        </div>
+      </div>
+    `,
+  };
+};
+
+module.exports = { sendOTPEmail, sendPostExamEmail };

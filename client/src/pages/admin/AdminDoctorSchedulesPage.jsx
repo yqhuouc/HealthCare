@@ -164,6 +164,22 @@ function AdminDoctorSchedulesPage() {
   };
 
   /**
+   * Duyệt hoặc Khóa lịch làm việc
+   */
+  const toggleSanSang = (sch) => {
+    updateMutation.mutate(
+      {
+        id: sch.id,
+        data: { sanSang: sch.sanSang === 1 ? 0 : 1 },
+      },
+      {
+        onSuccess: () => toast.success(`Đã ${sch.sanSang === 1 ? "tạm khóa" : "duyệt mở"} lịch làm việc!`),
+        onError: (error) => toast.error(error.message || "Lỗi cập nhật"),
+      }
+    );
+  };
+
+  /**
    * Chọn/Bỏ chọn một khung giờ trong Modal tạo lịch
    * @param {number} id - ID của khung giờ
    */
@@ -293,13 +309,27 @@ function AdminDoctorSchedulesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${sch.sanSang === 1 ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"}`}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${sch.sanSang === 1 ? "bg-emerald-50 text-emerald-600" : "bg-orange-50 text-orange-600"}`}
                       >
-                        {sch.sanSang === 1 ? "Đang mở" : "Tạm khóa"}
+                        {sch.sanSang === 1 ? "Đang mở" : "Chờ duyệt / Khóa"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-1">
+                        {/* Nút duyệt / khóa lịch */}
+                        <button
+                          onClick={() => toggleSanSang(sch)}
+                          className={`aspect-square size-8 flex justify-center items-center rounded-lg transition-all ${
+                            sch.sanSang === 1
+                              ? "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                              : "text-emerald-500 hover:bg-emerald-50 bg-emerald-50/50"
+                          }`}
+                          title={sch.sanSang === 1 ? "Tạm khóa lịch" : "Duyệt lịch (Mở cửa)"}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            {sch.sanSang === 1 ? "lock" : "check_circle"}
+                          </span>
+                        </button>
                         {/* Nút mở modal chỉnh sửa tải trọng */}
                         <button
                           onClick={() =>

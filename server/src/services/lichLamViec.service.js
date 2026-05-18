@@ -187,7 +187,7 @@ const createLichLamViec = async (data, requestUser = null) => {
       ngayLamViec: new Date(data.ngayLamViec),
       soBenhNhanHienTai: 0,
       soBenhNhanToiDa, // Đã tính xong
-      sanSang: 1, // Trạng thái: Cửa mở
+      sanSang: requestUser?.vaiTro === "admin" ? 1 : 0, // Trạng thái: 0 = Chờ duyệt, 1 = Cửa mở
       bacSiId: BigInt(data.bacSiId),
       khungGioId: BigInt(data.khungGioId),
     },
