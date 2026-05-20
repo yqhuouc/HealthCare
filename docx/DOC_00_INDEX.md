@@ -17,6 +17,9 @@ mindmap
       DOC_02_DATABASE_DESIGN["DOC_02: Thiết kế Cơ sở dữ liệu"]
       DOC_08_FUNCTION_FLOW["DOC_08: Luồng đi Frontend - Backend"]
       DOC_06_PAYMENT_FLOW["DOC_06: Chi tiết Luồng Giao dịch VNPay"]
+      DOC_17_SITEMAP["DOC_17: Sơ đồ điều hướng trang"]
+      DOC_18_THUYET_MINH_10_TRANG["DOC_18: Thuyết minh chi tiết 10 trang"]
+      DOC_19_QUY_TRINH_THIET_KE_CODE["DOC_19: Quy trình thiết kế & Code"]
     CongNghe_KienTruc["2. Công Nghệ & Kiến Trúc"]
       DOC_03_TECH_STACK["DOC_03: Công nghệ sử dụng"]
       DOC_11_TECH_LIST["DOC_11: Danh sách công nghệ (Tóm tắt)"]
@@ -60,6 +63,9 @@ mindmap
 | **DOC_14** | [Ôn Tập Đầu Cuối Chuyên Sâu](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/docx/DOC_14_ENDPOINT_STUDY_NOTES.md) | Phân tích sâu sắc các mối quan hệ DB phức tạp (1-N, N-N) và cơ chế khóa bệnh án khi chưa thanh toán. | Để **chuẩn bị câu trả lời hoàn hảo cho thầy phản biện**. |
 | **DOC_15** | [Luồng API Từng Bước Một](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/docx/DOC_15_API_STEP_BY_STEP.md) | Mô tả chi tiết từng Request/Response thực tế, cách cookie HttpOnly hoạt động. | Dùng để **trả lời hội đồng** khi bị hỏi "API này gửi gì, nhận gì, Zod validate gì". |
 | **DOC_16** | [Kịch Bản Trả Lời Phản Biện (Q&A)](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/docx/DOC_16_DEFENSE_QNA.md) | Tổng hợp các câu hỏi hóc búa từ hội đồng về luồng thanh toán và email sau khám kèm kịch bản trả lời xuất sắc. | Mở ra xem **khi bị hội đồng bắt bẻ** về thiết kế luồng O2O và email. |
+| **DOC_17** | [Sơ Đồ Điều Hướng Trang](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/docx/DOC_17_SITEMAP.md) | Sơ đồ cây điều hướng thể hiện cấu trúc 10 trang cốt lõi của website. | Khi cần trình bày nhanh **luồng đi của người dùng qua các trang chính**. |
+| **DOC_18** | [Thuyết Minh Chi Tiết 10 Trang](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/docx/DOC_18_THUYET_MINH_10_TRANG.md) | Tài liệu thuyết minh chi tiết cấu trúc, giao diện, luồng và mã nguồn của 10 trang cốt lõi. | Khi cần **copy nội dung chi tiết từng trang** đưa vào thuyết minh đồ án. |
+| **DOC_19** | [Quy Trình Thiết Kế & Lập Trình](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/docx/DOC_19_QUY_TRINH_THIET_KE_CODE.md) | Thuyết minh quy trình thiết kế giao diện bằng Stitch và quy trình tái cấu trúc code React.js cho 2 template chính. | Khi cần **copy thuyết minh quy trình thiết kế UI/UX & lập trình Front-end** vào Word. |
 | **BÁO CÁO** | [Báo Cáo Dự Án Chi Tiết](file:///c:/Users/hbui2/OneDrive%20-%20Hanoi%20University%20of%20Mining%20and%20Geology/Trường%20Đại%20Học%20Mỏ%20Địa%20Chất/Năm%20Học%202025%20-%202026/Đồ%20Án%20Tốt%20Nghiệp/CodeDoAnTotNghiep/docx/BAO_CAO_DU_AN_CHI_TIET.md) | Bản tổng thể full 12 bảng PostgreSQL, 58 endpoints API, cấu trúc thư mục và Tech Stack. | Dùng làm **nội dung chính để in ấn quyển Báo cáo Đồ án Tốt nghiệp**. |
 
 ---
@@ -88,4 +94,5 @@ mindmap
 ---
 
 > [!NOTE]
-> *Bản đồ tra cứu DOC_00 này được biên soạn bởi trợ lý AI Antigravity, được cập nhật theo luồng nghiệp vụ mới nhất phục vụ hoàn hảo cho buổi bảo vệ đồ án tốt nghiệp của bạn.*
+> *Bản đồ tra cứu DOC_00 này đã được cập nhật bởi trợ lý **Antigravity 2.0** vào lúc 15:38 ngày 20/05/2026 để kiểm tra tính năng chỉnh sửa file trực tiếp.*
+
