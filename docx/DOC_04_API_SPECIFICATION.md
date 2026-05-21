@@ -67,6 +67,7 @@ Hệ thống sử dụng cơ chế **Token Rotation** để đảm bảo an toà
 ## 4. Chi tiết API Endpoints
 
 ### 4.1 Hệ thống (Auth & Profile)
+- `GET /api/health`: Kiểm tra trạng thái máy chủ (Health check).
 - `POST /api/auth/register`: Đăng ký bệnh nhân.
 - `POST /api/auth/login`: Đăng nhập (Set Dual Cookie).
 - `POST /api/auth/refresh`: Làm mới token (Token Rotation).

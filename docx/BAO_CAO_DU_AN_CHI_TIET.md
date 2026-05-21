@@ -59,7 +59,7 @@ CodeDoAnTotNghiep/
 │   │   ├── config/             # Cấu hình Env, Cloudinary, VNPay
 │   │   ├── controllers/        # Tiếp nhận request & điều hướng
 │   │   ├── middlewares/        # Authenticate, Authorize, xử lý lỗi
-│   │   ├── routes/             # Định nghĩa 58 đầu cuối API
+│   │   ├── routes/             # Định nghĩa 64 đầu cuối API
 │   │   ├── services/           # Logic nghiệp vụ tập trung (quan trọng nhất)
 │   │   ├── validations/        # Kiểm tra tính hợp lệ của dữ liệu API
 │   │   └── app.js              # Khởi tạo Server Express
@@ -178,82 +178,90 @@ CodeDoAnTotNghiep/
 ## 4. Danh mục đầy đủ Endpoints API (Toàn dự án)
 
 ### 4.1. Module Xác thực (`/api/auth`)
-1.  `POST /register`: Đăng ký tài khoản bệnh nhân.
-2.  `POST /login`: Đăng nhập, trả về Tokens.
-3.  `POST /refresh`: Làm mới Access Token.
-4.  `POST /logout`: Đăng xuất hệ thống.
-5.  `GET /me`: Lấy thông tin tài khoản hiện tại.
-6.  `PUT /doi-mat-khau`: Đổi mật khẩu người dùng.
-7.  `PUT /cap-nhat-ho-so`: Cập nhật thông tin cá nhân.
-8.  `PUT /cap-nhat-avatar`: Tải ảnh đại diện.
+1.  `GET /health`: Kiểm tra trạng thái hoạt động của máy chủ (Health check).
+2.  `POST /register`: Đăng ký tài khoản bệnh nhân.
+3.  `POST /login`: Đăng nhập, trả về Tokens.
+4.  `POST /refresh`: Làm mới Access Token (Token Rotation).
+5.  `POST /logout`: Đăng xuất hệ thống (Clear cookies).
+6.  `GET /me`: Lấy thông tin tài khoản hiện tại.
+7.  `PUT /doi-mat-khau`: Đổi mật khẩu người dùng.
+8.  `PUT /cap-nhat-ho-so`: Cập nhật thông tin cá nhân.
+9.  `PUT /cap-nhat-avatar`: Tải ảnh đại diện lên Cloudinary.
+10. `POST /forgot-password`: Gửi mã OTP khôi phục mật khẩu qua Email.
+11. `POST /reset-password`: Xác thực OTP và đặt lại mật khẩu mới.
 
 ### 4.2. Module Bác sĩ (`/api/bac-si`)
-9.  `GET /`: Danh sách bác sĩ.
-10. `GET /:id`: Hồ sơ chi tiết bác sĩ.
-11. `POST /`: (Admin) Thêm bác sĩ.
-12. `PUT /:id`: (Admin) Cập nhật bác sĩ.
-13. `DELETE /:id`: (Admin) Xóa bác sĩ.
+12. `GET /`: Danh sách bác sĩ (hỗ trợ phân trang, lọc theo chuyên khoa).
+13. `GET /:id`: Hồ sơ chi tiết bác sĩ.
+14. `POST /`: (Admin) Thêm bác sĩ mới.
+15. `PUT /:id`: Cập nhật thông tin bác sĩ.
+16. `DELETE /:id`: (Admin) Xóa bác sĩ khỏi hệ thống.
 
 ### 4.3. Module Bệnh nhân (`/api/benh-nhan`)
-14. `GET /`: (Admin) Danh sách bệnh nhân.
-15. `GET /:id`: Chi tiết bệnh nhân.
-16. `PUT /:id`: Cập nhật bệnh nhân.
-17. `DELETE /:id`: (Admin) Xóa bệnh nhân.
+17. `GET /`: (Admin) Danh sách bệnh nhân.
+18. `GET /:id`: Chi tiết hồ sơ bệnh nhân.
+19. `PUT /:id`: Cập nhật hồ sơ bệnh nhân.
+20. `DELETE /:id`: (Admin) Xóa bệnh nhân.
 
 ### 4.4. Module Chuyên khoa (`/api/chuyen-khoa`)
-18. `GET /`: Danh sách chuyên khoa.
-19. `GET /:id`: Chi tiết chuyên khoa.
-20. `POST /`: (Admin) Thêm chuyên khoa.
-21. `PUT /:id`: (Admin) Sửa chuyên khoa.
-22. `DELETE /:id`: (Admin) Xóa chuyên khoa.
-23. `PUT /:id/upload-anh`: Tải ảnh chuyên khoa.
+21. `GET /`: Danh sách chuyên khoa công khai.
+22. `GET /:id`: Chi tiết chuyên khoa.
+23. `POST /`: (Admin) Thêm chuyên khoa mới.
+24. `PUT /:id`: (Admin) Sửa thông tin chuyên khoa.
+25. `DELETE /:id`: (Admin) Xóa chuyên khoa.
+26. `PUT /:id/upload-anh`: Tải ảnh bìa chuyên khoa lên Cloudinary.
 
 ### 4.5. Module Đặt lịch (`/api/dat-lich`)
-24. `GET /slot-trong`: Tìm khung giờ trống.
-25. `GET /`: (Admin) Toàn bộ lịch hẹn.
-26. `GET /benh-nhan/:id`: Lịch sử bệnh nhân.
-27. `GET /bac-si/:id`: Lịch khám của bác sĩ.
-28. `GET /:id`: Chi tiết lịch hẹn.
-29. `POST /`: Tạo lịch hẹn mới.
-30. `PUT /:id/trang-thai`: Cập nhật Trạng thái khám.
-31. `PUT /:id/thanh-toan`: Cập nhật Trạng thái thanh toán.
-32. `DELETE /:id`: Xóa lịch hẹn.
-33. `PATCH /:id/payment-method`: Đổi phương thức thanh toán.
+27. `GET /slot-trong`: Tìm các khung giờ khám còn trống.
+28. `GET /`: (Admin) Toàn bộ lịch đặt khám.
+29. `GET /benh-nhan/:id`: Lịch sử khám của bệnh nhân.
+30. `GET /bac-si/:id`: Lịch khám của bác sĩ.
+31. `GET /:id`: Chi tiết lịch đặt khám.
+32. `POST /`: Tạo lịch đặt khám mới.
+33. `PUT /:id/trang-thai`: Cập nhật Trạng thái khám.
+34. `PUT /:id/thanh-toan`: Cập nhật Trạng thái thanh toán hóa đơn.
+35. `DELETE /:id`: Hủy lịch hẹn khám.
+36. `PATCH /:id/payment-method`: Đổi phương thức thanh toán.
 
-### 4.6. Module Đơn thuôc (`/api/don-thuoc`)
-34. `GET /`: Danh sách đơn thuốc.
-35. `GET /:id`: Chi tiết đơn thuốc.
-36. `POST /`: Tạo đơn thuốc mới (Bác sĩ).
-37. `PUT /:id`: Sửa đơn thuốc.
-38. `DELETE /:id`: Xóa đơn thuốc.
+### 4.6. Module Đơn thuốc (`/api/don-thuoc`)
+37. `GET /`: Danh sách các đơn thuốc đã kê.
+38. `GET /:id`: Chi tiết đơn thuốc (áp dụng cơ chế bảo mật khóa nếu chưa thanh toán).
+39. `POST /`: Tạo đơn thuốc mới (Bác sĩ).
+40. `PUT /:id`: Sửa đổi thông tin đơn thuốc.
+41. `DELETE /:id`: Xóa đơn thuốc khỏi hệ thống.
 
 ### 4.7. Module Lịch làm việc (`/api/lich-lam-viec`)
-39. `GET /khung-gio`: Danh mục khung giờ.
-40. `POST /khung-gio`: Thêm khung giờ.
-41. `DELETE /khung-gio/:id`: Xóa khung giờ.
-42. `GET /`: Xem lịch trực bác sĩ.
-43. `POST /`: Đăng ký lịch trực.
-44. `PUT /:id`: Sửa lịch trực.
-45. `DELETE /:id`: Hủy lịch trực.
+42. `GET /khung-gio`: Danh mục các khung giờ khám.
+43. `POST /khung-gio`: Thêm khung giờ mới.
+44. `DELETE /khung-gio/:id`: Xóa khung giờ.
+45. `GET /`: Xem lịch trực bác sĩ.
+46. `POST /`: Đăng ký ca trực mới của bác sĩ.
+47. `PUT /:id`: Sửa đổi thông tin ca trực.
+48. `DELETE /:id`: Hủy bỏ ca trực.
 
 ### 4.8. Module Thống kê (`/api/thong-ke`)
-46. `GET /tong-quan`: Chỉ số dashboard Admin.
-47. `GET /lich-hen`: Thống kê lịch hẹn.
-48. `GET /doanh-thu`: Thống kê doanh thu.
+49. `GET /tong-quan`: Chỉ số dashboard Admin.
+50. `GET /lich-hen`: Thống kê lượng đặt lịch.
+51. `GET /doanh-thu`: Thống kê doanh thu tài chính.
 
 ### 4.9. Module Thanh toán VNPay (`/api/vnpay`)
-49. `POST /create-payment`: Tạo yêu cầu thanh toán.
-50. `GET /return`: Nhận kết quả từ VNPay.
-51. `GET /ipn`: Nhận thông báo tự động.
-52. `POST /verify`: Xác thực giao dịch.
+52. `POST /create-payment`: Tạo yêu cầu thanh toán (Sinh URL cổng VNPay).
+53. `GET /return`: Nhận kết quả phản hồi từ VNPay (Redirect URL).
+54. `GET /ipn`: Nhận thông báo tự động (IPN Webhook ngầm).
+55. `POST /verify`: Xác thực chủ động chữ ký bảo mật giao dịch.
 
-### 4.10. Module Câu hỏi (`/api/cau-hoi-thuong-gap`)
-53. `GET /`: Danh sách FAQ công khai.
-54. `GET /all`: Admin quản lý FAQ.
-55. `GET /:id`: Chi tiết câu hỏi.
-56. `POST /`: Thêm FAQ.
-57. `PUT /:id`: Sửa FAQ.
-58. `DELETE /:id`: Xóa FAQ.
+### 4.10. Module Hình thức thanh toán (`/api/hinh-thuc-thanh-toan`)
+56. `GET /`: Danh sách hình thức thanh toán được cấu hình.
+57. `POST /`: Thêm mới phương thức thanh toán.
+58. `DELETE /:id`: Xóa phương thức thanh toán.
+
+### 4.11. Module Câu hỏi (`/api/cau-hoi-thuong-gap`)
+59. `GET /`: Danh sách FAQ hiển thị ở trang chủ.
+60. `GET /all`: Danh sách quản lý FAQ dành cho Admin.
+61. `GET /:id`: Chi tiết câu hỏi và trả lời.
+62. `POST /`: Thêm FAQ mới.
+63. `PUT /:id`: Cập nhật nội dung câu hỏi/trả lời.
+64. `DELETE /:id`: Xóa FAQ.
 
 ---
 

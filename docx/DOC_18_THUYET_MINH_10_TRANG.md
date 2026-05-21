@@ -7,6 +7,7 @@
 
 ## 1. TRANG CHỦ (HOMEPAGE)
 * **Đường dẫn (Route):** `/`
+* **Trạng thái truy cập:** Công khai (Không yêu cầu đăng nhập - `publicRoutes`)
 * **Mô tả chức năng:** Điểm truy cập đầu tiên của hệ thống. Hiển thị banner giới thiệu, thanh tìm kiếm bác sĩ nhanh, danh mục chuyên khoa nổi bật, thông tin bác sĩ tiêu biểu và các câu hỏi thường gặp (FAQs).
 * **Thiết kế giao diện (UI/UX):**
   * *Hero Section:* Banner lớn với câu slogan thương hiệu và hình nền y tế hiện đại. Tích hợp thanh tìm kiếm thông tin nhanh (Bác sĩ, Chuyên khoa).
@@ -56,6 +57,7 @@ export default function HomePage() {
 
 ## 2. TRANG ĐĂNG NHẬP (LOGIN PAGE)
 * **Đường dẫn (Route):** `/login`
+* **Trạng thái truy cập:** Công khai (Không yêu cầu đăng nhập - `publicRoutes`)
 * **Mô tả chức năng:** Cho phép người dùng đăng nhập bằng tài khoản Email và Mật khẩu. Hỗ trợ xác thực kép qua token (Access/Refresh Token) được trả về dưới dạng HttpOnly Cookie bảo mật.
 * **Thiết kế giao diện (UI/UX):** Layout 2 cột. Cột trái hiển thị banner thương hiệu y tế kỹ thuật số hiện đại. Cột phải là biểu mẫu đăng nhập với trường Email, Mật khẩu (có nút ẩn/hiện mật khẩu) và tích hợp widget xác thực Cloudflare Turnstile để chống spam.
 * **Luồng xử lý (Data Flow):**
@@ -85,6 +87,7 @@ const login = async (req, res, next) => {
 
 ## 3. TRANG ĐĂNG KÝ TÀI KHOẢN (REGISTER PAGE)
 * **Đường dẫn (Route):** `/register`
+* **Trạng thái truy cập:** Công khai (Không yêu cầu đăng nhập - `publicRoutes`)
 * **Mô tả chức năng:** Cho phép bệnh nhân mới đăng ký tài khoản thành viên trên hệ thống.
 * **Thiết kế giao diện (UI/UX):** Tương tự trang Login nhưng biểu mẫu yêu cầu thêm: Họ và tên, Số điện thoại (kiểm tra định dạng regex số điện thoại Việt Nam), Mật khẩu và Xác nhận mật khẩu.
 * **Luồng xử lý (Data Flow):**
@@ -121,6 +124,7 @@ const onSubmit = async (data) => {
 
 ## 4. TRANG QUÊN MẬT KHẨU (FORGOT PASSWORD PAGE)
 * **Đường dẫn (Route):** `/forgot-password`
+* **Trạng thái truy cập:** Công khai (Không yêu cầu đăng nhập - `publicRoutes`)
 * **Mô tả chức năng:** Hỗ trợ bệnh nhân khôi phục tài khoản khi quên mật khẩu qua việc nhận mã OTP xác thực từ Email.
 * **Thiết kế giao diện (UI/UX):** Biểu mẫu đơn giản chỉ yêu cầu nhập Email tài khoản đã đăng ký.
 * **Luồng xử lý (Data Flow):**
@@ -148,6 +152,7 @@ const forgotPassword = async (email) => {
 
 ## 5. TRANG ĐẶT LẠI MẬT KHẨU (RESET PASSWORD PAGE)
 * **Đường dẫn (Route):** `/reset-password`
+* **Trạng thái truy cập:** Công khai (Không yêu cầu đăng nhập - `publicRoutes`)
 * **Mô tả chức năng:** Xác nhận mã OTP hợp lệ và tiến hành cập nhật mật khẩu mới cho bệnh nhân.
 * **Thiết kế giao diện (UI/UX):** Form nhập Email, mã OTP 6 chữ số, Mật khẩu mới và Xác nhận mật khẩu mới.
 * **Luồng xử lý (Data Flow):**
@@ -178,6 +183,7 @@ const resetPassword = async ({ email, otp, matKhauMoi }) => {
 
 ## 6. TRANG DANH SÁCH CHUYÊN KHOA (SPECIALTY LIST PAGE)
 * **Đường dẫn (Route):** `/specialties`
+* **Trạng thái truy cập:** Công khai (Không yêu cầu đăng nhập - `publicRoutes`)
 * **Mô tả chức năng:** Hiển thị toàn bộ danh sách các chuyên khoa của phòng khám cùng thống kê số lượng bác sĩ trực thuộc từng khoa.
 * **Thiết kế giao diện (UI/UX):** Lưới các thẻ chuyên khoa lớn, có hiệu ứng zoom nhẹ khi rê chuột (hover). Mỗi thẻ hiển thị tên chuyên khoa, hình ảnh thu nhỏ, mô tả ngắn và nhãn "Số lượng bác sĩ: X".
 * **Luồng xử lý (Data Flow):**
@@ -202,6 +208,7 @@ const getAll = async () => {
 
 ## 7. TRANG CHI TIẾT CHUYÊN KHOA (SPECIALTY DETAIL PAGE)
 * **Đường dẫn (Route):** `/specialties/:id`
+* **Trạng thái truy cập:** Công khai (Không yêu cầu đăng nhập - `publicRoutes`)
 * **Mô tả chức năng:** Xem mô tả chi tiết của một chuyên khoa và danh sách toàn bộ các bác sĩ đang công tác tại khoa đó.
 * **Thiết kế giao diện (UI/UX):** Phần đầu trang hiển thị mô tả chi tiết về chuyên môn thế mạnh của chuyên khoa. Phần dưới hiển thị danh sách các bác sĩ thuộc khoa dưới dạng hàng ngang (Doctor Row Cards) để người dùng dễ chọn bác sĩ.
 * **Luồng xử lý (Data Flow):**
@@ -248,6 +255,7 @@ export default function SpecialtyDetailPage() {
 
 ## 8. TRANG DANH SÁCH BÁC SĨ (DOCTOR LIST PAGE)
 * **Đường dẫn (Route):** `/doctors`
+* **Trạng thái truy cập:** Công khai (Không yêu cầu đăng nhập - `publicRoutes`)
 * **Mô tả chức năng:** Cung cấp bộ lọc tìm kiếm bác sĩ theo chuyên khoa, từ khóa (tên bác sĩ) và hỗ trợ phân trang (Pagination).
 * **Thiết kế giao diện (UI/UX):** Sidebar chứa bộ lọc chọn chuyên khoa và ô nhập từ khóa tìm kiếm. Vùng chính hiển thị lưới danh sách bác sĩ kèm theo thanh phân trang số (Trang trước, Trang sau, Số trang).
 * **Luồng xử lý (Data Flow):**
@@ -281,6 +289,7 @@ const getAll = async ({ chuyenKhoaId, search, page = 1, limit = 10 }) => {
 
 ## 9. TRANG CHI TIẾT BÁC SĨ (DOCTOR DETAIL PAGE)
 * **Đường dẫn (Route):** `/doctors/:id`
+* **Trạng thái truy cập:** Công khai (Không yêu cầu đăng nhập - `publicRoutes`)
 * **Mô tả chức năng:** Hiển thị thông tin học vấn, kinh nghiệm công tác chi tiết, giá khám bệnh và lịch trực (Time slots) trong ngày của bác sĩ để bệnh nhân chuẩn bị đăng ký lịch khám.
 * **Thiết kế giao diện (UI/UX):** Bố cục dạng thẻ chi tiết. Hiển thị ảnh chân dung bác sĩ lớn bên trái. Bên phải hiển thị thông tin bằng cấp, thế mạnh chuyên khoa, giá khám công khai và nút lớn "Đặt lịch khám ngay".
 * **Luồng xử lý (Data Flow):**
@@ -318,6 +327,7 @@ export default function DoctorDetailPage() {
 
 ## 10. TRANG ĐẶT LỊCH KHÁM (BOOKING PAGE)
 * **Đường dẫn (Route):** `/booking/:doctorId`
+* **Trạng thái truy cập:** Bảo mật (Yêu cầu đăng nhập - `privateRoutes`)
 * **Mô tả chức năng:** Cho phép chọn ngày/giờ, lý do khám và gửi yêu cầu tạo lịch hẹn miễn phí (khám xong mới thanh toán).
 * **Thiết kế giao diện (UI/UX):** Định dạng dạng Step Wizard (Từng bước). Bước 1: Chọn ngày khám trên thanh trượt 21 ngày. Lựa chọn khung giờ (Time slots) trống hiển thị dưới dạng lưới nút bấm. Nhập lý do khám. Bước 2: Xem lại toàn bộ thông tin và bấm "Xác nhận đặt lịch".
 * **Luồng xử lý (Data Flow):**
@@ -370,6 +380,7 @@ const create = async (data, requestUser = null) => {
 
 ## 11. TRANG HỒ SƠ CÁ NHÂN (PATIENT PROFILE PAGE)
 * **Đường dẫn (Route):** `/profile`
+* **Trạng thái truy cập:** Bảo mật (Yêu cầu đăng nhập - `privateRoutes`)
 * **Mô tả chức năng:** Cho phép bệnh nhân thay đổi thông tin cá nhân (Ngày sinh, giới tính, số điện thoại, địa chỉ) và cập nhật ảnh đại diện lên Cloudinary.
 * **Thiết kế giao diện (UI/UX):** Biểu mẫu phân chia thành 2 khu vực: Thông tin chung (nhập liệu) và Thông tin tài khoản kèm khung cập nhật ảnh đại diện.
 * **Luồng xử lý (Data Flow):**
@@ -401,6 +412,7 @@ const handleAvatarChange = async (e) => {
 
 ## 12. TRANG LỊCH SỬ KHÁM BỆNH (APPOINTMENT HISTORY PAGE)
 * **Đường dẫn (Route):** `/appointments`
+* **Trạng thái truy cập:** Bảo mật (Yêu cầu đăng nhập - `privateRoutes`)
 * **Mô tả chức năng:** Bệnh nhân xem danh sách các lịch hẹn đã đặt, sắp xếp theo thời gian mới nhất. Cho phép theo dõi trạng thái lịch và thực hiện Hủy lịch.
 * **Thiết kế giao diện (UI/UX):** Các dòng lịch đặt được bố trí dạng danh sách (List View). Mỗi lịch đặt hiển thị tên bác sĩ, ngày khám, giờ khám, nhãn trạng thái (Chờ duyệt, Đã khám, Đã hủy) và các nút thao tác như "Hủy lịch" hoặc "Xem kết quả khám".
 * **Luồng xử lý (Data Flow):**
@@ -436,6 +448,7 @@ const remove = async (id, requestUser) => {
 
 ## 13. TRANG KẾT QUẢ KHÁM VÀ ĐƠN THUỐC (MEDICAL RESULT PAGE)
 * **Đường dẫn (Route):** `/medical-results/:id`
+* **Trạng thái truy cập:** Bảo mật (Yêu cầu đăng nhập - `privateRoutes`)
 * **Mô tả chức năng:** Xem chẩn đoán của bác sĩ và thông tin đơn thuốc. Tích hợp thanh toán online và tính năng bảo mật khóa đơn thuốc.
 * **Thiết kế giao diện (UI/UX):** Thông tin bệnh án hiển thị dạng hóa đơn chi tiết. Nếu hóa đơn chưa thanh toán, danh sách đơn thuốc bị làm mờ (blur) kèm theo nút "Thanh toán ngay bằng VNPay". Sau khi thanh toán thành công, danh sách thuốc và liều lượng sẽ hiển thị đầy đủ.
 * **Cơ chế bảo mật Khóa đơn thuốc:** Bệnh nhân chỉ được xem chi tiết đơn thuốc sau khi đã thanh toán hóa đơn. Nếu chưa thanh toán, Server trả về mảng rỗng cho đơn thuốc để chống thất thoát.
@@ -462,6 +475,7 @@ const redactSensitiveData = (data, requestUser) => {
 
 ## 14. TRANG KẾT QUẢ THANH TOÁN (PAYMENT RESULT PAGE)
 * **Đường dẫn (Route):** `/payment/result`
+* **Trạng thái truy cập:** Bảo mật (Yêu cầu đăng nhập - `privateRoutes`)
 * **Mô tả chức năng:** Nhận kết quả phản hồi từ cổng thanh toán VNPay để thông báo cho người dùng và cập nhật trạng thái hóa đơn.
 * **Thiết kế giao diện (UI/UX):** Hiển thị hộp trạng thái dạng pop-up lớn. Nếu thành công: hiển thị dấu tích xanh lá, mã giao dịch, số tiền thanh toán và nút "Xem đơn thuốc". Nếu thất bại: hiển thị dấu chéo đỏ và lỗi chi tiết.
 * **Luồng xử lý (Data Flow):**
@@ -506,6 +520,7 @@ const verifyVNPayReturn = async (queryParams) => {
 
 ## 15. TRANG HỎI ĐÁP FAQ (FAQ PAGE)
 * **Đường dẫn (Route):** `/faq`
+* **Trạng thái truy cập:** Công khai (Không yêu cầu đăng nhập - `publicRoutes`)
 * **Mô tả chức năng:** Cung cấp thông tin trợ giúp, giải đáp các thắc mắc thường gặp của bệnh nhân về quy trình khám bệnh, đặt lịch và thanh toán.
 * **Thiết kế giao diện (UI/UX):** Bố cục dạng Accordion (Đóng/Mở linh hoạt). Người dùng click vào câu hỏi để trượt mở rộng hiển thị nội dung câu trả lời.
 * **Luồng xử lý (Data Flow):**
