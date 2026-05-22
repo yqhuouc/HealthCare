@@ -82,4 +82,24 @@ Dự án áp dụng mô hình phân tầng rõ rệt:
 *   **In-memory Performance:** Tốc độ phản hồi đạt mức < 5ms cho các dữ liệu đã được cache, giảm tải cho Database chính tới 80% trong các kịch bản thực tế.
 *   **Dynamic Expiration:** Kết hợp linh hoạt giữa TTL (Time-to-Live) và cơ chế tự động xóa cache khi dữ liệu thay đổi (Automatic Invalidation), đảm bảo người dùng luôn thấy thông tin mới nhất mà vẫn đạt tốc độ tối đa.
 
-**Kết luận:** Việc kết hợp bộ công cụ hiện đại (**React 19 + Tailwind 4 + VNPay + Redis**) không chỉ giúp đồ án đạt điểm cao về mặt kỹ thuật mà còn mang tính thực tiễn cực lớn, sẵn sàng cho việc triển khai thực tế trong ngành y tế số.
+---
+
+## 9. Cloudflare Turnstile (Bảo mật chống Bot Spam & Brute-force)
+**Vấn đề:** Các form đăng nhập, đăng ký và quên mật khẩu luôn bị đe dọa bởi các cuộc tấn công brute-force hoặc spam tài khoản rác từ bot tự động, trong khi các giải pháp CAPTCHA truyền thống (như Google reCAPTCHA v2) làm giảm trải nghiệm người dùng nghiêm trọng vì phải click chọn hình ảnh.
+
+**Giải pháp & Ưu điểm:**
+*   **Trải nghiệm người dùng không xâm lấn:** Turnstile hoạt động ngầm để phân tích hành vi của trình duyệt mà không yêu cầu người dùng giải các câu đố phức tạp, tạo cảm giác mượt mà (frictionless UX).
+*   **Xác thực phía Server chặt chẽ:** Frontend gửi token nhận được từ Cloudflare lên Backend. Backend sẽ thực hiện gọi API xác minh bảo mật (server-to-server) với Cloudflare trước khi xử lý tiếp các nghiệp vụ nhạy cảm như Đăng nhập, Đăng ký hoặc gửi OTP.
+*   **Miễn phí & Bảo mật quyền riêng tư:** Turnstile không theo dõi người dùng như các CAPTCHA khác, tuân thủ các tiêu chuẩn bảo mật dữ liệu nghiêm ngặt.
+
+---
+
+## 10. Nodemailer & Email Service (Thông tin liên lạc tự động)
+**Vấn đề:** Các giao dịch y tế số cần được thông báo kịp thời. Bệnh nhân cần nhận được đơn thuốc ngay sau khi khám và cần nhận OTP tức thì khi quên mật khẩu mà không gặp trễ.
+
+**Giải pháp & Ưu điểm:**
+*   **Đồng bộ hóa tức thời:** Gửi mã OTP xác nhận đặt lại mật khẩu với thời gian sống (TTL) 5 phút được lưu trữ trong Redis.
+*   **Tự động hóa chăm sóc sức khỏe:** Gửi thông tin chi tiết đơn thuốc (bao gồm danh sách thuốc, liều dùng, chẩn đoán của bác sĩ) trực tiếp về email của bệnh nhân ngay khi bác sĩ kê đơn xong, nâng cao tính chuyên nghiệp của phòng khám.
+*   **Cấu hình SMTP linh hoạt:** Hỗ trợ kết nối bảo mật qua SSL/TLS với các máy chủ email phổ biến (Gmail, Outlook) thông qua biến môi trường.
+
+**Kết luận:** Việc kết hợp bộ công cụ hiện đại (**React 19 + Tailwind 4 + VNPay + Redis + Cloudflare Turnstile + Nodemailer**) không chỉ giúp đồ án đạt điểm cao về mặt kỹ thuật mà còn mang tính thực tiễn cực lớn, sẵn sàng cho việc triển khai thực tế trong ngành y tế số.

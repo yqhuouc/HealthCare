@@ -84,4 +84,20 @@ Mọi Controller đều được bao bọc bởi `asyncHandler` để không c�
 - `isOperational`: Phân biệt lỗi nghiệp vụ và lỗi hệ thống.
 
 ---
+
+## 7. Caching & OTP (Upstash Redis)
+
+Hệ thống tích hợp **Redis** (host trên **Upstash**) để phục vụ 2 nghiệp vụ chính:
+- **Lưu trữ mã OTP:** Khi người dùng yêu cầu đặt lại mật khẩu, hệ thống tạo mã OTP ngẫu nhiên, lưu vào Redis với thời gian sống (TTL) là 5 phút. Khi người dùng nhập OTP, hệ thống truy vấn nhanh từ bộ nhớ đệm để kiểm tra, đảm bảo hiệu năng cao và tự động thu hồi khi hết hạn.
+- **Caching dữ liệu:** Các API truy vấn dữ liệu ít thay đổi nhưng tần suất đọc lớn (như thông tin bác sĩ, chuyên khoa, thống kê) được cache trực tiếp trên Redis giúp tốc độ phản hồi giảm xuống mức < 5ms.
+
+---
+
+## 8. Gửi Email tự động (Nodemailer)
+
+Sử dụng thư viện **Nodemailer** để cấu hình luồng gửi mail tự động qua SMTP (Gmail/Outlook):
+- **Email OTP:** Gửi mã xác nhận đặt lại mật khẩu bảo mật.
+- **Email Đơn Thuốc:** Ngay khi bác sĩ hoàn thành khám và kê đơn thuốc cho bệnh nhân, hệ thống tự động tổng hợp thông tin chẩn đoán, ghi chú, danh sách các loại thuốc kèm liều lượng và đơn giá để gửi trực tiếp đến địa chỉ email liên hệ của bệnh nhân.
+
+---
 *Tài liệu Master Doc hỗ trợ bảo vệ ĐATN - Nhóm phát triển Server.*

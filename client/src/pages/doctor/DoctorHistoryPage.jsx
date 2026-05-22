@@ -214,7 +214,7 @@ function DoctorHistoryPage() {
                               {getInitials(item.benhNhan?.hoTen)}
                             </span>
                           )}
-                        </div>
+                        </div> 
                         <div>
                           <p className="text-sm font-bold text-slate-800">{item.benhNhan?.hoTen}</p>
                           <p className="text-[10px] font-bold text-primary tracking-widest uppercase">
@@ -233,7 +233,7 @@ function DoctorHistoryPage() {
                         to={`/doctor/appointments/${item.id}`}
                         className="px-4 py-2 border-2 border-slate-100 text-[10px] font-bold text-slate-500 uppercase rounded-xl hover:border-primary/20 hover:text-primary hover:bg-primary/5 transition-all inline-flex items-center gap-2 tracking-widest"
                       >
-                        Hồ sơ án
+                        Hồ sơ bệnh án
                         <span className="material-symbols-outlined text-sm">visibility</span>
                       </Link>
                     </td>

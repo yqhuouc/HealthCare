@@ -6,17 +6,21 @@ Backend REST API cho hệ thống đặt lịch khám bệnh trực tuyến.
 
 | Công nghệ | Mục đích |
 |------------|----------|
-| **Node.js** | Runtime |
-| **Express 4** | Web framework |
-| **Prisma 6** | ORM |
-| **PostgreSQL** (Supabase) | Database |
-| **Zod** | Validate dữ liệu đầu vào |
+| **Node.js** | Môi trường runtime JavaScript phía server |
+| **Express 4.21** | Web framework chính cho API |
+| **Prisma 6.4** | ORM giao tiếp cơ sở dữ liệu quan hệ |
+| **PostgreSQL** (Supabase) | Hệ quản trị cơ sở dữ liệu chính |
+| **Upstash Redis** (`ioredis` 5.10) | Bộ nhớ đệm (Cache) & lưu OTP (TTL) |
+| **VNPay** (`vnpay` 2.5) | Cổng thanh toán trực tuyến |
+| **Cloudinary** (`cloudinary` 1.41) | Lưu trữ hình ảnh trên đám mây |
+| **Nodemailer 8.0** | Gửi email thông báo, OTP, kết quả khám |
+| **Zod 3.24** | Khai báo schema validate dữ liệu đầu vào API |
 | **JWT** (Dual Token) | Xác thực (Access Token + Refresh Token HttpOnly Cookie) |
-| **bcryptjs** | Mã hóa mật khẩu |
-| **Helmet** | Bảo vệ HTTP headers |
-| **express-rate-limit** | Giới hạn request |
-| **cookie-parser** | Parse cookie |
-| **Nodemon** | Auto-restart khi dev |
+| **bcryptjs 2.4** | Mã hóa mật khẩu tài khoản |
+| **Helmet 8.0** | Thiết lập các HTTP Header bảo mật chống lỗ hổng phổ biến |
+| **express-rate-limit 7.5** | Giới hạn số lượng request phòng tránh DDoS/Brute-force |
+| **cookie-parser 1.4** | Phân tích cú pháp cookie trong request header |
+| **Nodemon 3.1** | Tự động tải lại server khi có thay đổi code trong môi trường dev |
 
 ## Cài đặt
 
@@ -82,7 +86,7 @@ CLIENT_URL=http://localhost:5173
 ```
 server/
 ├── prisma/
-│   ├── schema.prisma          # 11 model database
+│   ├── schema.prisma          # 12 model database
 │   └── seed.js                # Dữ liệu mẫu
 ├── src/
 │   ├── app.js                 # Entry point

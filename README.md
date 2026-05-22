@@ -24,7 +24,12 @@ Dự án theo mô hình **Client - Server**:
 | **Frontend** | React 19 + Vite 7 + Tailwind CSS 4 |
 | **Backend** | Node.js + Express 4 + Prisma 6 ORM |
 | **Database** | PostgreSQL (Supabase) |
-| **Xác thực** | JWT (JSON Web Token) |
+| **Caching & OTP** | Upstash Redis |
+| **Cổng thanh toán** | VNPay (HMAC-SHA512) |
+| **Lưu trữ hình ảnh** | Cloudinary Cloud |
+| **Gửi Email** | Nodemailer (OTP & đơn thuốc) |
+| **Chống Bot Spam** | Cloudflare Turnstile |
+| **Xác thực** | Dual JWT (Access & Refresh HttpOnly Cookie) |
 | **Quản lý State** | Zustand + TanStack React Query |
 
 ## ✨ Tính Năng Chính
@@ -103,7 +108,7 @@ CodeDoAnTotNghiep/
 
 ## 🗄 Cơ Sở Dữ Liệu
 
-Hệ thống sử dụng **PostgreSQL** (host trên **Supabase**) với **Prisma ORM**. Gồm **10 bảng** chính:
+Hệ thống sử dụng **PostgreSQL** (host trên **Supabase**) với **Prisma ORM**. Gồm **12 bảng** chính:
 
 | Bảng (Model) | Mô tả |
 |---|---|
@@ -115,7 +120,9 @@ Hệ thống sử dụng **PostgreSQL** (host trên **Supabase**) với **Prisma
 | `LichLamViecBacSi` | Lịch làm việc bác sĩ (ngày, khung giờ, trạng thái) |
 | `HinhThucThanhToan` | Hình thức thanh toán |
 | `DatLich` | Đặt lịch khám (ngày, giờ, lý do, giá, trạng thái) |
-| `DonThuoc` | Đơn thuốc (liên kết với lịch khám) |
+| `GiaoDich` | Lưu vết thanh toán VNPay (loại giao dịch, số tiền, trạng thái, mã VNPay) |
+| `DonThuoc` | Đơn thuốc (chẩn đoán, ghi chú, tổng tiền thuốc, liên kết với lịch khám) |
+| `ChiTietDonThuoc` | Chi tiết thuốc trong đơn (tên thuốc, số lượng, đơn giá, liều dùng) |
 | `CauHoiThuongGap` | Câu hỏi thường gặp (FAQ) |
 
 ### Quan hệ chính
@@ -125,6 +132,8 @@ Hệ thống sử dụng **PostgreSQL** (host trên **Supabase**) với **Prisma
 - `BacSi` → `LichLamViecBacSi` (1:N)
 - `BacSi` + `BenhNhan` → `DatLich` (N:1)
 - `DatLich` ↔ `DonThuoc` (1:1)
+- `DatLich` → `GiaoDich` (1:N)
+- `DonThuoc` → `ChiTietDonThuoc` (1:N)
 
 ## 🔌 API Endpoints
 
@@ -248,28 +257,37 @@ npm run build
 
 | Công nghệ | Phiên bản | Mục đích |
 |---|---|---|
-| React | 19 | UI Framework |
-| Vite | 7 | Build tool & Dev server |
-| Tailwind CSS | 4 | Utility-first CSS framework |
-| React Router DOM | 7 | Routing phía client |
-| Zustand | 5 | State management |
-| TanStack React Query | 5 | Server state & data fetching |
-| Axios | - | HTTP client |
-| React Hook Form | 7 | Quản lý form |
-| React Toastify | 11 | Thông báo toast |
+| React | 19.2 | UI Framework |
+| Vite | 7.3 | Build tool & Dev server |
+| Tailwind CSS | 4.2 | Utility-first CSS framework |
+| React Router DOM | 7.13 | Routing phía client |
+| Zustand | 5.0 | State management |
+| TanStack React Query | 5.90 | Server state & data fetching |
+| Axios | 1.13 | HTTP client |
+| React Hook Form | 7.71 | Quản lý form |
+| Zod | 4.3 | Schema Validation ở phía client |
+| @marsidev/react-turnstile | 1.5 | Tích hợp khiên chống bot Cloudflare Turnstile |
+| React Toastify | 11.0 | Thông báo toast |
 
 ### Backend
 
 | Công nghệ | Phiên bản | Mục đích |
 |---|---|---|
-| Express | 4 | Web framework |
-| Prisma | 6 | ORM (Object-Relational Mapping) |
-| JSON Web Token | 9 | Xác thực người dùng |
-| bcryptjs | 2 | Mã hóa mật khẩu |
-| express-validator | 7 | Validate dữ liệu request |
-| cors | 2 | Cross-Origin Resource Sharing |
-| dotenv | 16 | Quản lý biến môi trường |
-| nodemon | 3 | Auto-restart server khi dev |
+| Express | 4.21 | Web framework |
+| Prisma | 6.4 | ORM (Object-Relational Mapping) |
+| JSON Web Token | 9.0 | Xác thực người dùng |
+| bcryptjs | 2.4 | Mã hóa mật khẩu |
+| Zod | 3.24 | Validate dữ liệu request đầu vào |
+| vnpay | 2.5 | Tích hợp cổng thanh toán trực tuyến VNPay |
+| ioredis | 5.10 | Kết nối và lưu trữ bộ nhớ đệm, OTP trên Redis |
+| cloudinary | 1.41 | SDK quản lý lưu trữ hình ảnh trên Cloudinary |
+| multer-storage-cloudinary | 4.0 | Engine lưu trữ Multer trực tiếp lên Cloudinary |
+| nodemailer | 8.0 | Tiện ích gửi email mã OTP và đơn thuốc |
+| cors | 2.8 | Cross-Origin Resource Sharing |
+| dotenv | 16.4 | Quản lý biến môi trường |
+| express-rate-limit | 7.5 | Giới hạn số lượng request từ một IP để chống spam/DoS |
+| helmet | 8.0 | Thiết lập các HTTP Header bảo mật |
+| nodemon | 3.1 | Auto-restart server khi dev |
 
 ### Database & Hosting
 
@@ -277,6 +295,8 @@ npm run build
 |---|---|
 | PostgreSQL | Hệ quản trị CSDL quan hệ |
 | Supabase | Database hosting (cloud) |
+| Upstash | Dịch vụ serverless Redis hosting |
+| Cloudinary | Dịch vụ lưu trữ & tối ưu hình ảnh đám mây |
 
 ## 📝 Tác Giả
 

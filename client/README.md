@@ -6,16 +6,18 @@ Frontend SPA cho hệ thống đặt lịch khám bệnh trực tuyến.
 
 | Công nghệ | Mục đích |
 |------------|----------|
-| **React 19** | UI library |
-| **Vite 7** | Build tool + dev server |
-| **Tailwind CSS 4** | Utility-first CSS framework |
-| **React Router 7** | Routing (SPA) |
-| **Zustand 5** | State management (auth store) |
-| **TanStack Query 5** | Server state management, caching |
-| **Axios** | HTTP client (gọi API) |
-| **React Hook Form 7** | Form handling + validation |
-| **React Toastify** | Toast notifications |
-| **ESLint 9** | Linter |
+| **React 19.2** | UI library |
+| **Vite 7.3** | Build tool + dev server |
+| **Tailwind CSS 4.2** | Utility-first CSS framework |
+| **React Router 7.1** | Routing (SPA) |
+| **Zustand 5.0** | State management (auth store) |
+| **TanStack React Query 5.90** | Server state management, caching |
+| **Axios 1.13** | HTTP client (gọi API) |
+| **React Hook Form 7.71** | Form handling |
+| **Zod 4.3** | Client schema validation |
+| **@marsidev/react-turnstile 1.5** | Cloudflare Turnstile (Anti-bot protection) |
+| **React Toastify 11.0** | Toast notifications |
+| **ESLint 9.39** | Linter |
 
 ## Cài đặt
 
