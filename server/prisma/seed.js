@@ -53,16 +53,50 @@ async function main() {
   });
   console.log("✅ Tài khoản admin: admin@clinic.vn / admin123");
 
-  // ===== 2. TẠO CHUYÊN KHOA =====
+  // ===== 2. TẠO CHUYÊN KHOA (7 CHUYÊN KHOA PHÒNG KHÁM TƯ NHÂN) =====
   const chuyenKhoaData = [
-    { tenChuyenKhoa: "Tim mạch", thoiLuongKham: 30 },
-    { tenChuyenKhoa: "Thần kinh", thoiLuongKham: 30 },
-    { tenChuyenKhoa: "Da liễu", thoiLuongKham: 20 },
-    { tenChuyenKhoa: "Nhi khoa", thoiLuongKham: 20 },
-    { tenChuyenKhoa: "Tai Mũi Họng", thoiLuongKham: 15 },
-    { tenChuyenKhoa: "Mắt", thoiLuongKham: 15 },
-    { tenChuyenKhoa: "Răng Hàm Mặt", thoiLuongKham: 20 },
-    { tenChuyenKhoa: "Sản phụ khoa", thoiLuongKham: 30 },
+    { 
+      tenChuyenKhoa: "Nội tổng quát", 
+      thoiLuongKham: 30, 
+      icon: "vaccines", 
+      moTaChuyenKhoa: "Khám lâm sàng, chẩn đoán và điều trị không phẫu thuật các bệnh lý nội khoa người lớn như tim mạch, huyết áp, tiểu đường, hô hấp, tiêu hóa..." 
+    },
+    { 
+      tenChuyenKhoa: "Nhi khoa", 
+      thoiLuongKham: 20, 
+      icon: "child_care", 
+      moTaChuyenKhoa: "Chăm sóc sức khỏe y tế toàn diện cho trẻ em từ sơ sinh đến tuổi vị thành niên, khám bệnh lý cấp tính, tư vấn dinh dưỡng và tiêm chủng." 
+    },
+    { 
+      tenChuyenKhoa: "Tai Mũi Họng", 
+      thoiLuongKham: 15, 
+      icon: "hearing", 
+      moTaChuyenKhoa: "Khám và điều trị các bệnh lý phổ biến tai, mũi, họng ở trẻ em và người lớn như viêm xoang, viêm tai giữa, viêm họng mãn tính, VA..." 
+    },
+    { 
+      tenChuyenKhoa: "Da liễu", 
+      thoiLuongKham: 20, 
+      icon: "healing", 
+      moTaChuyenKhoa: "Chẩn đoán và điều trị các bệnh về da, tóc, móng, dị ứng, chàm, nấm da, trứng cá và thực hiện các quy trình chăm sóc thẩm mỹ da liễu an toàn." 
+    },
+    { 
+      tenChuyenKhoa: "Mắt", 
+      thoiLuongKham: 15, 
+      icon: "visibility", 
+      moTaChuyenKhoa: "Khám mắt định kỳ, đo thị lực, chẩn đoán và điều trị các bệnh lý về mắt như cận thị, viễn thị, đục thủy tinh thể, viêm kết mạc..." 
+    },
+    { 
+      tenChuyenKhoa: "Răng Hàm Mặt", 
+      thoiLuongKham: 20, 
+      icon: "face", 
+      moTaChuyenKhoa: "Chăm sóc sức khỏe răng miệng toàn diện, nhổ răng, hàn răng, điều trị tủy, lấy cao răng và thẩm mỹ răng hàm mặt." 
+    },
+    { 
+      tenChuyenKhoa: "Sản phụ khoa", 
+      thoiLuongKham: 30, 
+      icon: "pregnant_woman", 
+      moTaChuyenKhoa: "Khám thai định kỳ, tư vấn chăm sóc sức khỏe thai sản, siêu âm phụ khoa và điều trị các bệnh lý phụ khoa thường gặp." 
+    },
   ];
 
   const chuyenKhoas = [];
@@ -70,45 +104,78 @@ async function main() {
     const created = await prisma.chuyenKhoa.create({ data: ck });
     chuyenKhoas.push(created);
   }
-  console.log(`✅ Tạo ${chuyenKhoas.length} chuyên khoa`);
+  console.log(`✅ Tạo ${chuyenKhoas.length} chuyên khoa thông dụng`);
 
-  // ===== 3. TẠO BÁC SĨ =====
-  const bacSiData = [
-    { tenBacSi: "Nguyễn Văn An", hocViChucDanh: "PGS.TS", giaKham: 500000, chuyenKhoaIdx: 0 },
-    { tenBacSi: "Trần Thị Bình", hocViChucDanh: "ThS.BS", giaKham: 350000, chuyenKhoaIdx: 1 },
-    { tenBacSi: "Lê Hoàng Cường", hocViChucDanh: "TS.BS", giaKham: 450000, chuyenKhoaIdx: 2 },
-    { tenBacSi: "Phạm Minh Đức", hocViChucDanh: "BS.CKI", giaKham: 300000, chuyenKhoaIdx: 3 },
-  ];
+  // ===== 3. TẠO BÁC SĨ (MỖI CHUYÊN KHOA 5 BÁC SĨ - TỔNG 20 BÁC SĨ) =====
+  const hoNguoiViet = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô"];
+  const tenDemNam = ["Văn", "Minh", "Anh", "Đức", "Hoàng", "Duy", "Thanh", "Quốc", "Xuân", "Mạnh", "Hữu", "Khánh", "Ngọc"];
+  const tenDemNu = ["Thị", "Hồng", "Kim", "Ngọc", "Thu", "Xuân", "Thanh", "Mỹ", "Phương", "Lan", "Quỳnh", "Minh"];
+  const tenNam = ["An", "Bình", "Cường", "Đức", "Hùng", "Huy", "Khoa", "Lâm", "Mạnh", "Nam", "Phong", "Sơn", "Vinh", "Tuấn", "Minh"];
+  const tenNu = ["Hương", "Oanh", "Quỳnh", "Thảo", "Trang", "Yến", "Mai", "Lan", "Phượng", "Hà", "Linh", "Hoa", "Nga", "Chi"];
+  
+  const hocVis = ["ThS.BS", "TS.BS", "BS.CKI", "PGS.TS.BS", "BS.CKII"];
 
   const doctors = [];
-  for (let i = 0; i < bacSiData.length; i++) {
-    const bs = bacSiData[i];
-    const email = `bacsi${i + 1}@clinic.vn`;
-    const hashedPw = await bcrypt.hash("doctor123", 10);
+  let doctorCount = 0;
 
-    const taiKhoan = await prisma.taiKhoan.create({
-      data: {
-        email,
-        matKhau: hashedPw,
-        vaiTro: "bac_si",
-        trangThaiTaiKhoan: 1,
-        gioiTinh: i % 2 === 0 ? 1 : 2,
-      },
-    });
+  for (let s = 0; s < chuyenKhoas.length; s++) {
+    const ck = chuyenKhoas[s];
+    for (let d = 0; d < 5; d++) {
+      doctorCount++;
+      const isMale = (doctorCount % 2 === 1);
+      const ho = hoNguoiViet[(s * 5 + d) % hoNguoiViet.length];
+      const dem = isMale 
+        ? tenDemNam[(s * 5 + d) % tenDemNam.length] 
+        : tenDemNu[(s * 5 + d) % tenDemNu.length];
+      const ten = isMale 
+        ? tenNam[(s * 5 + d) % tenNam.length] 
+        : tenNu[(s * 5 + d) % tenNu.length];
+      
+      const tenBacSi = `${ho} ${dem} ${ten}`;
+      const hocViChucDanh = hocVis[(s * 5 + d) % hocVis.length];
+      const giaKham = 150000 + ((s * 5 + d) % 5) * 50000; // 150k - 350k phù hợp phòng khám tư
 
-    const createdBs = await prisma.bacSi.create({
-      data: {
-        tenBacSi: bs.tenBacSi,
-        hocViChucDanh: bs.hocViChucDanh,
-        moTaNgan: `Bác sĩ ${bs.tenBacSi} - chuyên môn giỏi, tận tâm.`,
-        giaKham: bs.giaKham,
-        taiKhoanId: taiKhoan.id,
-        chuyenKhoaId: chuyenKhoas[bs.chuyenKhoaIdx].id,
-      },
-    });
-    doctors.push(createdBs);
+      const email = `bacsi${doctorCount}@clinic.vn`;
+      const hashedPw = await bcrypt.hash("doctor123", 10);
+
+      const taiKhoan = await prisma.taiKhoan.create({
+        data: {
+          email,
+          matKhau: hashedPw,
+          vaiTro: "bac_si",
+          trangThaiTaiKhoan: 1,
+          gioiTinh: isMale ? 1 : 2,
+        },
+      });
+
+      const moTaChiTiet = `### Giới thiệu bác sĩ
+Bác sĩ **${tenBacSi}** là chuyên gia ưu tú thuộc chuyên khoa **${ck.tenChuyenKhoa}** với hơn 10 năm kinh nghiệm công tác trong ngành y tế. Bác sĩ luôn đặt y đức làm tôn chỉ hoạt động, thấu hiểu tâm lý người bệnh và không ngừng cập nhật các phương pháp chẩn đoán tiên tiến nhất.
+
+### Quá trình học tập & Đào tạo chuyên môn
+*   Tốt nghiệp Bác sĩ Đa khoa tại Trường Đại học Y Hà Nội.
+*   Nhận học vị **${hocViChucDanh}** chuyên ngành **${ck.tenChuyenKhoa}**.
+*   Hoàn thành nhiều khóa đào tạo ngắn hạn về kỹ năng lâm sàng nâng cao và chăm sóc y tế hiện đại.
+
+### Thế mạnh chuyên môn
+*   Chẩn đoán chính xác và thiết lập phác đồ điều trị an toàn cho các bệnh lý thuộc khoa **${ck.tenChuyenKhoa}**.
+*   Tư vấn toàn diện về lối sống, dinh dưỡng phục hồi và các biện pháp chăm sóc sức khỏe chủ động để hạn chế dùng thuốc kháng sinh nếu không cần thiết.
+*   Theo dõi và quản lý bệnh lý mãn tính tận tình, chu đáo cho bệnh nhân ngoại trú.`;
+
+      const createdBs = await prisma.bacSi.create({
+        data: {
+          tenBacSi,
+          hocViChucDanh,
+          moTaNgan: `Bác sĩ ${hocViChucDanh} ${tenBacSi} - Chuyên gia chuyên khoa ${ck.tenChuyenKhoa}, giàu kinh nghiệm và tận tụy với người bệnh.`,
+          moTaChiTiet,
+          giaKham,
+          taiKhoanId: taiKhoan.id,
+          chuyenKhoaId: ck.id,
+        },
+      });
+      doctors.push(createdBs);
+    }
   }
-  console.log(`✅ Tạo ${bacSiData.length} bác sĩ (bác sĩ 1 đến 4)`);
+  console.log(`✅ Đã tạo ${doctors.length} bác sĩ (mỗi chuyên khoa 5 bác sĩ)`);
 
   // ===== 4. TẠO BỆNH NHÂN MẪU =====
   const benhNhanPassword = await bcrypt.hash("patient123", 10);
@@ -163,28 +230,55 @@ async function main() {
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
-  const lichMau = [
-    { bacSiIdx: 0, khungGioIdx: 0, ngay: today },    // BS An - Sáng nay
-    { bacSiIdx: 1, khungGioIdx: 1, ngay: today },    // BS Bình - Chiều nay
-    { bacSiIdx: 2, khungGioIdx: 2, ngay: today },    // BS Cường - Tối nay
-    { bacSiIdx: 3, khungGioIdx: 0, ngay: tomorrow }, // BS Đức - Sáng mai
-  ];
+  const nextDay = new Date(today);
+  nextDay.setDate(today.getDate() + 2);
 
-  for (const lm of lichMau) {
-    if (doctors[lm.bacSiIdx] && khungGios[lm.khungGioIdx]) {
+  let scheduleCount = 0;
+  for (let i = 0; i < doctors.length; i++) {
+    const doc = doctors[i];
+    
+    // Ca Sáng hôm nay
+    await prisma.lichLamViecBacSi.create({
+      data: {
+        bacSiId: doc.id,
+        khungGioId: khungGios[0].id,
+        ngayLamViec: today,
+        soBenhNhanToiDa: 10,
+        soBenhNhanHienTai: 0,
+        sanSang: 1,
+      },
+    });
+
+    // Ca Chiều ngày mai
+    await prisma.lichLamViecBacSi.create({
+      data: {
+        bacSiId: doc.id,
+        khungGioId: khungGios[1].id,
+        ngayLamViec: tomorrow,
+        soBenhNhanToiDa: 10,
+        soBenhNhanHienTai: 0,
+        sanSang: 1,
+      },
+    });
+
+    // Ca Tối ngày kia (chỉ gán cho bác sĩ chẵn để phân tán dữ liệu)
+    if (i % 2 === 0) {
       await prisma.lichLamViecBacSi.create({
         data: {
-          bacSiId: doctors[lm.bacSiIdx].id,
-          khungGioId: khungGios[lm.khungGioIdx].id,
-          ngayLamViec: lm.ngay,
-          soBenhNhanToiDa: 10,
+          bacSiId: doc.id,
+          khungGioId: khungGios[2].id,
+          ngayLamViec: nextDay,
+          soBenhNhanToiDa: 8,
           soBenhNhanHienTai: 0,
           sanSang: 1,
         },
       });
+      scheduleCount += 3;
+    } else {
+      scheduleCount += 2;
     }
   }
-  console.log(`✅ Đã tạo ${lichMau.length} lịch làm việc mẫu cho bác sĩ`);
+  console.log(`✅ Đã tạo ${scheduleCount} lịch làm việc mẫu cho toàn bộ ${doctors.length} bác sĩ`);
   // ===== 7. TẠO HÌNH THỨC THANH TOÁN & FAQ =====
   const hinhThucData = [
     { tenHinhThuc: "Thanh toán tại quầy", maLoai: "OFFLINE" },
@@ -195,8 +289,14 @@ async function main() {
   }
 
   const faqData = [
-    { cauHoi: "Lịch khám bao lâu thì có kết quả?", traLoi: "Thông thường kết quả sẽ có ngay sau khi bác sĩ kết luận và kê đơn." },
-    { cauHoi: "Tôi có thể thanh toán bằng thẻ không?", traLoi: "Hiện tại chúng tôi chấp nhận tiền mặt và chuyển khoản qua mã QR." },
+    { cauHoi: "Lịch khám sau bao lâu thì có kết quả?", traLoi: "Thông thường kết quả khám và đơn thuốc sẽ được cập nhật trực tuyến trên hệ thống ngay sau khi bác sĩ kết luận và kết thúc ca khám." },
+    { cauHoi: "Tôi có thể thanh toán phí khám trực tuyến bằng hình thức nào?", traLoi: "Phòng khám hỗ trợ thanh toán online an toàn qua cổng VNPay (ATM nội địa, thẻ quốc tế hoặc quét mã QR ứng dụng ngân hàng) hoặc thanh toán trực tiếp bằng tiền mặt/quẹt thẻ tại quầy lễ tân." },
+    { cauHoi: "Tôi có thể hủy lịch hoặc thay đổi giờ khám đã đặt không?", traLoi: "Bạn hoàn toàn có thể chủ động hủy lịch hẹn hoặc chọn giờ khám mới trong mục Lịch sử lịch hẹn trước giờ khám dự kiến ít nhất 2 tiếng mà không mất phí." },
+    { cauHoi: "Tôi cần mang theo những giấy tờ gì khi đến khám bệnh?", traLoi: "Bệnh nhân vui lòng mang theo Căn cước công dân (hoặc thẻ BHYT nếu có) và mở ứng dụng HealthCare hiển thị mã đặt lịch khám cho lễ tân để được hỗ trợ check-in nhanh nhất." },
+    { cauHoi: "Nếu tôi đến muộn so với giờ hẹn trên lịch khám thì sao?", traLoi: "Lịch khám được đặt trước để tối ưu thời gian chờ. Nếu bạn đến muộn quá 15 phút, hệ thống sẽ tự động xếp bạn vào lượt khám dự phòng của ca trực để tránh ảnh hưởng đến các bệnh nhân đặt lịch đúng giờ." },
+    { cauHoi: "Hồ sơ bệnh án và đơn thuốc của tôi được bảo mật thế nào?", traLoi: "Toàn bộ thông tin bệnh án và lịch sử khám bệnh của bạn được mã hóa an toàn và chỉ có bác sĩ trực tiếp khám cùng với tài khoản cá nhân của bạn mới có quyền truy cập." },
+    { cauHoi: "Phòng khám có làm việc ngoài giờ hành chính hoặc cuối tuần không?", traLoi: "Có, phòng khám có ca trực tối ngoài giờ từ 18:00 - 21:00 từ Thứ 2 đến Thứ 7, phục vụ cho những người đi làm bận rộn." },
+    { cauHoi: "Làm thế nào để tôi liên hệ trực tiếp với bác sĩ sau khi khám?", traLoi: "Sau khi hoàn thành ca khám, đơn thuốc sẽ được đính kèm số điện thoại liên hệ khẩn cấp của bác sĩ điều trị để bạn tiện trao đổi nếu có phản ứng phụ của thuốc." }
   ];
   for (const faq of faqData) {
     await prisma.cauHoiThuongGap.create({ data: { ...faq, dangHoatDong: 1 } });
