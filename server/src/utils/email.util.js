@@ -5,6 +5,7 @@
  */
 const nodemailer = require("nodemailer");
 const config = require("../config");
+const { vnDay } = require("./dateUtils");
 
 // Tạo transporter SMTP
 const transporter = nodemailer.createTransport({
@@ -144,4 +145,106 @@ const sendPostExamEmail = async (toEmail, patientName, diagnosis, totalAmount) =
   }
 };
 
-module.exports = { sendOTPEmail, sendPostExamEmail };
+/**
+ * Gửi email xác nhận đặt lịch khám thành công
+ * @param {string} toEmail - Email bệnh nhân
+ * @param {Object} bookingDetails - Thông tin chi tiết lịch hẹn
+ * @param {string} bookingDetails.bookingId - Mã lịch hẹn (ví dụ: "LK25")
+ * @param {string} bookingDetails.patientName - Tên bệnh nhân
+ * @param {string} bookingDetails.doctorName - Tên bác sĩ
+ * @param {string} bookingDetails.specialtyName - Tên chuyên khoa
+ * @param {string} bookingDetails.date - Ngày khám (định dạng dd/mm/yyyy)
+ * @param {string} bookingDetails.time - Giờ khám (định dạng hh:mm)
+ * @param {number} bookingDetails.price - Giá khám
+ */
+const sendBookingConfirmationEmail = async (toEmail, { bookingId, patientName, doctorName, specialtyName, date, time, price }) => {
+  const formattedPrice = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
+  
+  const mailOptions = {
+    from: '"HealthCare Clinic" <no-reply@healthcare.vn>',
+    to: toEmail,
+    subject: `Xác nhận lịch hẹn khám bệnh #${bookingId} thành công — HealthCare`,
+    html: `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 35px 20px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 26px; letter-spacing: 0.5px;">🏥 Phòng Khám HealthCare</h1>
+          <p style="color: #d1fae5; margin: 8px 0 0; font-size: 15px;">Lịch hẹn của bạn đã được xác nhận thành công</p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 40px 30px;">
+          <h2 style="color: #0f172a; margin: 0 0 15px; font-size: 20px;">Kính gửi ${patientName},</h2>
+          <p style="color: #475569; line-height: 1.6; font-size: 15px; margin-bottom: 25px;">
+            Yêu cầu đặt lịch khám bệnh của bạn đã được bác sĩ/admin duyệt thành công. Dưới đây là thông tin chi tiết lịch hẹn:
+          </p>
+
+          <!-- Ticket Box -->
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; margin-bottom: 30px;">
+            <!-- Header Ticket -->
+            <div style="background-color: #f1f5f9; padding: 15px 20px; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: bold; color: #475569; font-size: 14px;">CHI TIẾT LỊCH HẸN</span>
+              <span style="font-weight: bold; color: #10b981; font-size: 14px; background-color: #d1fae5; padding: 4px 8px; border-radius: 4px;">#${bookingId}</span>
+            </div>
+            
+            <!-- Details List -->
+            <div style="padding: 20px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; width: 40%;">Bác sĩ điều trị</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: bold; text-align: right;">${doctorName}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Chuyên khoa</td>
+                  <td style="padding: 10px 0; color: #475569; font-size: 14px; text-align: right;">${specialtyName}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Ngày khám</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 500; text-align: right;">${date}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Giờ bắt đầu khám</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: bold; text-align: right;">${time}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Phí khám dự kiến</td>
+                  <td style="padding: 10px 0; color: #10b981; font-size: 16px; font-weight: bold; text-align: right;">${formattedPrice}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Instructions Box -->
+          <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 0 8px 8px 0; margin-bottom: 30px;">
+            <p style="margin: 0; font-size: 13px; color: #b45309; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">📌 Hướng dẫn khi đến khám</p>
+            <ul style="margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: #475569; line-height: 1.6;">
+              <li>Vui lòng có mặt tại phòng khám trước giờ hẹn <strong>15 phút</strong> để làm thủ tục check-in.</li>
+              <li>Khi đi mang theo Căn cước công dân (CCCD) và Thẻ Bảo hiểm y tế (nếu có).</li>
+              <li>Xuất trình mã lịch hẹn <strong>#${bookingId}</strong> tại quầy lễ tân để được ưu tiên sắp xếp lượt khám.</li>
+            </ul>
+          </div>
+
+          <p style="color: #475569; line-height: 1.6; font-size: 14px; margin-bottom: 25px;">
+            Nếu bạn cần thay đổi lịch khám hoặc hủy lịch hẹn, vui lòng thực hiện trên hệ thống trước giờ khám tối thiểu 2 tiếng để được hoàn tiền phí khám (nếu thanh toán online).
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+
+          <p style="color: #94a3b8; font-size: 13px; text-align: center; margin: 0; line-height: 1.5;">
+            Trân trọng,<br/>
+            <strong>Đội ngũ Y Bác sĩ HealthCare</strong>
+          </p>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email] Đã gửi thư xác nhận đặt lịch cho ${toEmail}`);
+  } catch (error) {
+    console.error(`[Email Error] Lỗi gửi thư xác nhận đặt lịch cho ${toEmail}:`, error);
+  }
+};
+
+module.exports = { sendOTPEmail, sendPostExamEmail, sendBookingConfirmationEmail };

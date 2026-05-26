@@ -16,6 +16,7 @@ const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 const { dayjs, vnDay } = require("../utils/dateUtils");
 const { getCache, setCache, delCache } = require("../utils/redis.util");
+const { sendBookingConfirmationEmail } = require("../utils/email.util");
 
 // Cache key helper
 const getSlotCacheKey = (bsId, date) => `cache:slot:${bsId}:${dayjs(date).format("YYYY-MM-DD")}`;
@@ -104,6 +105,7 @@ const defaultInclude = {
       id: true,
       hoTen: true,
       soDienThoai: true,
+      emailLienHe: true,
       taiKhoan: { select: { anhDaiDien: true } },
     },
   },
@@ -426,7 +428,7 @@ const updateTrangThai = async (id, trangThai, requestUser = null) => {
   const oldTrangThai = existing.trangThai;
   const newTrangThai = Number(trangThai);
 
-  return prisma.$transaction(async (tx) => {
+  const updatedDatLich = await prisma.$transaction(async (tx) => {
     const datLich = await tx.datLich.update({
       where: { id: BigInt(id) },
       data: { trangThai: newTrangThai },
@@ -455,6 +457,29 @@ const updateTrangThai = async (id, trangThai, requestUser = null) => {
 
     return datLich;
   });
+
+  // Gửi email xác nhận nếu chuyển từ Đang chờ (0) sang Đã xác nhận (1)
+  if (oldTrangThai === 0 && newTrangThai === 1) {
+    const emailTo = updatedDatLich.benhNhan?.emailLienHe;
+    if (emailTo) {
+      const timeStr = dayjs.utc(updatedDatLich.gioBatDau).year(2000).tz("Asia/Ho_Chi_Minh").format("HH:mm");
+      const dateStr = vnDay(updatedDatLich.ngayDat).format("DD/MM/YYYY");
+      
+      sendBookingConfirmationEmail(emailTo, {
+        bookingId: updatedDatLich.id.toString(),
+        patientName: updatedDatLich.benhNhan?.hoTen || "Quý khách",
+        doctorName: updatedDatLich.bacSi?.tenBacSi || "Bác sĩ HealthCare",
+        specialtyName: updatedDatLich.bacSi?.chuyenKhoa?.tenChuyenKhoa || "Khám chung",
+        date: dateStr,
+        time: timeStr,
+        price: Number(updatedDatLich.giaKham || 0),
+      }).catch((err) => {
+        console.error("[Email Error] Lỗi gửi mail xác nhận lịch khám:", err);
+      });
+    }
+  }
+
+  return updatedDatLich;
 };
 
 /**
