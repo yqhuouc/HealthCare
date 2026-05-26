@@ -30,7 +30,6 @@ import FAQPage from "../pages/patient/FAQPage";
 import NotFoundPage from "../pages/patient/NotFoundPage";
 
 /* ---- Trang bác sĩ ---- */
-import DoctorLoginPage from "../pages/doctor/DoctorLoginPage";
 import DoctorDashboardPage from "../pages/doctor/DoctorDashboardPage";
 import DoctorAppointmentsPage from "../pages/doctor/DoctorAppointmentsPage";
 import DoctorAppointmentDetailPage from "../pages/doctor/DoctorAppointmentDetailPage";
@@ -91,10 +90,8 @@ export const privateRoutes = [
    ROUTES BÁC SĨ — dùng DoctorLayout (sidebar + Outlet)
    ========================================================== */
 
-/** Routes bác sĩ standalone — KHÔNG dùng layout (login page) */
-export const doctorStandaloneRoutes = [
-  { path: "/doctor/login", component: DoctorLoginPage },
-];
+/** Routes bác sĩ standalone — KHÔNG dùng layout */
+export const doctorStandaloneRoutes = [];
 
 /**
  * Routes bác sĩ nested — render bên trong DoctorLayout (<Outlet />)

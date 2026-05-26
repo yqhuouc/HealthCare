@@ -96,7 +96,7 @@ function DoctorLayout() {
    */
   const handleLogout = () => {
     logout();
-    navigate("/doctor/login");
+    navigate("/login");
   };
 
   // Lấy đường dẫn cơ sở để xác định tiêu đề trang (ví dụ: /doctor/schedule/add -> /doctor/schedule)
