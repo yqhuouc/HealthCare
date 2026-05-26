@@ -23,18 +23,75 @@ import { formatPrice } from "../../utils/formatters";
 export default function DoctorListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 6; // Hiển thị 6 bác sĩ mỗi trang (phù hợp với lưới 3 cột)
 
   // TanStack Query: Lấy chuyên khoa (auto-cache, chỉ fetch 1 lần)
   const { data: specRes } = useSpecialties();
   const specialties = specRes?.data || [];
 
   // TanStack Query: Lấy bác sĩ theo filter (auto-refetch khi filter đổi)
-  const filters = { limit: 12 };
+  const filters = { page: currentPage, limit };
   if (searchQuery) filters.search = searchQuery;
   if (selectedSpecialty) filters.chuyenKhoaId = selectedSpecialty;
   const { data: docRes, isLoading: loading } = useDoctors(filters);
   const doctors = docRes?.data || [];
   const pagination = docRes?.pagination || null;
+
+  const totalPages = pagination?.totalPages || 1;
+
+  // Xử lý thay đổi tìm kiếm
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1); // Reset về trang 1 khi tìm kiếm
+  };
+
+  // Xử lý thay đổi chuyên khoa
+  const handleSpecialtyChange = (e) => {
+    setSelectedSpecialty(e.target.value);
+    setCurrentPage(1); // Reset về trang 1 khi đổi chuyên khoa
+  };
+
+  // Tạo mảng hiển thị các số trang
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      // Luôn hiển thị trang 1
+      pageNumbers.push(1);
+
+      let start = Math.max(2, currentPage - 1);
+      let end = Math.min(totalPages - 1, currentPage + 1);
+
+      if (currentPage <= 2) {
+        end = 4;
+      } else if (currentPage >= totalPages - 1) {
+        start = totalPages - 3;
+      }
+
+      if (start > 2) {
+        pageNumbers.push("...");
+      }
+
+      for (let i = start; i <= end; i++) {
+        pageNumbers.push(i);
+      }
+
+      if (end < totalPages - 1) {
+        pageNumbers.push("...");
+      }
+
+      // Luôn hiển thị trang cuối
+      pageNumbers.push(totalPages);
+    }
+
+    return pageNumbers;
+  };
 
   return (
     <section className="py-12">
@@ -55,14 +112,14 @@ export default function DoctorListPage() {
               type="text"
               placeholder="Tìm kiếm bác sĩ theo tên..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full pl-11 pr-4 py-3 rounded-lg border border-slate-200 bg-white text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
             />
           </div>
 
           <select
             value={selectedSpecialty}
-            onChange={(e) => setSelectedSpecialty(e.target.value)}
+            onChange={handleSpecialtyChange}
             className="px-4 py-3 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition sm:w-56"
           >
             <option value="">Tất cả chuyên khoa</option>
@@ -89,7 +146,7 @@ export default function DoctorListPage() {
             {/* Thông tin số lượng */}
             {pagination && (
               <p className="text-sm text-slate-500 mb-6">
-                Hiển thị {doctors.length} / {pagination.total} bác sĩ
+                Hiển thị {doctors.length} / {pagination.total} bác sĩ (Trang {currentPage} / {totalPages})
               </p>
             )}
 
@@ -141,6 +198,58 @@ export default function DoctorListPage() {
                 );
               })}
             </div>
+
+            {/* Điều khiển phân trang */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-12">
+                {/* Nút Previous */}
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 disabled:hover:bg-white disabled:hover:border-slate-200 transition cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-xl">chevron_left</span>
+                </button>
+
+                {/* Các số trang */}
+                {getPageNumbers().map((pageNum, idx) => {
+                  if (pageNum === "...") {
+                    return (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="w-10 h-10 flex items-center justify-center text-slate-400"
+                      >
+                        ...
+                      </span>
+                    );
+                  }
+
+                  const isActive = pageNum === currentPage;
+                  return (
+                    <button
+                      key={`page-${pageNum}`}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-10 h-10 rounded-lg font-medium text-sm transition cursor-pointer flex items-center justify-center ${
+                        isActive
+                          ? "bg-primary text-white shadow-md shadow-primary/20"
+                          : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                {/* Nút Next */}
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 disabled:hover:bg-white disabled:hover:border-slate-200 transition cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-xl">chevron_right</span>
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
