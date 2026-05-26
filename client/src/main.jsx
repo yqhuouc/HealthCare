@@ -21,7 +21,7 @@ const queryClient = new QueryClient({
 // Mount React app vào div#root (trong index.html)
 createRoot(document.getElementById("root")).render(
   // StrictMode giúp cảnh báo các pattern không tốt trong môi trường dev
-  <StrictMode>
+    <StrictMode>
     {/* Provider bọc App để mọi component dùng được React Query hooks */}
     <QueryClientProvider client={queryClient}>
       <App />

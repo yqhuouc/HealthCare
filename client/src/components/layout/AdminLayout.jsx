@@ -8,9 +8,9 @@ const NAV_ITEMS = [
   { to: "/admin/doctors", icon: "medical_information", label: "Quản lý bác sĩ" },
   { to: "/admin/patients", icon: "group", label: "Quản lý bệnh nhân" },
   { to: "/admin/appointments", icon: "calendar_month", label: "Quản lý lịch khám" },
-  { to: "/admin/schedules", icon: "event_available", label: "Lịch làm việc" },
-  { to: "/admin/time-slots", icon: "schedule", label: "Khung giờ khám" },
-  { to: "/admin/payment-methods", icon: "payments", label: "Thanh toán" },
+  { to: "/admin/schedules", icon: "event_available", label: "Quản lý lịch làm việc" },
+  { to: "/admin/time-slots", icon: "schedule", label: "Quản lý ca làm việc" },
+  { to: "/admin/payment-methods", icon: "payments", label: "Quản lý thanh toán" },
   { to: "/admin/stats", icon: "bar_chart", label: "Thống kê" },
   { to: "/admin/faqs", icon: "quiz", label: "Quản lý FAQs" },
 ];
@@ -25,10 +25,10 @@ const PAGE_TITLES = {
   "/admin/patients/edit": "Chỉnh sửa bệnh nhân",
   "/admin/appointments": "Quản lý lịch khám",
   "/admin/schedules": "Quản lý lịch làm việc",
-  "/admin/time-slots": "Cấu hình khung giờ",
-  "/admin/payment-methods": "Hình thức thanh toán",
-  "/admin/stats": "Thống kê chi tiết",
-  "/admin/faqs": "Quản lý FAQs",
+  "/admin/time-slots": "Quản lý ca làm việc",
+  "/admin/payment-methods": "Quản lý thanh toán",
+  "/admin/stats": "Thống kê chi tiết", 
+  "/admin/faqs": "Quản lý FAQs", 
   "/admin/faqs/add": "Thêm câu hỏi mới",
 };
 

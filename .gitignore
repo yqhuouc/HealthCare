@@ -7,3 +7,6 @@ Thumbs.db
 .gitignore
 .prettierrc
 
+
+doc/
+docx/
