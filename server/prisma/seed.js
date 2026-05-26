@@ -309,6 +309,19 @@ Bác sĩ **${tenBacSi}** là chuyên gia ưu tú thuộc chuyên khoa **${ck.ten
   }
   console.log("✅ Hoàn tất các thông tin bổ trợ (Thanh toán, FAQ)");
 
+  // Tự động dọn sạch cache Redis sau khi seed lại database
+  try {
+    const { redis } = require("../src/utils/redis.util");
+    if (redis) {
+      console.log("🧹 Đang dọn dẹp cache Redis...");
+      await redis.flushall();
+      await redis.disconnect();
+      console.log("✅ Đã dọn dẹp sạch cache Redis.");
+    }
+  } catch (redisError) {
+    console.warn("⚠️ Không thể dọn dẹp cache Redis:", redisError.message);
+  }
+
   console.log("\n🎉 SEED DỮ LIỆU THÀNH CÔNG! Hệ thống đã sẵn sàng để test.");
 }
 

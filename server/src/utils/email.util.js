@@ -225,7 +225,7 @@ const sendBookingConfirmationEmail = async (toEmail, { bookingId, patientName, d
           </div>
 
           <p style="color: #475569; line-height: 1.6; font-size: 14px; margin-bottom: 25px;">
-            Nếu bạn cần thay đổi lịch khám hoặc hủy lịch hẹn, vui lòng thực hiện trên hệ thống trước giờ khám tối thiểu 2 tiếng để được hoàn tiền phí khám (nếu thanh toán online).
+            Nếu bạn cần thay đổi lịch khám hoặc hủy lịch hẹn, vui lòng thực hiện trên hệ thống trước giờ khám tối thiểu 2 tiếng để chúng tôi tiến hành xử lý.
           </p>
 
           <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
