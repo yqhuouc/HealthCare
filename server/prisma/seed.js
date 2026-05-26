@@ -138,6 +138,11 @@ async function main() {
       const email = `bacsi${doctorCount}@clinic.vn`;
       const hashedPw = await bcrypt.hash("doctor123", 10);
 
+      // Sinh URL ảnh đại diện mẫu dựa trên giới tính
+      const avatarUrl = isMale 
+        ? `https://randomuser.me/api/portraits/men/${(doctorCount % 90) + 1}.jpg`
+        : `https://randomuser.me/api/portraits/women/${(doctorCount % 90) + 1}.jpg`;
+
       const taiKhoan = await prisma.taiKhoan.create({
         data: {
           email,
@@ -145,6 +150,7 @@ async function main() {
           vaiTro: "bac_si",
           trangThaiTaiKhoan: 1,
           gioiTinh: isMale ? 1 : 2,
+          anhDaiDien: avatarUrl,
         },
       });
 
