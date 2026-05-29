@@ -290,6 +290,21 @@ const create = async (data, requestUser = null) => {
     if (BigInt(data.benhNhanId) !== requestUser.benhNhan?.id) {
       throw new AppError("Bạn không có quyền đặt lịch khám cho bệnh nhân khác", 403);
     }
+
+    // Chống spam: Mỗi bệnh nhân chỉ được phép có tối đa 1 lịch hẹn chưa hoàn tất (Chờ xác nhận hoặc Đã xác nhận)
+    const activeAppointment = await prisma.datLich.findFirst({
+      where: {
+        benhNhanId: BigInt(data.benhNhanId),
+        trangThai: { in: [0, 1] }, // 0: Chờ xác nhận, 1: Đã xác nhận
+      },
+    });
+
+    if (activeAppointment) {
+      throw new AppError(
+        "Bạn đang có một lịch hẹn chưa hoàn tất (đang chờ xác nhận hoặc đã xác nhận). Vui lòng hoàn thành hoặc hủy lịch hẹn hiện tại trước khi đặt lịch mới.",
+        400
+      );
+    }
   }
 
   // 1. Xác thực thông tin liên đới

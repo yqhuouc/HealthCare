@@ -29,7 +29,7 @@ function AdminDoctorSchedulesPage() {
 
   // TanStack Query: Lấy dữ liệu danh mục (auto-cache)
   const { data: spRes } = useSpecialties();
-  const { data: dRes } = useDoctors();
+  const { data: dRes } = useDoctors({ limit: 1000 });
   const { data: sRes } = useKhungGio();
   const specialties = spRes?.data || [];
   const doctors = dRes?.data || [];
