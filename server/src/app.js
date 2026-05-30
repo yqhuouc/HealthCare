@@ -32,7 +32,7 @@ app.use(helmet());
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000, // cửa sổ 15 phút
-    max: 100, // tối đa 100 request / IP / 15 phút
+    max: 1000, // tối đa 100 request / IP / 15 phút
     message: { success: false, message: "Quá nhiều request. Vui lòng thử lại sau." },
   })
 );

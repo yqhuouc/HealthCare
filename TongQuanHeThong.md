@@ -165,7 +165,7 @@ Hệ thống có cấu trúc cơ sở dữ liệu chặt chẽ gồm **12 thực
 
 Để phát triển và kiểm thử dự án này, các công cụ sau đã được sử dụng:
 1. **Visual Studio Code (VS Code)**: Trình soạn thảo mã nguồn chính, tích hợp ESLint và Prettier để đảm bảo chuẩn hóa code format.
-2. **Postman**: Công cụ thiết kế và chạy thử nghiệm 64 API Endpoints của hệ thống. Lưu trữ các collection API có sẵn biến môi trường để test nhanh.
+2. **Postman**: Công cụ thiết kế và chạy thử nghiệm 65 API Endpoints của hệ thống. Lưu trữ các collection API có sẵn biến môi trường để test nhanh.
 3. **Prisma Studio**: Trình quản trị cơ sở dữ liệu giao diện trực quan (GUI) chạy local bằng lệnh `npm run prisma:studio`. Cho phép xem, sửa và tạo dữ liệu thủ công nhanh chóng.
 4. **Supabase Console & Upstash Console**: Trang quản trị trực tuyến dịch vụ PostgreSQL và Redis trên Cloud để giám sát hoạt động truy vấn và kết nối của server.
 5. **Git & GitHub**: Quản lý phiên bản mã nguồn, theo dõi lịch sử commit và phối hợp làm việc.

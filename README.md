@@ -72,9 +72,9 @@ CodeDoAnTotNghiep/
 │   │   │   ├── layout/              #   Layout components
 │   │   │   └── ui/                  #   UI components tái sử dụng
 │   │   ├── pages/                   # Các trang chính
-│   │   │   ├── admin/               #   Trang quản trị viên (10 pages)
-│   │   │   ├── doctor/              #   Trang bác sĩ (8 pages)
-│   │   │   └── patient/             #   Trang bệnh nhân (13 pages)
+│   │   │   ├── admin/               #   Trang quản trị viên (20 pages)
+│   │   │   ├── doctor/              #   Trang bác sĩ (7 pages)
+│   │   │   └── patient/             #   Trang bệnh nhân (16 pages)
 │   │   ├── services/                # Gọi API (Axios)
 │   │   ├── stores/                  # Zustand stores (state management)
 │   │   ├── hooks/                   # Custom React hooks
@@ -90,8 +90,8 @@ CodeDoAnTotNghiep/
 │   ├── src/
 │   │   ├── app.js                   # Entry point server
 │   │   ├── config/                  # Cấu hình (database, env)
-│   │   ├── controllers/             # Xử lý logic nghiệp vụ (9 controllers)
-│   │   ├── routes/                  # Định tuyến API (9 route modules)
+│   │   ├── controllers/             # Xử lý logic nghiệp vụ (11 controllers)
+│   │   ├── routes/                  # Định tuyến API (12 route modules)
 │   │   ├── middlewares/             # Auth, error handling, validate
 │   │   ├── validators/              # Validate dữ liệu đầu vào
 │   │   └── utils/                   # Hàm tiện ích
@@ -148,6 +148,8 @@ Hệ thống sử dụng **PostgreSQL** (host trên **Supabase**) với **Prisma
 | Đơn Thuốc | `/api/don-thuoc/*` | Quản lý đơn thuốc |
 | Thanh Toán | `/api/hinh-thuc-thanh-toan/*` | Hình thức thanh toán |
 | FAQ | `/api/cau-hoi-thuong-gap/*` | Câu hỏi thường gặp |
+| Thống Kê | `/api/thong-ke/*` | Thống kê doanh thu, lịch hẹn cho Admin |
+| VNPay | `/api/vnpay/*` | Tạo link thanh toán VNPay, xử lý IPN và Return |
 
 > 📖 Xem chi tiết hướng dẫn test API tại [`server/doc/POSTMAN_TESTING_GUIDE.md`](server/doc/POSTMAN_TESTING_GUIDE.md)
 

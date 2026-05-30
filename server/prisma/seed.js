@@ -106,7 +106,7 @@ async function main() {
   }
   console.log(`✅ Tạo ${chuyenKhoas.length} chuyên khoa thông dụng`);
 
-  // ===== 3. TẠO BÁC SĨ (MỖI CHUYÊN KHOA 5 BÁC SĨ - TỔNG 20 BÁC SĨ) =====
+  // ===== 3. TẠO BÁC SĨ (MỖI CHUYÊN KHOA 3 BÁC SĨ) =====
   const hoNguoiViet = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô"];
   const tenDemNam = ["Văn", "Minh", "Anh", "Đức", "Hoàng", "Duy", "Thanh", "Quốc", "Xuân", "Mạnh", "Hữu", "Khánh", "Ngọc"];
   const tenDemNu = ["Thị", "Hồng", "Kim", "Ngọc", "Thu", "Xuân", "Thanh", "Mỹ", "Phương", "Lan", "Quỳnh", "Minh"];
@@ -120,20 +120,20 @@ async function main() {
 
   for (let s = 0; s < chuyenKhoas.length; s++) {
     const ck = chuyenKhoas[s];
-    for (let d = 0; d < 5; d++) {
+    for (let d = 0; d < 3; d++) {
       doctorCount++;
       const isMale = (doctorCount % 2 === 1);
-      const ho = hoNguoiViet[(s * 5 + d) % hoNguoiViet.length];
+      const ho = hoNguoiViet[(s * 3 + d) % hoNguoiViet.length];
       const dem = isMale 
-        ? tenDemNam[(s * 5 + d) % tenDemNam.length] 
-        : tenDemNu[(s * 5 + d) % tenDemNu.length];
+        ? tenDemNam[(s * 3 + d) % tenDemNam.length] 
+        : tenDemNu[(s * 3 + d) % tenDemNu.length];
       const ten = isMale 
-        ? tenNam[(s * 5 + d) % tenNam.length] 
-        : tenNu[(s * 5 + d) % tenNu.length];
+        ? tenNam[(s * 3 + d) % tenNam.length] 
+        : tenNu[(s * 3 + d) % tenNu.length];
       
       const tenBacSi = `${ho} ${dem} ${ten}`;
-      const hocViChucDanh = hocVis[(s * 5 + d) % hocVis.length];
-      const giaKham = 150000 + ((s * 5 + d) % 5) * 50000; // 150k - 350k phù hợp phòng khám tư
+      const hocViChucDanh = hocVis[(s * 3 + d) % hocVis.length];
+      const giaKham = 150000 + ((s * 3 + d) % 5) * 50000; // 150k - 350k phù hợp phòng khám tư
 
       const email = `bacsi${doctorCount}@clinic.vn`;
       const hashedPw = await bcrypt.hash("doctor123", 10);
@@ -181,7 +181,7 @@ Bác sĩ **${tenBacSi}** là chuyên gia ưu tú thuộc chuyên khoa **${ck.ten
       doctors.push(createdBs);
     }
   }
-  console.log(`✅ Đã tạo ${doctors.length} bác sĩ (mỗi chuyên khoa 5 bác sĩ)`);
+  console.log(`✅ Đã tạo ${doctors.length} bác sĩ (mỗi chuyên khoa 3 bác sĩ)`);
 
   // ===== 4. TẠO BỆNH NHÂN MẪU =====
   const benhNhanPassword = await bcrypt.hash("patient123", 10);
@@ -206,6 +206,16 @@ Bác sĩ **${tenBacSi}** là chuyên gia ưu tú thuộc chuyên khoa **${ck.ten
     },
   });
   console.log("✅ Tài khoản bệnh nhân: benhnhan@gmail.com / patient123");
+
+  await prisma.benhNhan.create({
+    data: {
+      hoTen: "Lê Vãng Lai",
+      soDienThoai: "0987654321",
+      emailLienHe: "levanglai@gmail.com",
+      taiKhoanId: null,
+    },
+  });
+  console.log("✅ Đã tạo bệnh nhân vãng lai (không tài khoản): Lê Vãng Lai / 0987654321");
 
   // ===== 5. TẠO KHUNG GIỜ (CA LÀM VIỆC) =====
   // Sử dụng offset +07:00 để lưu đúng giờ Việt Nam (Khi format ra sẽ khớp hoàn toàn)
