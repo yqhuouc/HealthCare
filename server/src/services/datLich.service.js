@@ -671,7 +671,7 @@ const getSlotTrong = async ({ bacSiId, ngayDat }) => {
     }
   }
 
-  return {
+  const result = {
     bacSi: {
       id: bacSi.id,
       tenBacSi: bacSi.tenBacSi,

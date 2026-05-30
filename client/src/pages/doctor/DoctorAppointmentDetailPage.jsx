@@ -17,7 +17,7 @@
  * ============================================================
  */
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAppointment, useUpdateAppointmentStatus } from "../../hooks/queries/useAppointmentQueries";
 import { useCreatePrescription, useUpdatePrescription } from "../../hooks/queries/usePrescriptionQueries";
 import { toast } from "react-toastify";
@@ -218,6 +218,17 @@ function DoctorAppointmentDetailPage() {
             </button>
           )}
 
+          {appointment.trangThai === 2 /* Đã khám */ && (
+            <Link
+              to={`/medical-results/${appointment.id}`}
+              target="_blank"
+              className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-lg hover:bg-emerald-100 transition-all flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-sm">print</span>
+              Xem & In đơn thuốc
+            </Link>
+          )}
+
           <div className="w-px h-8 bg-slate-200 mx-1 hidden sm:block" />
 
           <button
@@ -264,7 +275,11 @@ function DoctorAppointmentDetailPage() {
         <div className="w-24 h-24 rounded-xl bg-slate-50 border-2 border-slate-200 shrink-0 overflow-hidden flex items-center justify-center">
           {patient?.taiKhoan?.anhDaiDien ? (
             <img
-              src={import.meta.env.VITE_API_URL + patient?.taiKhoan?.anhDaiDien}
+              src={
+                patient.taiKhoan.anhDaiDien.startsWith("http")
+                  ? patient.taiKhoan.anhDaiDien
+                  : `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${patient.taiKhoan.anhDaiDien}`
+              }
               alt="BN"
               className="w-full h-full object-cover"
               onError={(e) => {

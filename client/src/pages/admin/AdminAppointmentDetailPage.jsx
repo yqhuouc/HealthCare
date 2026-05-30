@@ -191,14 +191,24 @@ function AdminAppointmentDetailPage() {
 
             {/* Nếu đang ở trạng thái ĐÃ KHÁM (2) */}
             {appointment.trangThai === 2 && (
-              <button
-                onClick={() => handleUpdateStatus(1)}
-                disabled={updating}
-                className="px-4 py-2 bg-slate-100 text-slate-500 text-[10px] font-black rounded-xl hover:bg-slate-200 transition flex items-center gap-2 uppercase tracking-widest"
-              >
-                <span className="material-symbols-outlined text-base">undo</span>
-                Hoàn tác xong
-              </button>
+              <>
+                <button
+                  onClick={() => handleUpdateStatus(1)}
+                  disabled={updating}
+                  className="px-4 py-2 bg-slate-100 text-slate-500 text-[10px] font-black rounded-xl hover:bg-slate-200 transition flex items-center gap-2 uppercase tracking-widest"
+                >
+                  <span className="material-symbols-outlined text-base">undo</span>
+                  Hoàn tác xong
+                </button>
+                <Link
+                  to={`/medical-results/${appointment.id}`}
+                  target="_blank"
+                  className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-xl hover:bg-emerald-700 transition shadow-md shadow-emerald-100 flex items-center gap-2 uppercase tracking-widest"
+                >
+                  <span className="material-symbols-outlined text-base">print</span>
+                  Xem & In đơn thuốc
+                </Link>
+              </>
             )}
 
             <button

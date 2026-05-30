@@ -60,7 +60,15 @@ function AdminPatientDetailPage() {
             {/* Ảnh đại diện: Nếu không có ảnh thì hiển thị chữ cái đầu tên */}
             <div className="size-24 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center overflow-hidden">
               {patient.taiKhoan?.anhDaiDien ? (
-                <img src={patient.taiKhoan.anhDaiDien} alt={patient.hoTen} className="w-full h-full object-cover" />
+                <img
+                  src={
+                    patient.taiKhoan.anhDaiDien.startsWith("http")
+                      ? patient.taiKhoan.anhDaiDien
+                      : `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${patient.taiKhoan.anhDaiDien}`
+                  }
+                  alt={patient.hoTen}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <span className="text-3xl font-bold">{getInitials(patient.hoTen)}</span>
               )}

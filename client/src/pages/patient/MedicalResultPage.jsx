@@ -41,7 +41,7 @@ export default function MedicalResultPage() {
       toast.info("Đang xử lý yêu cầu thanh toán...");
       const res = await paymentService.createVnpayPayment({
         datLichId: id,
-        loaiGiaoDich: loaiGiaoDich, // "PHI_KHAM" hoặc "DON_THUOC"
+        loaiGiaoDich: loaiGiaoDich, // "PHI_KHAM" hoặc "DON_THUOC" "TAT_CA"
       });
       if (res.paymentUrl) {
         window.location.assign(res.paymentUrl);

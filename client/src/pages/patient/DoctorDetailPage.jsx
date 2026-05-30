@@ -57,7 +57,12 @@ export default function DoctorDetailPage() {
   }
 
   const specialtyName = doctor.chuyenKhoa?.tenChuyenKhoa || "Chưa phân khoa";
-  const avatarUrl = doctor.taiKhoan?.anhDaiDien;
+  const getAvatarUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    return `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${url}`;
+  };
+  const avatarUrl = getAvatarUrl(doctor.taiKhoan?.anhDaiDien);
 
   return (
     <section className="py-12">

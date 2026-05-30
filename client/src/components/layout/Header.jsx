@@ -91,7 +91,15 @@ function Header() {
                   className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-primary transition-colors cursor-pointer"
                 >
                   {user?.anhDaiDien ? (
-                    <img src={user.anhDaiDien} alt="avatar" className="w-8 h-8 rounded-full object-cover border border-slate-200" />
+                    <img
+                      src={
+                        user.anhDaiDien.startsWith("http")
+                          ? user.anhDaiDien
+                          : `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${user.anhDaiDien}`
+                      }
+                      alt="avatar"
+                      className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                    />
                   ) : (
                     <span className="material-symbols-outlined text-xl">
                       account_circle

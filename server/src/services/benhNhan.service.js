@@ -7,10 +7,16 @@ const { AppError } = require("../middlewares/error.middleware");
 const { delCache } = require("../utils/redis.util");
 
 // Lọc theo họ tên (contains, không phân biệt hoa thường) + skip/take
-const getAll = async ({ search, page = 1, limit = 10 }) => {
+const getAll = async ({ search, page = 1, limit = 10, hasAccount }) => {
   const skip = (Number(page) - 1) * Number(limit);
   const where = {};
   if (search) where.hoTen = { contains: search, mode: "insensitive" };
+
+  if (hasAccount === "true") {
+    where.taiKhoanId = { not: null };
+  } else if (hasAccount === "false") {
+    where.taiKhoanId = null;
+  }
 
   const [benhNhans, total] = await Promise.all([
     prisma.benhNhan.findMany({
@@ -178,4 +184,18 @@ const remove = async (id) => {
   await delCache("cache:stats:overview");
 };
 
-module.exports = { getAll, getById, update, remove };
+// Tạo mới bệnh nhân vãng lai (không có tài khoản liên kết)
+const create = async (data) => {
+  const benhNhan = await prisma.benhNhan.create({
+    data: {
+      hoTen: data.hoTen,
+      soDienThoai: data.soDienThoai || null,
+      emailLienHe: data.emailLienHe || null,
+    },
+  });
+
+  await delCache("cache:stats:overview");
+  return benhNhan;
+};
+
+module.exports = { getAll, getById, update, remove, create };

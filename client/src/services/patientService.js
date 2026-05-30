@@ -19,6 +19,9 @@ export const patientService = {
   /** Cập nhật thông tin bệnh nhân */
   update: (id, data) => api.put(`/benh-nhan/${id}`, data),
 
+  /** Tạo mới hồ sơ bệnh nhân (Admin) */
+  create: (data) => api.post("/benh-nhan", data),
+
   /** Xóa bệnh nhân (Admin) */
   remove: (id) => api.delete(`/benh-nhan/${id}`),
 };

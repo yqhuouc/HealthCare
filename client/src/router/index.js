@@ -58,6 +58,7 @@ import AdminTimeSlotsPage from "../pages/admin/AdminTimeSlotsPage";
 import AdminDoctorSchedulesPage from "../pages/admin/AdminDoctorSchedulesPage";
 import AdminPaymentMethodsPage from "../pages/admin/AdminPaymentMethodsPage";
 import AdminEditPatientPage from "../pages/admin/AdminEditPatientPage";
+import AdminCreateAppointmentPage from "../pages/admin/AdminCreateAppointmentPage";
 
 /* ==========================================================
    ROUTES BỆNH NHÂN — dùng layout Header + Footer
@@ -81,9 +82,13 @@ export const publicRoutes = [
 export const privateRoutes = [
   { path: "/booking/:doctorId", component: BookingPage },
   { path: "/appointments", component: AppointmentHistoryPage },
-  { path: "/medical-results/:id", component: MedicalResultPage },
   { path: "/profile", component: PatientProfilePage },
   { path: "/payment/result", component: PaymentResultPage },
+];
+
+/** Routes dùng chung cho cả Bệnh nhân, Bác sĩ, Admin (Cần đăng nhập) */
+export const sharedPrivateRoutes = [
+  { path: "/medical-results/:id", component: MedicalResultPage },
 ];
 
 /* ==========================================================
@@ -123,6 +128,7 @@ export const adminRoutes = [
   { path: "patients/:id", component: AdminPatientDetailPage },
   { path: "patients/edit/:id", component: AdminEditPatientPage },
   { path: "appointments", component: AdminAppointmentsPage },
+  { path: "appointments/create", component: AdminCreateAppointmentPage },
   { path: "appointments/:id", component: AdminAppointmentDetailPage },
   { path: "schedules", component: AdminDoctorSchedulesPage },
   { path: "time-slots", component: AdminTimeSlotsPage },

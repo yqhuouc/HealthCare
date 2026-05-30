@@ -140,10 +140,26 @@ function AdminAppointmentsPage() {
 
   return (
     <div className="space-y-6">
+      {/* HEADER: Tiêu đề và nút Tạo lịch khám tại quầy */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Quản lý lịch khám</h1>
+          <p className="text-slate-500 text-sm mt-1">Duyệt lịch, xếp ca trực và điều phối lịch hẹn phòng khám.</p>
+        </div>
+
+        <Link
+          to="/admin/appointments/create"
+          className="px-5 py-2.5 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-wider hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20 cursor-pointer self-start sm:self-auto"
+        >
+          <span className="material-symbols-outlined text-base">person_add</span>
+          Đăng ký khám tại quầy
+        </Link>
+      </div>
+
       {/* Khối thống kê đơn giản */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <p className="text-sm text-slate-500">Tổng lịch đang hiện thị</p>
+          <p className="text-sm text-slate-500">Tổng lịch đang hiển thị</p>
           <p className={`text-2xl font-bold mt-1 text-slate-800`}>{totalAppointments}</p>
         </div>
       </div>

@@ -16,9 +16,10 @@ const ITEMS_PER_PAGE = 8;
 export default function AdminPatientsPage() {
   const navigate = useNavigate();
 
-  // State quản lý tìm kiếm và phân trang
+  // State quản lý tìm kiếm, phân trang và phân loại tài khoản
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [accountFilter, setAccountFilter] = useState("all"); // 'all' | 'true' | 'false'
 
   // State quản lý Modal xác nhận (Dùng chung cho Xóa, Khóa, Mở khóa)
   const [modalMode, setModalMode] = useState(null);
@@ -40,6 +41,7 @@ export default function AdminPatientsPage() {
     page,
     limit: ITEMS_PER_PAGE,
     search: debouncedSearch,
+    ...(accountFilter !== "all" && { hasAccount: accountFilter }),
   });
   const patients = patientsRes?.data || [];
   const totalPages = patientsRes?.pagination?.totalPages || 1;
@@ -121,8 +123,8 @@ export default function AdminPatientsPage() {
         </div>
       </div>
 
-      {/* SEARCH BAR: Bộ lọc tìm kiếm bệnh nhân */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3">
+      {/* SEARCH BAR & FILTER: Bộ lọc tìm kiếm bệnh nhân */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-4">
         <div className="relative group">
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl transition-colors group-focus-within:text-primary">
             search
@@ -134,6 +136,40 @@ export default function AdminPatientsPage() {
             placeholder="Tìm kiếm theo mã BN, tên, số điện thoại..."
             className="w-full pl-12 pr-4 py-3 rounded-xl border border-transparent bg-slate-50 focus:bg-white focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-all outline-none text-sm font-medium"
           />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100/50">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2">Phân loại bệnh nhân:</span>
+          <button
+            onClick={() => { setAccountFilter("all"); setPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              accountFilter === "all"
+                ? "bg-primary text-white shadow-sm"
+                : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+            }`}
+          >
+            Tất cả
+          </button>
+          <button
+            onClick={() => { setAccountFilter("true"); setPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              accountFilter === "true"
+                ? "bg-primary text-white shadow-sm"
+                : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+            }`}
+          >
+            Có tài khoản (Online)
+          </button>
+          <button
+            onClick={() => { setAccountFilter("false"); setPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              accountFilter === "false"
+                ? "bg-primary text-white shadow-sm"
+                : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+            }`}
+          >
+            Vãng lai (Offline)
+          </button>
         </div>
       </div>
 

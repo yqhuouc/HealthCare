@@ -60,3 +60,14 @@ export const useDeletePatient = () => {
     },
   });
 };
+
+/** Tạo hồ sơ bệnh nhân mới (admin) */
+export const useCreatePatient = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => patientService.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: patientKeys.lists() });
+    },
+  });
+};

@@ -4,7 +4,6 @@
  */
 const prisma = require("../utils/prisma");
 const { delCache } = require("../utils/redis.util");
-const { sendPostExamEmail } = require("../utils/email.util");
 const { AppError } = require("../middlewares/error.middleware");
 
 const defaultInclude = {
@@ -164,15 +163,6 @@ const create = async (data, requestUser = null) => {
 
   await delCache("cache:stats:overview");
 
-  // Gửi email thông báo chẩn đoán sau khám (fire-and-forget)
-  const emailTo = datLich.benhNhan?.emailLienHe || datLich.benhNhan?.taiKhoan?.email;
-  if (emailTo) {
-    const tongThuTien = Number(datLich.giaKham || 0) + Number(tongTien || 0);
-    sendPostExamEmail(emailTo, datLich.benhNhan?.hoTen || "Quý khách", data.chanDoan, tongThuTien).catch((err) =>
-      console.error("[Email Error] Lỗi gửi email sau khám:", err),
-    );
-  }
-
   return result;
 };
 
@@ -232,8 +222,7 @@ const update = async (id, data, requestUser) => {
       include: defaultInclude,
     });
   });
-
-  const { delCache } = require("../utils/redis.util");
+  
   await delCache("cache:stats:overview");
   return updated;
 };

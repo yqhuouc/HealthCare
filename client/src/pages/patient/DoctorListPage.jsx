@@ -152,7 +152,12 @@ export default function DoctorListPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {doctors.map((doctor) => {
-                const avatarUrl = doctor.taiKhoan?.anhDaiDien;
+                const getAvatarUrl = (url) => {
+                  if (!url) return null;
+                  if (url.startsWith("http")) return url;
+                  return `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${url}`;
+                };
+                const avatarUrl = getAvatarUrl(doctor.taiKhoan?.anhDaiDien);
                 const specialtyName = doctor.chuyenKhoa?.tenChuyenKhoa || "Chưa phân khoa";
 
                 return (

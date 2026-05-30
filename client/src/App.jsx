@@ -13,6 +13,7 @@ import AdminLayout from "./components/layout/AdminLayout";
 import {
   publicRoutes,
   privateRoutes,
+  sharedPrivateRoutes,
   doctorStandaloneRoutes,
   doctorRoutes,
   adminRoutes,
@@ -85,6 +86,13 @@ function App() {
                   {/* Bảo vệ các trang dành cho bệnh nhân đã đăng nhập */}
                   <Route element={<ProtectedRoute allowedRoles={["benh_nhan"]} />}>
                     {privateRoutes.map((route) => (
+                      <Route key={route.path} path={route.path} element={<route.component />} />
+                    ))}
+                  </Route>
+
+                  {/* Các trang bảo vệ dùng chung cho cả Bệnh nhân, Bác sĩ, Admin */}
+                  <Route element={<ProtectedRoute allowedRoles={["benh_nhan", "bac_si", "admin"]} />}>
+                    {sharedPrivateRoutes.map((route) => (
                       <Route key={route.path} path={route.path} element={<route.component />} />
                     ))}
                   </Route>

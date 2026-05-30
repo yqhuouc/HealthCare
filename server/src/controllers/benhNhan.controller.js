@@ -29,4 +29,14 @@ const remove = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Xóa bệnh nhân thành công" });
 });
 
-module.exports = { getAll, getById, update, remove };
+// POST /api/benh-nhan — tạo bệnh nhân mới (admin)
+const create = asyncHandler(async (req, res) => {
+  const benhNhan = await benhNhanService.create(req.body);
+  res.status(201).json({
+    success: true,
+    message: "Tạo hồ sơ bệnh nhân thành công",
+    data: benhNhan,
+  });
+});
+
+module.exports = { getAll, getById, update, remove, create };

@@ -199,7 +199,11 @@ export default function PatientProfilePage() {
             />
             {user?.anhDaiDien ? (
               <img
-                src={user?.anhDaiDien}
+                src={
+                  user.anhDaiDien.startsWith("http")
+                    ? user.anhDaiDien
+                    : `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${user.anhDaiDien}`
+                }
                 alt="Avatar"
                 className="w-24 h-24 rounded-full object-cover border-4 border-primary/20"
               />

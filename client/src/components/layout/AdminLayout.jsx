@@ -118,23 +118,6 @@ function AdminLayout() {
               {pageTitle}
             </h2>
           </div>
-
-          <div className="flex items-center gap-4">
-            <button className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 hover:text-primary transition-colors relative">
-              <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-            </button>
-            <div className="h-10 w-px bg-slate-200 hidden md:block" />
-            <div className="hidden md:flex items-center gap-3">
-              <div className="flex flex-col items-end">
-                <p className="text-sm font-bold leading-none">Admin User</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">admin@healthcare.com</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
-                AD
-              </div>
-            </div>
-          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 lg:p-8">

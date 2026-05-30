@@ -152,7 +152,12 @@ function SpecialtiesSection({ specialties, loading }) {
    ------------------------------------------------------------ */
 
 function DoctorCard({ doctor }) {
-  const avatarUrl = doctor.taiKhoan?.anhDaiDien || "/images/doctor-placeholder.jpg";
+  const getAvatarUrl = (url) => {
+    if (!url) return "/images/doctor-placeholder.jpg";
+    if (url.startsWith("http")) return url;
+    return `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${url}`;
+  };
+  const avatarUrl = getAvatarUrl(doctor.taiKhoan?.anhDaiDien);
   const specialtyName = doctor.chuyenKhoa?.tenChuyenKhoa || "Chưa phân khoa";
 
   return (
