@@ -16,6 +16,7 @@ const prisma = require("../utils/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 const { dayjs, vnDay } = require("../utils/dateUtils");
 const { getCache, setCache, delCache } = require("../utils/redis.util");
+const { sendBookingConfirmationEmail } = require("../utils/email.util");
 
 // Hàm tạo khóa (key) lưu trữ cache slot trống trên Redis dựa theo ID bác sĩ và ngày đặt lịch
 const getSlotCacheKey = (bsId, date) => `cache:slot:${bsId}:${dayjs(date).format("YYYY-MM-DD")}`;
@@ -341,7 +342,7 @@ const getByBacSi = async (bacSiId, requestUser) => {
  * - Thực hiện ghi nhận thông qua Transaction để đảm bảo tính toàn vẹn (tạo lịch hẹn mới + tăng số bệnh nhân hiện tại của ca đó lên 1).
  * - Dọn dẹp cache Redis liên quan để Frontend thấy dữ liệu cập nhật tức thời.
  * 
- * @param {Object} data - Dữ liệu đặt lịch gửi từ client ({ bacSiId, benhNhanId, ngayDat, gioBatDau, lyDoKham, giaKham, hinhThucThanhToanId })
+ * @param {Object} data - Dữ liệu đặt lịch gửi từ client ({ bacSiId, benhNhanId, ngayDat, gioBatDau, lyDoKham, giaKham})
  * @param {Object} requestUser - Thông tin người dùng đang đăng nhập thực hiện đặt lịch
  * @returns {Promise<Object>} Bản ghi lịch hẹn vừa được tạo thành công
  */
@@ -551,6 +552,27 @@ const updateTrangThai = async (id, trangThai, requestUser = null) => {
 
     return datLich;
   });
+
+  // Gửi email xác nhận nếu chuyển từ Đang chờ (0) sang Đã xác nhận (1)
+  if (oldTrangThai === 0 && newTrangThai === 1) {
+    const emailTo = updatedDatLich.benhNhan?.emailLienHe;
+    if (emailTo) {
+      const timeStr = dayjs.utc(updatedDatLich.gioBatDau).year(2000).tz("Asia/Ho_Chi_Minh").format("HH:mm");
+      const dateStr = vnDay(updatedDatLich.ngayDat).format("DD/MM/YYYY");
+      
+      sendBookingConfirmationEmail(emailTo, {
+        bookingId: updatedDatLich.id.toString(),
+        patientName: updatedDatLich.benhNhan?.hoTen || "Quý khách",
+        doctorName: updatedDatLich.bacSi?.tenBacSi || "Bác sĩ HealthCare",
+        specialtyName: updatedDatLich.bacSi?.chuyenKhoa?.tenChuyenKhoa || "Khám chung",
+        date: dateStr,
+        time: timeStr,
+        price: Number(updatedDatLich.giaKham || 0),
+      }).catch((err) => {
+        console.error("[Email Error] Lỗi gửi mail xác nhận lịch khám:", err);
+      });
+    }
+  }
 
   return updatedDatLich;
 };
